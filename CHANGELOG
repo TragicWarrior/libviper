@@ -1,0 +1,125 @@
+Version 1.4.6
+
+*  [Bryan Christ] Added workaround to suppress character echo
+   which happens over remote (ssh) connections.
+
+Version 1.4.5
+
+*  [Bryan Christ] Added viper_end() function which gracefully
+   releases allocated resources
+
+Version 1.4.4
+
+*  Removed BUTTON4* references from viper_gpm.def because
+   some older system don't have these defined.
+
+Version 1.4.3
+
+*  Added version string LIBVIPER_VERSION
+*  Added custom hook support for viper_kmio_dispatch()
+   facilities. 
+
+Version 1.4.2.2
+
+*  Makefile fix
+
+Version 1.4.2.1
+
+*  Makefile fix
+
+Version 1.4.2
+
+*  Added is_cursor_at* function family.
+*  Hide cursor when not using GPM or GPM is running
+   in a xterm-like emulator.
+
+Version 1.4.1
+
+*  Makefile patch from Ben Sittler to build parallel
+	versions of the library (libviper.so/libviper_wide.so)
+
+Version 1.4.0
+
+*  Major rewrite of the keyboard and mouse facilities.
+*  The changes to the mouse facilities should enable
+   sysmouse on *BSD should anyone care to do the porting
+   work.  The sysmouse functionailty is leveraged from 
+   ncurses directly.
+  
+Version 1.3.2
+
+*  fixed some minor build warnings.
+
+Version 1.3.1
+
+*  code testing on x86-64.
+*  displaced several screen initialization and screen
+   referencing functions and macros in favor of a
+   external global called SCREEN_WINDOW.  viper_init() must
+   now be explicitly called to initialize the internal
+   structures.
+*  enabled gcc -O2 optimizations in Makefile and moved to
+   C99 standard (mostly for long long int).
+
+Version 1.3.0
+
+*  retooling of several functions to better support feature like
+   fullscreen specifiers and NORESIZE state.
+*  new windows are created by default with the NORESIZE flag.
+*  setting the ground work for (possibly) multiple workspaces.
+*  implemented new callback agents for border manipulation.
+   the default agents replace the predefined "window-focus" and
+   "window-unfocus" events.  it is now safe to override these
+   event functions without consequence.
+*  much needed code clean-up.
+*  setting ground work to move predefined window managment out
+   of library and replace with better event framework. 
+
+Version 1.2.3
+
+*  added viper_menu_bind() to aide in reparenting and reshaping
+   a standard menu.
+*  changed default behavior of msgbox windows and added some
+   much needed bugfixes.
+
+Version 1.2.2
+
+*  fixed a bug in viper_form_driver() which cause the cursor to be
+   rendered at a incorrect location.
+*  fixed a bug in viper_event_del() which caused a segfault.
+*  simplified Makefile cflags to _GNU_SOURCE
+
+
+Version 1.2.1
+
+*  fixed a minor build warning for file dialog source file.
+
+Version 1.2.0
+
+*  added support for a file dialog box
+*  added functions to colorize and normalize forms
+*  added cursor support to forms
+*  fixed a small bug in the viper_forms_destroy() helper
+*  added a subwin_move_realign() to help move a nested subwin.  this is
+   currently _not_ supported in any curses implementation nor is it
+   likely to ever be.
+*  bug fix for window_fill() which unfortuately triggered an API change.
+*  added API function viper_form_driver() to support forms cursor support.
+
+Version 1.1.1
+
+*  fixed a small, but critical bug which caused viper_menu_destroy() to
+   leak memory and crash applications (namely VWM).
+
+Version 1.1
+
+*  moved the support for hotkeys out of libviper and in to VWM (because it
+   made more sense :)
+
+*  made GPM functionality optional.  compling libviper with support for GPM
+   is now controlled by the definition _VIPER_MOUSE_GPM.  by default, the
+   make script enables this flag.  manually edit Makefile to change.
+
+Version 1.0
+
+*  initial release.
