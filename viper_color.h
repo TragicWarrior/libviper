@@ -3,11 +3,11 @@
 
 #include <glib.h>
 
-void	viper_color_init(void);
+void viper_color_init(void);
 
 struct color_mtx {
-		gint	fg;
-		gint	bg;
+    gint	fg;
+    gint	bg;
 };
 
 #endif
