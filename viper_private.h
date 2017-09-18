@@ -13,7 +13,6 @@
 
 struct _viper_s
 {
-    GStaticRecMutex         *lock;
     GSList                  *wnd_list;
     guint32                 wnd_count;
     WINDOW                  *console_mouse;

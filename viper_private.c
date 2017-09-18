@@ -35,7 +35,6 @@ viper_init(guint32 init_flags)
 {
     extern VIPER                *viper;
     extern WINDOW               *SCREEN_WINDOW;
-    static GStaticRecMutex      lock = G_STATIC_REC_MUTEX_INIT;
     gint                        width,height;
     gchar                       *env;
     mmask_t                     mouse_mask = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
@@ -48,7 +47,6 @@ viper_init(guint32 init_flags)
 
         viper_global_flags |= init_flags;
         viper = (VIPER*)g_malloc0(sizeof(VIPER));
-        viper->lock = &lock;
         viper_color_init();
         env = getenv("TERM");
         if(g_strrstr(env,"xterm") != NULL) viper->xterm=TRUE;
@@ -99,7 +97,6 @@ viper_end(void)
 
     if(viper != NULL)
     {
-        g_static_rec_mutex_free(viper->lock);
         g_free(viper);
         viper = NULL;
     }
