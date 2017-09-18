@@ -9,6 +9,6 @@
 #include <curses.h>
 #endif
 
-gboolean 	is_viper_window_allowed_focus(WINDOW *window);
+gboolean    is_viper_window_allowed_focus(WINDOW *window);
 
 #endif

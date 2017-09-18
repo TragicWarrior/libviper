@@ -20,39 +20,36 @@
 #include "viper.h"
 #include "viper_private.h"
 
-void viper_window_set_userptr(WINDOW *window,gpointer anything)
+void
+viper_window_set_userptr(WINDOW *window, gpointer anything)
 {
-	extern VIPER	*viper;
-	VIPER_WND	   *viper_wnd;
-	
-	if(window==NULL) return;
-		
-/*	viper=viper_get_instance(); */
-	if(viper->wnd_count==0) return;
-	g_static_rec_mutex_lock(viper->lock);
-	viper_wnd=viper_get_viper_wnd(window);
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
 
-	if(viper_wnd!=NULL) viper_wnd->userptr=anything;
-	
-	g_static_rec_mutex_unlock(viper->lock);
-	return;
+    if(window == NULL) return;
+
+    if(viper->wnd_count == 0) return;
+    viper_wnd = viper_get_viper_wnd(window);
+
+    if(viper_wnd != NULL) viper_wnd->userptr = anything;
+
+    return;
 }
 
-gpointer viper_window_get_userptr(WINDOW *window)
+gpointer
+viper_window_get_userptr(WINDOW *window)
 {
-	extern VIPER   *viper;
-	VIPER_WND   	*viper_wnd;
-	gpointer	      anything=NULL;
-	
-	if(window==NULL) return NULL;
-		
-/*	viper=viper_get_instance(); */
-	if(viper->wnd_count==0) return NULL;
-	/* g_static_rec_mutex_lock(viper->lock); */
-	viper_wnd=viper_get_viper_wnd(window);
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
+    gpointer        anything = NULL;
 
-	if(viper_wnd!=NULL) anything=viper_wnd->userptr;
-	
-	/* g_static_rec_mutex_unlock(viper->lock); */
-	return anything;
+    if(window == NULL) return NULL;
+
+    if(viper->wnd_count == 0) return NULL;
+
+    viper_wnd = viper_get_viper_wnd(window);
+
+    if(viper_wnd != NULL) anything = viper_wnd->userptr;
+
+    return anything;
 }

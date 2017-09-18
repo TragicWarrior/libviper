@@ -3,6 +3,6 @@
 
 #include <glib.h>
 
-void		viper_screen_reset(void);
+void    viper_screen_reset(void);
 
 #endif

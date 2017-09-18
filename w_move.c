@@ -19,56 +19,60 @@
 
 #include "viper.h"
 
-gint window_move_rel(WINDOW *window,gint vector_x,gint vector_y)
+gint window_move_rel(WINDOW *window, gint vector_x, gint vector_y)
 {
-	gint 	curr_x,curr_y;
+    gint    curr_x, curr_y;
 
-	if(window==NULL) return ERR;
+    if(window == NULL) return ERR;
 
-	/* first, handle subwindows 	*/
-   if(window->_parent!=NULL)
-	{
-		/*	unfortunately, ncurses (and others) cannot move nested subwindows.
-			abort with ERR in these situations.	*/
+    /* first, handle subwindows     */
+    if(window->_parent != NULL)
+    {
+        /*
+            unfortunately, ncurses (and others) cannot move nested subwindows.
+            abort with ERR in these situations.
+        */
 
-      /* todo:  can the subwin_move_realign() help?   */
-		if(window->_parent->_parent!=NULL) return ERR;
+        /* todo:  can the subwin_move_realign() help?   */
+        if(window->_parent->_parent != NULL) return ERR;
 
-		getparyx(window,curr_y,curr_x);
-		curr_x+=vector_x;
-		curr_y+=vector_y;
-      return mvderwin(window,curr_y,curr_x);
-	}
+        getparyx(window, curr_y, curr_x);
+        curr_x += vector_x;
+        curr_y += vector_y;
 
-	/*	now handle reglar windows	*/
-	getbegyx(window,curr_y,curr_x);
-	curr_x+=vector_x;
-	curr_y+=vector_y;
+        return mvderwin(window, curr_y, curr_x);
+    }
 
-	return mvwin(window,curr_y,curr_x);
+    /*    now handle reglar windows    */
+    getbegyx(window, curr_y, curr_x);
+    curr_x += vector_x;
+    curr_y += vector_y;
+
+    return mvwin(window, curr_y, curr_x);
 }
 
-void subwin_move_realign(WINDOW *subwin)
+void
+subwin_move_realign(WINDOW *subwin)
 {
-   WINDOW   *target;
-   gint		x=0,y=0;
+    WINDOW  *target;
+    gint    x = 0, y = 0;
 
-   /* make sure this is a subwin */
-   if(subwin->_parent==NULL) return;
+    /* make sure this is a subwin */
+    if(subwin->_parent == NULL) return;
 
-   target=subwin;
-   while(subwin->_parent!=NULL)
-	{
-		x+=subwin->_parx;
-		y+=subwin->_pary;
-		subwin=subwin->_parent;
-	}
-	x+=subwin->_begx;
-	y+=subwin->_begy;
+    target = subwin;
+    while(subwin->_parent != NULL)
+    {
+        x += subwin->_parx;
+        y += subwin->_pary;
+        subwin = subwin->_parent;
+    }
+    x += subwin->_begx;
+    y += subwin->_begy;
 
-	subwin=target;
-	subwin->_begy=y;
-	subwin->_begx=x;
+    subwin = target;
+    subwin->_begy = y;
+    subwin->_begx = x;
 
-   return;
+    return;
 }

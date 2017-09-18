@@ -24,34 +24,34 @@
 #include "viper_states.h"
 #include "viper_kmio.h"
 
-void viper_window_set_key_func(WINDOW *window,VIPER_WKEY_FUNC func)
+void
+viper_window_set_key_func(WINDOW *window, VIPER_WKEY_FUNC func)
 {
-	extern VIPER   *viper;
-	VIPER_WND	   *viper_wnd;
-	if(window==NULL) return;
-	if(viper->wnd_count==0) return;
+    extern VIPER   *viper;
+    VIPER_WND       *viper_wnd;
 
-	viper_wnd=viper_get_viper_wnd(window);
-	if(viper_wnd!=NULL) viper_wnd->key_func=func;
+    if(window == NULL) return;
+    if(viper->wnd_count == 0) return;
 
-	return;
+    viper_wnd = viper_get_viper_wnd(window);
+    if(viper_wnd != NULL) viper_wnd->key_func=func;
+
+    return;
 }
 
-VIPER_WKEY_FUNC viper_window_get_key_func(WINDOW *window)
+VIPER_WKEY_FUNC
+viper_window_get_key_func(WINDOW *window)
 {
-	extern VIPER		*viper;
-	VIPER_WND			*viper_wnd;
-	VIPER_WKEY_FUNC	func=NULL;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    VIPER_WKEY_FUNC     func = NULL;
 
-	if(window==NULL) return NULL;
+    if(window == NULL) return NULL;
 
-	if(viper->wnd_count==0) return NULL;
+    if(viper->wnd_count == 0) return NULL;
 
-	viper_wnd=viper_get_viper_wnd(window);
-	if(viper_wnd!=NULL) func=viper_wnd->key_func;
+    viper_wnd = viper_get_viper_wnd(window);
+    if(viper_wnd != NULL) func = viper_wnd->key_func;
 
-	return func;
+    return func;
 }
-
-
-

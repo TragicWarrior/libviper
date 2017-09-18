@@ -1,11 +1,11 @@
 /*
-   x-macro used to translated Gpm_Event data structures to
-   ncurses MEVENT types
+    x-macro used to translated Gpm_Event data structures to
+    ncurses MEVENT types
 
-   field 1: raw=0, cooked=1
-   field 2: corresponding ncurses MEVENT bstate
-   field 3: button as reported by GPM
-   field 4: event type as reported by GPM
+    field 1: raw=0, cooked=1
+    field 2: corresponding ncurses MEVENT bstate
+    field 3: button as reported by GPM
+    field 4: event type as reported by GPM
 */
 
 X_GPM(0,BUTTON1_PRESSED, GPM_B_LEFT, GPM_DOWN)

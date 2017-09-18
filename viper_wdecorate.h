@@ -9,6 +9,6 @@
 #include <curses.h>
 #endif
 
-/* void		viper_window_add_controls(WINDOW *window); */
+/* void        viper_window_add_controls(WINDOW *window); */
 
 #endif
