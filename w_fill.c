@@ -20,29 +20,31 @@
 #include "viper.h"
 
 #ifdef _VIPER_WIDE
-void window_fill(WINDOW *window,cchar_t *ch,gshort color,attr_t attr)
+void
+window_fill(WINDOW *window, cchar_t *ch, gshort color, attr_t attr)
 #else
-void window_fill(WINDOW *window,chtype ch,gshort color,attr_t attr)
+void
+window_fill(WINDOW *window, chtype ch, gshort color, attr_t attr)
 #endif
 {
-	gint	width,height;
-	gint	i=0;
-	
-	getmaxyx(window,height,width);
-	wmove(window,0,0);
-	
-	i=width*height;
-	while(i)
-	{
-#ifdef _VIPER_WIDE
-		wadd_wch(window,ch);
-#else
-		waddch(window,ch);
-#endif
-		i--;
-	}
+    gint    width, height;
+    gint    i = 0;
 
-   for(i=0;i<height;i++) mvwchgat(window,i,0,-1,attr,color,NULL);
-	
-	return;
+    getmaxyx(window, height, width);
+    wmove(window, 0, 0);
+
+    i = width * height;
+    while(i)
+    {
+#ifdef _VIPER_WIDE
+        wadd_wch(window, ch);
+#else
+        waddch(window, ch);
+#endif
+        i--;
+    }
+
+    for(i = 0;i < height;i++) mvwchgat(window, i, 0, -1, attr, color, NULL);
+
+    return;
 }

@@ -22,16 +22,16 @@
 
 void viper_thread_enter(void)
 {
-	extern VIPER   *viper;
+    extern VIPER   *viper;
 
-	g_static_rec_mutex_lock(viper->lock);
+    g_static_rec_mutex_lock(viper->lock);
 
-	return;
+    return;
 }
 
 void viper_thread_leave(void)
 {
-	extern VIPER   *viper;
+    extern VIPER   *viper;
 
-	g_static_rec_mutex_unlock(viper->lock);
+    g_static_rec_mutex_unlock(viper->lock);
 }

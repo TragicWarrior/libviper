@@ -21,33 +21,34 @@
 #include "viper_private.h"
 #include "viper_wdecorate.h"
 
-void viper_window_modify_border(WINDOW *window,gint attrs,gshort colors)
+void
+viper_window_modify_border(WINDOW *window, gint attrs, gshort colors)
 {
-	extern VIPER   *viper;
-	VIPER_WND	   *viper_wnd;
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
 
-	if(viper->wnd_count==0) return;
+    if(viper->wnd_count == 0) return;
 
-	viper_wnd=viper_get_viper_wnd(window);
+    viper_wnd = viper_get_viper_wnd(window);
 
-	if(viper_wnd!=NULL) window_modify_border(viper_wnd->window,attrs,colors);
+    if(viper_wnd != NULL)
+        window_modify_border(viper_wnd->window, attrs, colors);
 
-	return;
+    return;
 }
 
-void viper_window_set_border_agent(WINDOW *window,VIPER_FUNC agent,gint id)
+void
+viper_window_set_border_agent(WINDOW *window, VIPER_FUNC agent, gint id)
 {
-   extern VIPER   *viper;
-	VIPER_WND	   *viper_wnd;
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
 
-	if(viper->wnd_count==0) return;
+    if(viper->wnd_count == 0) return;
 
-   if(id<1) return;
-   viper_wnd=viper_get_viper_wnd(window);
+    if(id < 1) return;
+    viper_wnd = viper_get_viper_wnd(window);
 
-   if(viper_wnd!=NULL) viper_wnd->border_agent[id]=agent;
+    if(viper_wnd != NULL) viper_wnd->border_agent[id] = agent;
 
-   return;
+    return;
 }
-
-

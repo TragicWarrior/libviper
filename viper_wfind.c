@@ -22,46 +22,44 @@
 #include "viper.h"
 #include "viper_private.h"
 
-WINDOW*	viper_window_find_by_class(gpointer classid)
+WINDOW*
+viper_window_find_by_class(gpointer classid)
 {
-	extern VIPER   *viper;
-	VIPER_WND	   *viper_wnd;
-	GSList		   *node;
-	
-/*	viper=viper_get_instance(); */
-	
-	if(viper->wnd_count==0) return NULL;
-	node=viper->wnd_list;
-	while(node!=NULL)
-	{
-		viper_wnd=(VIPER_WND*)node->data;
-		if(viper_wnd->classid==classid) break;
-		node=node->next;
-	}
-	
-	if(node!=NULL) return viper_wnd->user_window;
-	
-	return NULL;
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
+    GSList          *node;
+
+    if(viper->wnd_count == 0) return NULL;
+    node = viper->wnd_list;
+    while(node != NULL)
+    {
+        viper_wnd = (VIPER_WND*)node->data;
+        if(viper_wnd->classid == classid) break;
+        node = node->next;
+    }
+
+    if(node != NULL) return viper_wnd->user_window;
+
+    return NULL;
 }
-	
-WINDOW*	viper_window_find_by_title(gchar *title)
+
+WINDOW*
+viper_window_find_by_title(gchar *title)
 {
-	extern VIPER   *viper;
-	VIPER_WND	   *viper_wnd;
-	GSList		   *node;
-	
-/*	viper=viper_get_instance(); */
-	
-	if(viper->wnd_count==0) return NULL;
-	node=viper->wnd_list;
-	while(node!=NULL)
-	{
-		viper_wnd=(VIPER_WND*)node->data;
-		if(strcmp(viper_wnd->title,title)==0) break;
-		node=node->next;
-	}
-	
-	if(node!=NULL) return viper_wnd->user_window;
-	
-	return NULL;
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
+    GSList          *node;
+
+    if(viper->wnd_count == 0) return NULL;
+    node = viper->wnd_list;
+    while(node != NULL)
+    {
+        viper_wnd = (VIPER_WND*)node->data;
+        if(strcmp(viper_wnd->title,title) == 0) break;
+        node = node->next;
+    }
+
+    if(node != NULL) return viper_wnd->user_window;
+
+    return NULL;
 }

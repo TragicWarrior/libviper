@@ -19,29 +19,29 @@
 
 #include "viper.h"
 
-WINDOW* window_create(WINDOW *parent,gint x,gint y,gint width,gint height)
+WINDOW*
+window_create(WINDOW *parent, gint x, gint y, gint width, gint height)
 {
-   extern WINDOW  *SCREEN_WINDOW;
-/*	WINDOW		   *screen_window; */
-	WINDOW		   *window=NULL;
-	static gint	   stagger_x=3;
-	static gint	   stagger_y=3;
-	gint		      max_x,max_y;
-	
-	if(x==WPOS_STAGGERED || y==WPOS_STAGGERED)
-	{
-		stagger_x+=2;
-		stagger_y+=2;
-/*		screen_window=window_get_screen_window(); */
-		getmaxyx(SCREEN_WINDOW,max_y,max_x);
-		if(stagger_x+width>max_x) stagger_x=1;
-		if(stagger_y+height>max_y) stagger_y=1;
-		y=stagger_y;
-		x=stagger_x;
-	}
-	
-	if(parent==NULL) window=newwin(height,width,y,x);
-	else window=derwin(parent,height,width,y,x);
+    extern WINDOW   *SCREEN_WINDOW;
+    WINDOW          *window = NULL;
+    static gint     stagger_x = 3;
+    static gint     stagger_y = 3;
+    gint            max_x, max_y;
 
-	return window;
+    if(x == WPOS_STAGGERED || y == WPOS_STAGGERED)
+    {
+        stagger_x += 2;
+        stagger_y += 2;
+
+        getmaxyx(SCREEN_WINDOW, max_y, max_x);
+        if(stagger_x + width > max_x) stagger_x = 1;
+        if(stagger_y + height > max_y) stagger_y = 1;
+        y = stagger_y;
+        x = stagger_x;
+    }
+
+    if(parent == NULL) window = newwin(height, width, y, x);
+    else window = derwin(parent, height, width, y, x);
+
+    return window;
 }

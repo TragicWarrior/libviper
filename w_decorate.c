@@ -22,55 +22,58 @@
 
 #include "viper.h"
 
-void window_decorate(WINDOW *window,gchar *title,gboolean border)
+void
+window_decorate(WINDOW *window, gchar *title, gboolean border)
 {
-	gint			x,y;
-	static gchar	*term=NULL;
-	
-	getmaxyx(window,y,x);
-	
-	if(term==NULL) term=getenv("TERM");	
-	
-	if(border==TRUE)
-#ifdef _VIPER_WIDE		
-		box_set(window,WACS_VLINE,WACS_HLINE);
+    gint            x,y;
+    static gchar    *term = NULL;
+
+    getmaxyx(window, y, x);
+
+    if(term == NULL) term = getenv("TERM");
+
+    if(border == TRUE)
+#ifdef _VIPER_WIDE
+        box_set(window, WACS_VLINE, WACS_HLINE);
 #else
-		box(window,ACS_VLINE,ACS_HLINE);
+        box(window, ACS_VLINE, ACS_HLINE);
 #endif
-	
-	if(title!=NULL)
-	{
-		x=x/2;
-		x=x-(strlen(title)/2);
-		mvwprintw(window,0,x,title);
-	}
-	
-	touchwin(window);
+
+    if(title != NULL)
+    {
+        x = x / 2;
+        x = x - (strlen(title) / 2);
+        mvwprintw(window, 0, x, title);
+    }
+
+    touchwin(window);
 }
 
-void window_modify_border(WINDOW *window,gint attrs,gshort colors)
+void
+window_modify_border(WINDOW *window, gint attrs, gshort colors)
 {
-	chtype	char_attr;
-	gint	width,height;
-	gint	x,y;
-	
-	if(window==NULL) return;
-	
-	getmaxyx(window,height,width);
-	
-	for(y=0;y<height+1;y++)
-	{
-		for(x=0;x<width+1;x++)
-		{
-			if((x%(width-1)==0) || (y%(height-1)==0))
-			{
-				char_attr=mvwinch(window,y,x);
-				if((char_attr & A_ALTCHARSET)==A_ALTCHARSET)
-			 		mvwchgat(window,y,x,1,attrs | A_ALTCHARSET,colors,NULL);
-				else mvwchgat(window,y,x,1,attrs,colors,NULL);
-			}
-		}
-	}
-	
-	return;
+    chtype      char_attr;
+    gint        width, height;
+    gint        x, y;
+
+    if(window == NULL) return;
+
+    getmaxyx(window, height, width);
+
+    for(y = 0;y < height + 1;y++)
+    {
+        for(x = 0;x < width + 1;x++)
+        {
+            if((x % (width - 1) == 0) || (y % (height - 1) == 0))
+            {
+                char_attr = mvwinch(window, y, x);
+                if((char_attr & A_ALTCHARSET) == A_ALTCHARSET)
+                    mvwchgat(window, y, x, 1, attrs | A_ALTCHARSET, colors, NULL);
+                else
+                    mvwchgat(window, y, x, 1, attrs, colors, NULL);
+            }
+        }
+    }
+
+    return;
 }
