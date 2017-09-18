@@ -168,10 +168,6 @@ VIPER*          viper_init(guint32 flags);
 void            viper_end(void);
 void            viper_set_border_agent(VIPER_FUNC agent, gint id);
 
-/* viper thread saftey */
-void            viper_thread_enter(void);
-void            viper_thread_leave(void);
-
 /* viper screen facilities */
 WINDOW*         viper_screen_get_wallpaper();
 void            viper_screen_set_wallpaper(WINDOW *wallpaper,
