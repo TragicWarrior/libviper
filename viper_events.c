@@ -22,36 +22,42 @@
 #include "viper.h"
 #include "viper_private.h"
 #include "viper_callbacks.h"
+#include "list.h"
 
 VIPER_EVENT*
-viper_get_viper_event(WINDOW *window, gchar *event)
+viper_get_viper_event(WINDOW *window, char *event)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    VIPER_EVENT     *viper_event = NULL;
-    GSList          *node = NULL;
+    extern VIPER    	*viper;
+    VIPER_WND       	*viper_wnd;
+    VIPER_EVENT     	*viper_event = NULL;
+	struct list_head	*pos;
+    int                 len;
 
     if(window == NULL || event == NULL) return NULL;
     if(viper->wnd_count == 0) return NULL;
 
     viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd != NULL)
-    {
-        node = viper_wnd->event_list;
-        while(node != NULL)
-        {
-            viper_event = (VIPER_EVENT*)node->data;
-            if(memcmp(viper_event->event, event, strlen(event)) == 0) break;
-            node = node->next;
-        }
-    }
 
-    if(node != NULL) return viper_event;
-    return (VIPER_EVENT*)NULL;
+	// do a bunch of checks before iterating
+	if(viper_wnd == NULL) return NULL;
+	if(list_empty(&viper_wnd->event_list)) return NULL;
+
+    len = strlen(event);
+
+	list_for_each(pos, &viper_wnd->event_list)
+	{
+	    viper_event = list_entry(pos, VIPER_EVENT, list);
+		if(memcmp(viper_event->event, event, len) == 0) break;
+
+		// invalidate for the next iteration
+		viper_event = NULL;
+	}
+
+    return viper_event;
 }
 
-gint
-viper_event_set(WINDOW *window, gchar *event, VIPER_FUNC func, gpointer arg)
+int
+viper_event_set(WINDOW *window, char *event, VIPER_FUNC func, void *arg)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd = NULL;
@@ -61,13 +67,15 @@ viper_event_set(WINDOW *window, gchar *event, VIPER_FUNC func, gpointer arg)
 
     if(viper->wnd_count == 0) return ERR;
 
-    viper_event = viper_get_viper_event(window,event);
+    // does the event already exists?
+    viper_event = viper_get_viper_event(window, event);
+
     if(viper_event == NULL)
     {
         viper_wnd = viper_get_viper_wnd(window);
-        viper_event = (VIPER_EVENT*)g_malloc0(sizeof(VIPER_EVENT));
-        viper_wnd->event_list = g_slist_prepend(viper_wnd->event_list,
-            (gpointer)viper_event);
+        viper_event = (VIPER_EVENT*)calloc(1, sizeof(VIPER_EVENT));
+
+        list_add(viper_event, &viper_wnd->event_list);
     }
 
     viper_event->event = event;
@@ -78,48 +86,8 @@ viper_event_set(WINDOW *window, gchar *event, VIPER_FUNC func, gpointer arg)
     return 1;
 }
 
-gint
-viper_event_del(WINDOW *window, gchar *event)
-{
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    VIPER_EVENT     *viper_event = NULL;
-
-    if(window == NULL || event == NULL) return -1;
-
-    if(viper->wnd_count == 0) return ERR;
-
-    viper_wnd = viper_get_viper_wnd(window);
-    if(event[0] == '*')
-    {
-        g_slist_foreach(viper_wnd->event_list, viper_callback_del_event, NULL);
-        g_slist_free(viper_wnd->event_list);
-        viper_wnd->event_list = NULL;
-        viper_event = (gpointer)1;   /* so that we don't return ERR.   */
-    }
-    else
-    {
-        viper_event = viper_get_viper_event(window,event);
-        if(viper_event != NULL)
-        {
-            viper_wnd->event_list = g_slist_remove(viper_wnd->event_list,
-                (gconstpointer)viper_event);
-            g_free(viper_event);
-            if(g_slist_length(viper_wnd->event_list) == 0)
-            {
-                g_slist_free(viper_wnd->event_list);
-                viper_wnd->event_list = NULL;
-            }
-        }
-    }
-
-    if(viper_event == NULL) return ERR;
-
-    return 1;
-}
-
-gint
-viper_event_exec(WINDOW *window, gchar *event, gpointer anything)
+int
+viper_event_exec(WINDOW *window, char *event, void *anything)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
@@ -183,15 +151,59 @@ viper_event_exec(WINDOW *window, gchar *event, gpointer anything)
     return 1;
 }
 
+
+int
+viper_event_del(WINDOW *window, char *event)
+{
+    extern VIPER    	*viper;
+    VIPER_WND       	*viper_wnd;
+    VIPER_EVENT     	*viper_event = NULL;
+
+	struct list_head	*pos;
+    struct list_head    *tmp;
+
+    if(window == NULL || event == NULL) return -1;
+
+    if(viper->wnd_count == 0) return ERR;
+
+    viper_wnd = viper_get_viper_wnd(window);
+    if(list_empty(&viper_wnd->event_list)) return ERR;
+
+    if(event[0] == '*')
+    {
+		list_for_each_safe(pos, tmp, &viper_wnd->event_list)
+		{
+			viper_event = list_entry(pos, VIPER_EVENT, list);
+
+			list_del(&viper_event->list);
+			free(viper_event);
+		}
+
+		return 1;
+    }
+
+    viper_event = viper_get_viper_event(window, event);
+    if(viper_event != NULL)
+    {
+		list_del(&viper_event->list);
+		free(viper_event);
+
+		return 1;
+    }
+
+    return ERR;
+}
+
+
 /*
     these events defined below get automatically added to certain windows
     during initialization
 */
-gint
-viper_event_default_TERM_RESIZE(WINDOW *window, gpointer arg)
+int
+viper_event_default_TERM_RESIZE(WINDOW *window, void *arg)
 {
     VIPER_WND       *viper_wnd;
-    gint            x, y;
+    int            	x, y;
 
     viper_wnd = viper_get_viper_wnd(window);
 
@@ -206,8 +218,8 @@ viper_event_default_TERM_RESIZE(WINDOW *window, gpointer arg)
     return 0;
 }
 
-gint
-viper_event_default_WINDOW_CLOSE(WINDOW *window,gpointer arg)
+int
+viper_event_default_WINDOW_CLOSE(WINDOW *window, void *arg)
 {
     return VIPER_EVENT_WINDOW_DESIST;
 }
@@ -216,8 +228,8 @@ viper_event_default_WINDOW_CLOSE(WINDOW *window,gpointer arg)
     by returning VIPER_EVENT_WINDOW_PERSIST we prevent the user from closing
     the msgbox using the mouse, hotkey, or viper_window_close() function.
 */
-gint
-viper_event_default_MSGBOX_CLOSE(WINDOW *window, gpointer arg)
+int
+viper_event_default_MSGBOX_CLOSE(WINDOW *window, void *arg)
 {
     beep();
     return VIPER_EVENT_WINDOW_PERSIST;

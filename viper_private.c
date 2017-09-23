@@ -19,6 +19,7 @@
 
 #include <unistd.h>
 #include <termios.h>
+#include <stdio.h>
 
 #include "viper.h"
 #include "viper_color.h"
@@ -43,6 +44,8 @@ viper_init(guint32 init_flags)
 
     if(viper == NULL)
     {
+        // newterm(NULL, stdout, stdin);
+
         SCREEN_WINDOW = initscr();
 
         viper_global_flags |= init_flags;
