@@ -10,6 +10,7 @@
 #endif
 
 #include "viper.h"
+#include "list.h"
 
 struct _viper_s
 {
@@ -26,6 +27,14 @@ struct _viper_s
     WINDOW                  *redraw_catalyst;
 };
 
+struct _viper_event_s
+{
+    struct list_head        list;
+    char                   	*event;
+    VIPER_FUNC              func;
+    void                	*arg;
+};
+
 struct _viper_wnd_s
 {
     WINDOW                  *window;
@@ -36,18 +45,13 @@ struct _viper_wnd_s
     gint                    max_width;
     gint                    max_height;
     guint32                 window_state;
-    GSList                  *event_list;
+    // GSList                  *event_list;
+    struct _viper_event_s   *events;
     VIPER_WKEY_FUNC         key_func;
     VIPER_FUNC              border_agent[2];
     gpointer                userptr;
     gpointer                classid;
 };
 
-struct _viper_event_s
-{
-    gchar                   *event;
-    VIPER_FUNC              func;
-    gpointer                arg;
-};
 
 #endif

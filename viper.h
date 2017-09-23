@@ -115,6 +115,7 @@ typedef gint32 (*VIPER_KMIO_HOOK)(gint32 keystroke);
 typedef struct _viper_s             VIPER;
 typedef struct _viper_wnd_s         VIPER_WND;
 typedef struct _viper_event_s       VIPER_EVENT;
+typedef struct _viper_event_s       viper_event_t;
 
 
 /* basic window routines    */

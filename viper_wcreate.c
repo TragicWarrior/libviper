@@ -107,6 +107,8 @@ viper_window_create(gchar *title, gfloat x, gfloat y,
     }
     else viper_wnd->user_window = viper_wnd->window;
 
+    // LIST_HEAD_INIT(&viper_wnd->event_list);
+
     viper_event_set(viper_wnd->window, "window-close",
         viper_event_default_WINDOW_CLOSE, NULL);
     viper_event_set(viper_wnd->window, "term-resized",
