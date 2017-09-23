@@ -1,3 +1,8 @@
+Version 1.5.0
+
+*  [Bryan Christ] Removed GSList from window event system
+   and replaced it with Linux linked list implemenation. 
+
 Version 1.4.6
 
 *  [Bryan Christ] Added workaround to suppress character echo

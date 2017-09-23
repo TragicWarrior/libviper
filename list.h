@@ -35,6 +35,11 @@
     using the generic single-entry routines.
 */
 
+/*
+    Copied in list_for_each_safe() from Torvalds master on Sept 23, 2017 by
+    Bryan Christ (bryan.christ@gmail.com)
+*/
+
 struct list_head {
 	struct list_head *next, *prev;
 };
