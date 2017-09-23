@@ -17,7 +17,7 @@
 #include <form.h>
 #endif
 
-#define LIBVIPER_VERSION            "1.4.6"
+#define LIBVIPER_VERSION            "1.5.0"
 
 #define VECTOR_TOP_TO_BOTTOM        1
 #define VECTOR_BOTTOM_TO_TOP        -1
@@ -241,13 +241,12 @@ void            viper_kmio_dispatch_set_hook(gint sequence, VIPER_KMIO_HOOK hook
 void            viper_window_set_key_func(WINDOW *window, VIPER_WKEY_FUNC func);
 
 /* event handling */
-gint            viper_event_set(WINDOW *window, gchar *event,
-                    VIPER_FUNC func,gpointer arg);
-gint            viper_event_del(WINDOW *window, gchar *event);
-gint            viper_event_exec(WINDOW *window, gchar *event,
-                    gpointer anything);
-#define         viper_event_run(window,event) \
-                    (viper_event_exec(window,event,NULL))
+int             viper_event_set(WINDOW *window, char *event,
+                    VIPER_FUNC func, void *arg);
+int             viper_event_del(WINDOW *window, char *event);
+int             viper_event_exec(WINDOW *window, char *event, void *anything);
+#define         viper_event_run(window, event) \
+                    (viper_event_exec(window, event, NULL))
 #define         VIPER_EVENT_BROADCAST           ((WINDOW*)"ALL_VIPER_WINDOWS")
 #define         VIPER_EVENT_WINDOW_DESIST       (viper_window_destroy(window))
 #define         VIPER_EVENT_WINDOW_PERSIST      0

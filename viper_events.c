@@ -31,6 +31,7 @@ viper_get_viper_event(WINDOW *window, char *event)
     VIPER_WND       	*viper_wnd;
     VIPER_EVENT     	*viper_event = NULL;
 	struct list_head	*pos;
+    int                 len;
 
     if(window == NULL || event == NULL) return NULL;
     if(viper->wnd_count == 0) return NULL;
@@ -39,13 +40,14 @@ viper_get_viper_event(WINDOW *window, char *event)
 
 	// do a bunch of checks before iterating
 	if(viper_wnd == NULL) return NULL;
-	if(viper_wnd->events == NULL) return NULL;
-	if(list_empty(&viper_wnd->events->list)) return NULL;
+	if(list_empty(&viper_wnd->event_list)) return NULL;
 
-	list_for_each(pos, &viper_wnd->events->list)
+    len = strlen(event);
+
+	list_for_each(pos, &viper_wnd->event_list)
 	{
 	    viper_event = list_entry(pos, VIPER_EVENT, list);
-		if(memcmp(viper_event->event, event, strlen(event)) == 0) break;
+		if(memcmp(viper_event->event, event, len) == 0) break;
 
 		// invalidate for the next iteration
 		viper_event = NULL;
@@ -65,18 +67,15 @@ viper_event_set(WINDOW *window, char *event, VIPER_FUNC func, void *arg)
 
     if(viper->wnd_count == 0) return ERR;
 
+    // does the event already exists?
     viper_event = viper_get_viper_event(window, event);
+
     if(viper_event == NULL)
     {
         viper_wnd = viper_get_viper_wnd(window);
         viper_event = (VIPER_EVENT*)calloc(1, sizeof(VIPER_EVENT));
 
-		if(viper_wnd->events == NULL)
-		{
-			viper_wnd->events = viper_event;
-            INIT_LIST_HEAD(&viper_wnd->events->list);
-			list_add(viper_event, &viper_wnd->events->list);
-		}
+        list_add(viper_event, &viper_wnd->event_list);
     }
 
     viper_event->event = event;
@@ -88,6 +87,72 @@ viper_event_set(WINDOW *window, char *event, VIPER_FUNC func, void *arg)
 }
 
 int
+viper_event_exec(WINDOW *window, char *event, void *anything)
+{
+    extern VIPER    *viper;
+    VIPER_WND       *viper_wnd;
+    VIPER_EVENT     *viper_event;
+    GSList          *copy;
+    GSList          *node;
+    gboolean        broadcast = FALSE;
+
+    if(window == NULL || event == NULL) return ERR;
+
+    /*  if the user wants to send a broadcast event, the value of *window will
+        be VIPER_EVENT_BROADCAST.   */
+    if(memcmp(window, VIPER_EVENT_BROADCAST, sizeof(VIPER_EVENT_BROADCAST)) == 0)
+        broadcast = TRUE;
+
+    if(viper->wnd_count == 0) return ERR;
+
+    if(broadcast == TRUE)
+    {
+        copy = g_slist_copy(viper->wnd_list);
+        /*
+            when doing a broadcast, the bottom most window in the stack Z-order
+            will be signaled first.  the last window will be the top window.
+        */
+        copy = g_slist_reverse(copy);
+
+        node = copy;
+        while(node != NULL)
+        {
+            viper_wnd = (VIPER_WND*)node->data;
+            viper_event = viper_get_viper_event(viper_wnd->user_window, event);
+            if(viper_event != NULL)
+            {
+                // if anything is NULL, pass the default data with the event
+                if(anything == NULL)
+                viper_event->func(viper_wnd->user_window, viper_event->arg);
+                /* otherwise, pass the override data.  */
+                else
+                viper_event->func(viper_wnd->user_window, anything);
+            }
+            node = node->next;
+        }
+
+        if(copy != NULL) g_slist_free(copy);
+    }
+    else
+    {
+        viper_wnd = viper_get_viper_wnd(window);
+        viper_event = viper_get_viper_event(viper_wnd->user_window, event);
+        if(viper_event != NULL)
+        {
+            // if anything is NULL, pass the default data with the event
+            if(anything == NULL)
+            viper_event->func(viper_wnd->user_window, viper_event->arg);
+            // otherwise, pass the override data
+            else
+                viper_event->func(viper_wnd->user_window, anything);
+        }
+    }
+
+    return 1;
+}
+
+
+int
 viper_event_del(WINDOW *window, char *event)
 {
     extern VIPER    	*viper;
@@ -95,19 +160,20 @@ viper_event_del(WINDOW *window, char *event)
     VIPER_EVENT     	*viper_event = NULL;
 
 	struct list_head	*pos;
+    struct list_head    *tmp;
 
     if(window == NULL || event == NULL) return -1;
 
     if(viper->wnd_count == 0) return ERR;
 
     viper_wnd = viper_get_viper_wnd(window);
+    if(list_empty(&viper_wnd->event_list)) return ERR;
+
     if(event[0] == '*')
     {
-		list_for_each(pos, &viper_wnd->events->list)
+		list_for_each_safe(pos, tmp, &viper_wnd->event_list)
 		{
 			viper_event = list_entry(pos, VIPER_EVENT, list);
-			free(viper_event->event);
-			if(viper_event->arg != NULL) free(viper_event->arg);
 
 			list_del(&viper_event->list);
 			free(viper_event);
@@ -119,9 +185,6 @@ viper_event_del(WINDOW *window, char *event)
     viper_event = viper_get_viper_event(window, event);
     if(viper_event != NULL)
     {
-		free(viper_event->event);
-		if(viper_event->arg != NULL) free(viper_event->arg);
-
 		list_del(&viper_event->list);
 		free(viper_event);
 
@@ -156,7 +219,7 @@ viper_event_default_TERM_RESIZE(WINDOW *window, void *arg)
 }
 
 int
-viper_event_default_WINDOW_CLOSE(WINDOW *window,void *arg)
+viper_event_default_WINDOW_CLOSE(WINDOW *window, void *arg)
 {
     return VIPER_EVENT_WINDOW_DESIST;
 }

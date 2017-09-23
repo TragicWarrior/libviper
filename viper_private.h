@@ -45,8 +45,7 @@ struct _viper_wnd_s
     gint                    max_width;
     gint                    max_height;
     guint32                 window_state;
-    // GSList                  *event_list;
-    struct _viper_event_s   *events;
+    struct list_head        event_list;
     VIPER_WKEY_FUNC         key_func;
     VIPER_FUNC              border_agent[2];
     gpointer                userptr;
