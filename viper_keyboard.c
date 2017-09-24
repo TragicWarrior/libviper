@@ -31,7 +31,7 @@ viper_window_set_key_func(WINDOW *window, VIPER_WKEY_FUNC func)
     VIPER_WND       *viper_wnd;
 
     if(window == NULL) return;
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
 
     viper_wnd = viper_get_viper_wnd(window);
     if(viper_wnd != NULL) viper_wnd->key_func=func;
@@ -47,8 +47,7 @@ viper_window_get_key_func(WINDOW *window)
     VIPER_WKEY_FUNC     func = NULL;
 
     if(window == NULL) return NULL;
-
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
     viper_wnd = viper_get_viper_wnd(window);
     if(viper_wnd != NULL) func = viper_wnd->key_func;

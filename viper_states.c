@@ -22,17 +22,18 @@
 #include "viper_callbacks.h"
 #include "viper_deck.h"
 #include "viper_states.h"
-
+#include "list.h"
 
 void
-viper_window_set_state(WINDOW *window, guint32 state)
+viper_window_set_state(WINDOW *window, uint32_t state)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
 
     if(window == NULL) return;
 
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
+
     viper_wnd = viper_get_viper_wnd(window);
 
     /*
@@ -93,7 +94,7 @@ viper_window_get_state(WINDOW *window)
 
     if(window == NULL) return 0;
 
-    if(viper->wnd_count == 0) return 0;
+    if(list_empty(&viper->wnd_list)) return 0;
     viper_wnd = viper_get_viper_wnd(window);
 
     return viper_wnd->window_state;
@@ -113,6 +114,8 @@ viper_window_show(WINDOW *window)
         viper_window_unhide(window);
 
     viper_window_redraw(window);
+
+    return;
 }
 
 void
@@ -122,8 +125,6 @@ viper_window_redraw(WINDOW *window)
     extern VIPER    *viper;
     VIPER_WND       *redraw_wnd;
     VIPER_WND       *next_wnd;
-    GSList          *list_copy;
-    GSList          *node;
 
     if(window == NULL) return;
 
@@ -134,11 +135,6 @@ viper_window_redraw(WINDOW *window)
     */
     while(window->_parent != NULL) window = window->_parent;
     redraw_wnd = viper_get_viper_wnd(window);
-
-    list_copy = g_slist_copy(viper->wnd_list);
-    list_copy = g_slist_reverse(list_copy);
-    node = list_copy;
-    while(node->data != redraw_wnd) node = node->next;
 
     /*
         redrawing a window is somewhat complex.  if you just redraw the
@@ -153,17 +149,22 @@ viper_window_redraw(WINDOW *window)
     */
     if(viper->redraw_catalyst == NULL) viper->redraw_catalyst = window;
     viper_callback_blit_window(redraw_wnd->window ,NULL);
-    node = node->next;
 
-    while(node != NULL)
+    /*
+        start traversing with the window to be redraw.  this will change as
+        the function recurses.
+    */
+    if(!(list_is_first(&redraw_wnd->list, &viper->wnd_list)))
     {
-        next_wnd = (VIPER_WND*)node->data;
-        if(viper_deck_check_occlusion(next_wnd, redraw_wnd) == TRUE)
-            viper_window_redraw(next_wnd->window);
-        node = node->next;
-    }
+        next_wnd = list_prev_entry(redraw_wnd, list);
 
-    g_slist_free(list_copy);
+        list_for_each_entry_from_reverse(next_wnd, &viper->wnd_list, list)
+        {
+            // check to see if we're at the top
+            if(viper_deck_check_occlusion(next_wnd, redraw_wnd) == TRUE)
+                viper_window_redraw(next_wnd->window);
+        }
+    }
 
     /*
         only copy the virtual screen to the terminal *IF* this is the orignal
@@ -173,6 +174,7 @@ viper_window_redraw(WINDOW *window)
     {
         if(viper->console_mouse != NULL)
         overwrite(viper->console_mouse, SCREEN_WINDOW);
+
         wnoutrefresh(SCREEN_WINDOW);
         doupdate();
         viper->redraw_catalyst = NULL;
@@ -188,8 +190,8 @@ is_viper_window_allowed_focus(WINDOW *window)
     VIPER_WND       *viper_wnd;
 
     if(window == NULL) return FALSE;
+    if(list_empty(&viper->wnd_list)) return FALSE;
 
-    if(viper->wnd_count == 0) return FALSE;
     viper_wnd = viper_get_viper_wnd(window);
 
     /*

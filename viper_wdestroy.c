@@ -19,16 +19,17 @@
 
 #include "viper.h"
 #include "viper_private.h"
+#include "list.h"
 
-gint
+int
 viper_window_destroy(WINDOW *window)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
     VIPER_EVENT     *viper_event;
-    GSList          *node;
 
-    if(viper->wnd_count == 0) return ERR;
+    if(list_empty(&viper->wnd_list)) return ERR;
+
     viper_wnd = viper_get_viper_wnd(window);
 
     if(viper_wnd != NULL)
@@ -47,12 +48,12 @@ viper_window_destroy(WINDOW *window)
         }
         else delwin(viper_wnd->window);
 
-        node = g_slist_find(viper->wnd_list, (gpointer)viper_wnd);
-        viper->wnd_list = g_slist_delete_link(viper->wnd_list, node);
+        list_del(&viper_wnd->list);
         g_free(viper_wnd);
-        viper->wnd_count--;
 
-        viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
+        // viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
+        viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
+        viper_window_focus(viper_wnd->window);
         viper_screen_redraw(REDRAW_ALL);
     }
 

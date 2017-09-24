@@ -153,7 +153,7 @@ void                subwin_move_realign(WINDOW *subwin);
     cursor in the other axis--except corner checks and is_curs_edge() which
     return 0 when true.
 */
-gint            is_cursor_at(WINDOW *window, guint mask);
+int             is_cursor_at(WINDOW *window, uint16_t mask);
 #define         is_curs_at_left(x)          is_cursor_at(x, CURS_LEFT)
 #define         is_curs_at_right(x)         (is_cursor_at(x, CURS_RIGHT))
 #define         is_curs_at_top(x)           is_cursor_at(x, CURS_TOP)

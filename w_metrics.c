@@ -17,17 +17,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
 #include <math.h>
 
 #include "viper.h"
 
-gint
-is_cursor_at(WINDOW *window, guint mask)
+int
+is_cursor_at(WINDOW *window, uint16_t mask)
 {
     extern WINDOW   *SCREEN_WINDOW;
-    gint            width, height;
-    gint            cur_x, cur_y;
-    guint           hitmap = 0;
+    int             width, height;
+    int             cur_x, cur_y;
+    uint16_t        hitmap = 0;
 
     if(window == NULL) window = SCREEN_WINDOW;
 
@@ -61,11 +62,11 @@ is_cursor_at(WINDOW *window, guint mask)
 
 
 void
-window_get_center(WINDOW *window, gint *x, gint *y)
+window_get_center(WINDOW *window, int *x, int *y)
 {
     extern WINDOW   *SCREEN_WINDOW;
-    gint            width, height;
-    gint            beg_x, beg_y;
+    int             width, height;
+    int             beg_x, beg_y;
 
     if(window == NULL) window = SCREEN_WINDOW;
 
@@ -80,13 +81,13 @@ window_get_center(WINDOW *window, gint *x, gint *y)
     return;
 }
 
-gint
+int
 window_check_width(WINDOW *window)
 {
     extern WINDOW   *SCREEN_WINDOW;
-    gint            screen_width, screen_height;
-    gint            beg_x, beg_y;
-    gint            height, width;
+    int             screen_width, screen_height;
+    int             beg_x, beg_y;
+    int             height, width;
 
     if(window == NULL) return -1;
 
@@ -96,17 +97,22 @@ window_check_width(WINDOW *window)
     getmaxyx(window, height, width);
     width += beg_x;
 
+    // squelch compiler warnings
+    (void)screen_height;
+    (void)height;
+    (void)beg_y;
+
     if(width > screen_width) return width - screen_width;
     return 0;
 }
 
-gint
+int
 window_check_height(WINDOW *window)
 {
     extern WINDOW   *SCREEN_WINDOW;
-    gint            screen_width, screen_height;
-    gint            beg_x, beg_y;
-    gint            width, height;
+    int             screen_width, screen_height;
+    int             beg_x, beg_y;
+    int             width, height;
 
     if(window == NULL) return -1;
 
@@ -115,6 +121,11 @@ window_check_height(WINDOW *window)
     getbegyx(window, beg_y, beg_x);
     getmaxyx(window, height, width);
     height += beg_y;
+
+    // squelch compiler warnings
+    (void)screen_width;
+    (void)width;
+    (void)beg_x;
 
     if(height > screen_height) return height - screen_height;
     return 0;

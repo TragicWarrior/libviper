@@ -21,11 +21,12 @@
 #include <string.h>
 
 #include "viper.h"
+#include "list.h"
 
 void
-window_decorate(WINDOW *window, gchar *title, gboolean border)
+window_decorate(WINDOW *window, char *title, gboolean border)
 {
-    gint            x,y;
+    int             x,y;
     static gchar    *term = NULL;
 
     getmaxyx(window, y, x);
@@ -47,14 +48,19 @@ window_decorate(WINDOW *window, gchar *title, gboolean border)
     }
 
     touchwin(window);
+
+    // squelch compiler warnings
+    (void)y;
+
+    return;
 }
 
 void
-window_modify_border(WINDOW *window, gint attrs, gshort colors)
+window_modify_border(WINDOW *window, int attrs, gshort colors)
 {
     chtype      char_attr;
-    gint        width, height;
-    gint        x, y;
+    int         width, height;
+    int         x, y;
 
     if(window == NULL) return;
 

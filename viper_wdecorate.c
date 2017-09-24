@@ -20,6 +20,7 @@
 #include "viper.h"
 #include "viper_private.h"
 #include "viper_wdecorate.h"
+#include "list.h"
 
 void
 viper_window_modify_border(WINDOW *window, gint attrs, gshort colors)
@@ -27,7 +28,7 @@ viper_window_modify_border(WINDOW *window, gint attrs, gshort colors)
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
 
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
 
     viper_wnd = viper_get_viper_wnd(window);
 
@@ -38,12 +39,12 @@ viper_window_modify_border(WINDOW *window, gint attrs, gshort colors)
 }
 
 void
-viper_window_set_border_agent(WINDOW *window, VIPER_FUNC agent, gint id)
+viper_window_set_border_agent(WINDOW *window, VIPER_FUNC agent, int id)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
 
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
 
     if(id < 1) return;
     viper_wnd = viper_get_viper_wnd(window);
