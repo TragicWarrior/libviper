@@ -34,7 +34,7 @@ viper_get_viper_event(WINDOW *window, char *event)
     int                 len;
 
     if(window == NULL || event == NULL) return NULL;
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
     viper_wnd = viper_get_viper_wnd(window);
 
@@ -64,8 +64,7 @@ viper_event_set(WINDOW *window, char *event, VIPER_FUNC func, void *arg)
     VIPER_EVENT     *viper_event = NULL;
 
     if(window == NULL || event == NULL || func == NULL) return -1;
-
-    if(viper->wnd_count == 0) return ERR;
+    if(list_empty(&viper->wnd_list)) return ERR;
 
     // does the event already exists?
     viper_event = viper_get_viper_event(window, event);
@@ -89,12 +88,12 @@ viper_event_set(WINDOW *window, char *event, VIPER_FUNC func, void *arg)
 int
 viper_event_exec(WINDOW *window, char *event, void *anything)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    VIPER_EVENT     *viper_event;
-    GSList          *copy;
-    GSList          *node;
-    gboolean        broadcast = FALSE;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    VIPER_EVENT         *viper_event;
+    struct list_head    *pos;
+    gboolean            broadcast = FALSE;
+
 
     if(window == NULL || event == NULL) return ERR;
 
@@ -103,35 +102,31 @@ viper_event_exec(WINDOW *window, char *event, void *anything)
     if(memcmp(window, VIPER_EVENT_BROADCAST, sizeof(VIPER_EVENT_BROADCAST)) == 0)
         broadcast = TRUE;
 
-    if(viper->wnd_count == 0) return ERR;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
     if(broadcast == TRUE)
     {
-        copy = g_slist_copy(viper->wnd_list);
         /*
             when doing a broadcast, the bottom most window in the stack Z-order
             will be signaled first.  the last window will be the top window.
         */
-        copy = g_slist_reverse(copy);
 
-        node = copy;
-        while(node != NULL)
+        list_for_each_prev(pos, &viper->wnd_list)
         {
-            viper_wnd = (VIPER_WND*)node->data;
+            viper_wnd = list_entry(pos, VIPER_WND, list);
+
             viper_event = viper_get_viper_event(viper_wnd->user_window, event);
+
             if(viper_event != NULL)
             {
                 // if anything is NULL, pass the default data with the event
                 if(anything == NULL)
-                viper_event->func(viper_wnd->user_window, viper_event->arg);
-                /* otherwise, pass the override data.  */
+                    viper_event->func(viper_wnd->user_window, viper_event->arg);
+                // otherwise, pass the override data
                 else
-                viper_event->func(viper_wnd->user_window, anything);
+                    viper_event->func(viper_wnd->user_window, anything);
             }
-            node = node->next;
         }
-
-        if(copy != NULL) g_slist_free(copy);
     }
     else
     {
@@ -141,7 +136,7 @@ viper_event_exec(WINDOW *window, char *event, void *anything)
         {
             // if anything is NULL, pass the default data with the event
             if(anything == NULL)
-            viper_event->func(viper_wnd->user_window, viper_event->arg);
+                viper_event->func(viper_wnd->user_window, viper_event->arg);
             // otherwise, pass the override data
             else
                 viper_event->func(viper_wnd->user_window, anything);
@@ -163,8 +158,7 @@ viper_event_del(WINDOW *window, char *event)
     struct list_head    *tmp;
 
     if(window == NULL || event == NULL) return -1;
-
-    if(viper->wnd_count == 0) return ERR;
+    if(list_empty(&viper->wnd_list)) return ERR;
 
     viper_wnd = viper_get_viper_wnd(window);
     if(list_empty(&viper_wnd->event_list)) return ERR;

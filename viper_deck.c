@@ -26,60 +26,70 @@
 #include "viper_screen.h"
 #include "viper_states.h"
 
+#include "list.h"
+
 WINDOW*
-viper_deck_hit_test(gint x, gint y)
+viper_deck_hit_test(int x, int y)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    GSList		    *node;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd = NULL;
+    struct list_head    *pos = NULL;
 
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
-    node = viper->wnd_list;
-    while(node != NULL)
+    list_for_each(pos, &viper->wnd_list)
     {
-        viper_wnd = (VIPER_WND*)node->data;
+        viper_wnd = list_entry(pos, VIPER_WND, list);
         if(wenclose(viper_wnd->window, y, x) == TRUE) break;
-        node = node->next;
+
+        viper_wnd = NULL;
     }
 
-    if(node == NULL) return NULL;
+    if(viper_wnd == NULL) return NULL;
+
     return viper_wnd->user_window;
 }
 
 WINDOW*
-viper_window_get_top(guint32 state_mask)
+viper_window_get_top(uint32_t state_mask)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    GSList          *node;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
 
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
+
     if(state_mask == 0)
     {
-        viper_wnd = (VIPER_WND*)viper->wnd_list->data;
+        viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
+
         return viper_wnd->user_window;
     }
 
-    node = viper->wnd_list;
-    while(node != NULL)
+    list_for_each(pos, &viper->wnd_list)
     {
-        viper_wnd = (VIPER_WND*)node->data;
+        viper_wnd = list_entry(pos, VIPER_WND, list);
+
         if(viper_wnd->window_state & state_mask) break;
-        node = node->next;
+
+        viper_wnd = NULL;
     }
 
-    if(node == NULL) return NULL;
+    if(viper_wnd == NULL) return NULL;
+
     return viper_wnd->user_window;
 }
+
 
 void
 viper_window_set_top(WINDOW *window)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd = NULL;
+    VIPER_WND       *top_wnd = NULL;
 
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
+
     viper_wnd = viper_get_viper_wnd(window);
     if(viper_wnd == NULL) return;
 
@@ -87,12 +97,15 @@ viper_window_set_top(WINDOW *window)
     if(is_viper_window_allowed_focus(window) == FALSE) return;
 
     /*	is this window already on top?  if so, nothing to be done	*/
-    if(viper_wnd == viper->wnd_list->data) return;
+    top_wnd = list_entry(&viper->wnd_list, VIPER_WND, list);
+    if(viper_wnd == top_wnd) return;
+
     /*	place eminent window on top... "no questions asked"	*/
     if(viper_wnd->window_state & STATE_EMINENT)
     {
-        viper->wnd_list = g_slist_remove(viper->wnd_list, viper_wnd);
-        viper->wnd_list = g_slist_prepend(viper->wnd_list, (gpointer)viper_wnd);
+        list_del(&viper_wnd->list);
+        list_add(&viper_wnd->list, &viper->wnd_list);
+
         viper_window_focus(window);
 
         return;
@@ -101,8 +114,9 @@ viper_window_set_top(WINDOW *window)
     /* if there aren't any eminent windows in the deck, fulfill request	*/
     if(viper_window_get_top(STATE_EMINENT) == NULL)
     {
-        viper->wnd_list = g_slist_remove(viper->wnd_list, viper_wnd);
-        viper->wnd_list = g_slist_prepend(viper->wnd_list, (gpointer)viper_wnd);
+        list_del(&viper_wnd->list);
+        list_add(&viper_wnd->list, &viper->wnd_list);
+
         viper_window_focus(window);
     }
 
@@ -110,54 +124,63 @@ viper_window_set_top(WINDOW *window)
 }
 
 void
-viper_deck_cycle(gint vector)
+viper_deck_cycle(int vector)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
     VIPER_WND       *first_wnd = NULL;
-    GSList          *node = NULL;
 
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
 
     /* honor window eminency flag */
-    viper_wnd = viper->wnd_list->data;
+    viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
     if(viper_wnd->window_state & STATE_EMINENT) return;
 
-    /* check for a valid cycle vector */
-    if(vector != 0 && viper->wnd_count>1)
+    do
     {
-        do
+        if(vector > 0)
         {
-            if(vector > 0) node = viper->wnd_list;
-            if(vector < 0) node = g_slist_last(viper->wnd_list);
-            viper_wnd = (VIPER_WND*)node->data;
-            if(viper_wnd == first_wnd) break;
-            if(first_wnd == NULL) first_wnd = viper_wnd;
-
-            viper->wnd_list = g_slist_delete_link(viper->wnd_list,node);
-            if(vector > 0) viper->wnd_list=g_slist_append(viper->wnd_list,
-                (gpointer)viper_wnd);
-            if(vector < 0) viper->wnd_list=g_slist_prepend(viper->wnd_list,
-                (gpointer)viper_wnd);
+            list_rotate_left(&viper->wnd_list);
         }
-        while(is_viper_window_allowed_focus(viper_wnd->window) == FALSE);
+
+        if(vector < 0)
+        {
+            list_rotate_right(&viper->wnd_list);
+        }
+
+        // get what's on top now
+        viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
     }
+    while(is_viper_window_allowed_focus(viper_wnd->window) == FALSE);
 
     viper_window_focus(TOPMOST_WINDOW);
     return;
 }
 
-gchar**
+char**
 viper_deck_get_wndlist(void)
 {
-    extern VIPER    *viper;
-    gchar           **titles;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    char                **titles;
+    struct list_head    *pos;
+    int                 i = 0;
 
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
-    titles = (gchar**)g_malloc0(sizeof(gchar*) * 256);
+    titles = (char**)calloc(1, sizeof(char*) * 256);
 
-    viper_window_for_each(viper_enum_window_titles, (gpointer)titles, 1);
+    list_for_each(pos, &viper->wnd_list)
+    {
+        viper_wnd = list_entry(pos, VIPER_WND, list);
+
+        if(viper_wnd->title != NULL)
+        {
+            titles[i] = strdup(viper_wnd->title);
+            i++;
+        }
+    }
+
     return titles;
 }
 

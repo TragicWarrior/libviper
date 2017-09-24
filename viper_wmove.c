@@ -19,9 +19,10 @@
 
 #include "viper.h"
 #include "viper_private.h"
+#include "list.h"
 
-gint
-viper_mvwin_rel(WINDOW *window, gint vector_x, gint vector_y)
+int
+viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
@@ -30,8 +31,8 @@ viper_mvwin_rel(WINDOW *window, gint vector_x, gint vector_y)
 
     if(window == NULL) return ERR;
     if(vector_x == 0 && vector_y == 0) return 1;
+    if(list_empty(&viper->wnd_list)) return ERR;
 
-    if(viper->wnd_count == 0) return ERR;
     viper_wnd = viper_get_viper_wnd(window);
 
     if(viper_wnd != NULL)
@@ -61,8 +62,8 @@ viper_mvwin_abs(WINDOW *window, gint x, gint y)
     gint            beg_x, beg_y;
 
     if(window == NULL) return ERR;
+    if(list_empty(&viper->wnd_list)) return ERR;
 
-    if(viper->wnd_count == 0) return ERR;
     viper_wnd = viper_get_viper_wnd(window);
 
     getbegyx(viper_wnd->window, beg_y, beg_x);

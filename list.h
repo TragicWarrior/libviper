@@ -162,6 +162,66 @@ static inline int list_empty(struct list_head *head)
 	return head->next == head;
 }
 
+/**
+ * list_is_last - tests whether @list is the last entry in list @head
+ * @list: the entry to test
+ * @head: the head of the list
+ */
+static inline int list_is_last(const struct list_head *list,
+                const struct list_head *head)
+{
+    return list->next == head;
+}
+
+/**
+ * list_is_last - tests whether @list is the last entry in list @head
+ * @list: the entry to test
+ * @head: the head of the list
+ */
+static inline int list_is_first(const struct list_head *list,
+                const struct list_head *head)
+{
+    return list->prev == head;
+}
+
+/**
+ * list_is_singular - tests whether a list has just one entry.
+ * @head: the list to test.
+ */
+static inline int list_is_singular(const struct list_head *head)
+{
+    return !list_empty(head) && (head->next == head->prev);
+}
+
+/**
+ * list_rotate_left - rotate the list to the left
+ * @head: the head of the list
+ */
+static inline void list_rotate_left(struct list_head *head)
+{
+    struct list_head *first;
+
+    if (!list_empty(head)) {
+        first = head->next;
+        list_move_tail(first, head);
+    }
+}
+
+/**
+ * list_rotate_left - rotate the list to the left
+ * @head: the head of the list
+ */
+static inline void list_rotate_right(struct list_head *head)
+{
+    struct list_head *last;
+
+    if (!list_empty(head)) {
+        last = head->prev;
+        list_del(last);
+        list_add(last, head);
+    }
+}
+
 static inline void __list_splice(struct list_head *list,
 				 struct list_head *head)
 {
@@ -211,6 +271,44 @@ static inline void list_splice_init(struct list_head *list,
  */
 #define list_entry(ptr, type, member) \
 	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
+
+/**
+ * list_first_entry - get the first element from a list
+ * @ptr:    the list head to take the element from.
+ * @type:   the type of the struct this is embedded in.
+ * @member: the name of the list_head within the struct.
+ *
+ * Note, that list is expected to be not empty.
+ */
+#define list_first_entry(ptr, type, member) \
+    list_entry((ptr)->next, type, member)
+
+/**
+ * list_last_entry - get the last element from a list
+ * @ptr:    the list head to take the element from.
+ * @type:   the type of the struct this is embedded in.
+ * @member: the name of the list_head within the struct.
+ *
+ * Note, that list is expected to be not empty.
+ */
+#define list_last_entry(ptr, type, member) \
+    list_entry((ptr)->prev, type, member)
+
+/**
+ * list_next_entry - get the next element in list
+ * @pos:    the type * to cursor
+ * @member: the name of the list_head within the struct.
+ */
+#define list_next_entry(pos, member) \
+    list_entry((pos)->member.next, typeof(*(pos)), member)
+
+/**
+ * list_prev_entry - get the prev element in list
+ * @pos:    the type * to cursor
+ * @member: the name of the list_head within the struct.
+ */
+#define list_prev_entry(pos, member) \
+    list_entry((pos)->member.prev, typeof(*(pos)), member)
 
 /**
  * list_for_each	-	iterate over a list
@@ -273,6 +371,31 @@ static inline void list_splice_init(struct list_head *list,
 		n = list_entry(pos->member.next, typeof(*pos), member);	\
 	     &pos->member != (head); 					\
 	     pos = n, n = list_entry(n->member.next, typeof(*n), member))
+
+/**
+ * list_for_each_entry_from - iterate over list of given type from the current point
+ * @pos:    the type * to use as a loop cursor.
+ * @head:   the head for your list.
+ * @member: the name of the list_head within the struct.
+ *
+ * Iterate over list of given type, continuing from current position.
+ */
+#define list_for_each_entry_from(pos, head, member)             \
+    for (; &pos->member != (head);                  \
+         pos = list_next_entry(pos, member))
+
+/**
+ * list_for_each_entry_from_reverse - iterate backwards over list of given type
+ *                                    from the current point
+ * @pos:    the type * to use as a loop cursor.
+ * @head:   the head for your list.
+ * @member: the name of the list_head within the struct.
+ *
+ * Iterate backwards over list of given type, continuing from current position.
+ */
+#define list_for_each_entry_from_reverse(pos, head, member)     \
+    for (; &pos->member != (head);                  \
+         pos = list_prev_entry(pos, member))
 
 
 #endif

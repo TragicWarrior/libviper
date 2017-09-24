@@ -19,16 +19,18 @@
 
 #include "viper.h"
 #include "viper_private.h"
+#include "list.h"
 
 void
-viper_window_set_userptr(WINDOW *window, gpointer anything)
+viper_window_set_userptr(WINDOW *window, void *anything)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
 
     if(window == NULL) return;
 
-    if(viper->wnd_count == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
+
     viper_wnd = viper_get_viper_wnd(window);
 
     if(viper_wnd != NULL) viper_wnd->userptr = anything;
@@ -36,16 +38,16 @@ viper_window_set_userptr(WINDOW *window, gpointer anything)
     return;
 }
 
-gpointer
+void*
 viper_window_get_userptr(WINDOW *window)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
-    gpointer        anything = NULL;
+    void            *anything = NULL;
 
     if(window == NULL) return NULL;
 
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
     viper_wnd = viper_get_viper_wnd(window);
 

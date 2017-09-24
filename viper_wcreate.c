@@ -23,23 +23,23 @@
 #include "viper_private.h"
 #include "viper_events.h"
 #include "viper_wdecorate.h"
+#include "list.h"
 
 WINDOW*
-viper_window_create(gchar *title, gfloat x, gfloat y,
-    gfloat width, gfloat height, gboolean managed)
+viper_window_create(char *title, float x, float y,
+    float width, float height, gboolean managed)
 {
     extern VIPER    *viper;
     extern WINDOW   *SCREEN_WINDOW;
     VIPER_WND       *viper_wnd;
-    gint            screen_width, screen_height;
-    gint            tmp;
+    int             screen_width, screen_height;
+    int             tmp;
 
     /* initialize window */
     viper_wnd = (VIPER_WND*)g_malloc0(sizeof(VIPER_WND));
     viper_wnd->title = title;
     viper_wnd->window_state |= STATE_VISIBLE;
-    viper->wnd_list = g_slist_append(viper->wnd_list, (gpointer)viper_wnd);
-    viper->wnd_count++;
+    list_add(&viper_wnd->list, &viper->wnd_list); 
 
     /* fetch the dimentions of the active screen. */
     getmaxyx(SCREEN_WINDOW, screen_height, screen_width);

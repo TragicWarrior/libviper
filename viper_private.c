@@ -62,6 +62,8 @@ viper_init(guint32 init_flags)
         viper->border_agent[1] = viper_default_border_agent_focus;
         mousemask(mouse_mask, NULL);
 
+        INIT_LIST_HEAD(&viper->wnd_list);
+
         /*
             these are "normal" settings that would be commonly
             configured for use with the library.  the user can always
@@ -135,7 +137,8 @@ viper_get_window_frame(WINDOW *window)
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
 
-    if(viper->wnd_count == 0) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
+
     viper_wnd = viper_get_viper_wnd(window);
 
     if(viper_wnd == NULL) window = NULL;
@@ -147,53 +150,56 @@ viper_get_window_frame(WINDOW *window)
 inline VIPER_WND*
 viper_get_viper_wnd(WINDOW *window)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    GSList          *node;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
 
     if(window == NULL) return NULL;
-    if(viper->wnd_count == 0) return NULL;
 
-    node = viper->wnd_list;
-    while(node != NULL)
+    if(list_empty(&viper->wnd_list)) return NULL;
+
+    list_for_each(pos, &viper->wnd_list)
     {
-        viper_wnd = (VIPER_WND*)node->data;
-        if(viper_wnd->window == (gpointer)window) break;
-        if(viper_wnd->user_window == (gpointer)window) break;
-        node = node->next;
+        viper_wnd = list_entry(pos, VIPER_WND, list);
+
+        if(viper_wnd->window == (void*)window) break;
+        if(viper_wnd->user_window == (void*)window) break;
+
+        viper_wnd = NULL;
     }
 
-    if(node != NULL) return viper_wnd;
-    return (VIPER_WND*)NULL;
+    return viper_wnd;
 }
 
 
 inline void
 viper_window_for_each(VIPER_FUNC func, gpointer arg, gint vector)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    GSList          *copy = NULL;
-    GSList          *node;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
 
     if(func == NULL) return;
-    if(viper->wnd_list == 0) return;
+    if(list_empty(&viper->wnd_list)) return;
 
     if(vector == VECTOR_BOTTOM_TO_TOP)
     {
-        copy = g_slist_copy(viper->wnd_list);
-        copy = g_slist_reverse(copy);
-        node = copy;
-    }
-    else node = viper->wnd_list;
+        list_for_each_prev(pos, &viper->wnd_list)
+        {
+            viper_wnd = list_entry(pos, VIPER_WND, list);
+            func(viper_wnd->user_window, arg);
+        }
 
-    while(node != NULL)
+    }
+    else
     {
-        viper_wnd = (VIPER_WND*)node->data;
-        func(viper_wnd->user_window, arg);
-        node = node->next;
+        list_for_each(pos, &viper->wnd_list)
+        {
+            viper_wnd = list_entry(pos, VIPER_WND, list);
+            func(viper_wnd->user_window, arg);
+        }
     }
 
-    if(copy != NULL) g_slist_free(copy);
     return;
 }
+

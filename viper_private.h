@@ -14,8 +14,7 @@
 
 struct _viper_s
 {
-    GSList                  *wnd_list;
-    guint32                 wnd_count;
+    struct list_head        wnd_list;
     WINDOW                  *console_mouse;
     WINDOW                  *wallpaper;
     VIPER_FUNC              wallpaper_agent;
@@ -40,6 +39,7 @@ struct _viper_wnd_s
     WINDOW                  *window;
     WINDOW                  *user_window;
     const gchar             *title;
+    struct list_head        list;
     gint                    min_width;
     gint                    min_height;
     gint                    max_width;

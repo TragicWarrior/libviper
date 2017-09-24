@@ -21,45 +21,48 @@
 
 #include "viper.h"
 #include "viper_private.h"
+#include "list.h"
 
 WINDOW*
 viper_window_find_by_class(gpointer classid)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    GSList          *node;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
 
-    if(viper->wnd_count == 0) return NULL;
-    node = viper->wnd_list;
-    while(node != NULL)
+    if(list_empty(&viper->wnd_list)) return NULL;
+
+    list_for_each(pos, &viper->wnd_list)
     {
-        viper_wnd = (VIPER_WND*)node->data;
+        viper_wnd = list_entry(pos, VIPER_WND, list);
         if(viper_wnd->classid == classid) break;
-        node = node->next;
+
+        viper_wnd = NULL;
     }
 
-    if(node != NULL) return viper_wnd->user_window;
+    if(viper_wnd == NULL) return NULL;
 
-    return NULL;
+    return viper_wnd->user_window;
 }
 
 WINDOW*
 viper_window_find_by_title(gchar *title)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    GSList          *node;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
 
-    if(viper->wnd_count == 0) return NULL;
-    node = viper->wnd_list;
-    while(node != NULL)
+    if(list_empty(&viper_wnd->list)) return NULL;
+
+    list_for_each(pos, &viper->wnd_list)
     {
-        viper_wnd = (VIPER_WND*)node->data;
+        viper_wnd = list_entry(pos, VIPER_WND, list);
         if(strcmp(viper_wnd->title,title) == 0) break;
-        node = node->next;
+
+        viper_wnd = NULL;
     }
 
-    if(node != NULL) return viper_wnd->user_window;
+    if(viper_wnd == NULL) return NULL;
 
-    return NULL;
+    return viper_wnd->user_window;
 }

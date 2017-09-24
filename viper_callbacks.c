@@ -188,6 +188,7 @@ viper_default_border_agent_unfocus(WINDOW *window, gpointer anything)
     return 0;
 }
 
+/*
 gint
 viper_enum_window_titles(WINDOW *window, gpointer anything)
 {
@@ -203,3 +204,4 @@ viper_enum_window_titles(WINDOW *window, gpointer anything)
 
 	return 0;
 }
+*/
