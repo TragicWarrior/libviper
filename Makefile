@@ -1,6 +1,5 @@
 CFLAGS = -Wall -O2 -std=gnu99 -ggdb 
-DEFS = -D_REENTRANT  -D_GNU_SOURCE
-PKG_CFG = `pkg-config --cflags glib-2.0`
+DEFS = -D_REENTRANT
 prefix = /usr/local
 libdir = ${prefix}/lib
 includedir = ${prefix}/include
@@ -17,12 +16,12 @@ vdk.o:
 
 wide: clean
 	sh -c "echo '#ifndef _VIPER_WIDE'; echo '#define _VIPER_WIDE 1';echo '#endif';echo '#include <viper.h>'" > viper_wide.h
-	gcc $(CFLAGS) $(DEFS) -D_VIPER_WIDE -c -fpic *.c $(PKG_CFG)
+	gcc $(CFLAGS) $(DEFS) -D_VIPER_WIDE -c -fpic *.c
 	gcc $(CFLAGS) -shared -o libviper_wide.so *.o
 	strip libviper_wide.so
 
 libviper: clean
-	gcc $(CFLAGS) $(DEFS) -c -fpic *.c $(PKG_CFG)
+	gcc $(CFLAGS) $(DEFS) -c -fpic *.c
 	gcc $(CFLAGS) -shared -o libviper.so *.o
 
 clean:

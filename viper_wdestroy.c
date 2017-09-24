@@ -49,7 +49,7 @@ viper_window_destroy(WINDOW *window)
         else delwin(viper_wnd->window);
 
         list_del(&viper_wnd->list);
-        g_free(viper_wnd);
+        free(viper_wnd);
 
         // viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
         viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);

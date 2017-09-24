@@ -17,6 +17,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <stdbool.h>
 #include <math.h>
 
 #include "viper.h"
@@ -27,7 +28,7 @@
 
 WINDOW*
 viper_window_create(char *title, float x, float y,
-    float width, float height, gboolean managed)
+    float width, float height, bool managed)
 {
     extern VIPER    *viper;
     extern WINDOW   *SCREEN_WINDOW;
@@ -36,7 +37,7 @@ viper_window_create(char *title, float x, float y,
     int             tmp;
 
     /* initialize window */
-    viper_wnd = (VIPER_WND*)g_malloc0(sizeof(VIPER_WND));
+    viper_wnd = (VIPER_WND*)calloc(1, sizeof(VIPER_WND));
     viper_wnd->title = title;
     viper_wnd->window_state |= STATE_VISIBLE;
     list_add(&viper_wnd->list, &viper->wnd_list); 
@@ -117,9 +118,9 @@ viper_window_create(char *title, float x, float y,
     return viper_wnd->user_window;
 }
 
-gint
-viper_window_set_limits(WINDOW *window, gint min_width, gint min_height,
-    gint max_width, gint max_height)
+int
+viper_window_set_limits(WINDOW *window, int min_width, int min_height,
+    int max_width, int max_height)
 {
     VIPER_WND       *viper_wnd;
 

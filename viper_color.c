@@ -23,12 +23,12 @@
 void
 viper_color_init(void)
 {
-    gshort					fg,bg;
-	gint					i;
-	gint					max_colors;
-	struct color_mtx		*matrix;
-	gint					hard_pair = -1;
-	extern guint32			viper_global_flags;
+    short				fg,bg;
+	int					i;
+	int					max_colors;
+	struct color_mtx	*matrix;
+	int					hard_pair = -1;
+	extern uint32_t		viper_global_flags;
 
 	start_color();
 
@@ -53,7 +53,7 @@ viper_color_init(void)
 	}
 
 	viper_global_flags &= ~VIPER_FASTCOLOR;
-	matrix =(struct color_mtx*)g_malloc0(COLOR_PAIRS * sizeof(struct color_mtx));
+	matrix =(struct color_mtx*)calloc(1, COLOR_PAIRS * sizeof(struct color_mtx));
 	for(i = 0;i < COLOR_PAIRS;i++)
 	{
 		matrix[i].fg = i / COLORS;
@@ -79,25 +79,25 @@ viper_color_init(void)
 	}
 
 	for(i = 1;i < COLOR_PAIRS;i++) init_pair(i, matrix[i].fg, matrix[i].bg);
-	g_free(matrix);
+	free(matrix);
 
 	return;
 }
 
-inline gshort
-viper_color_pair(gshort fg, gshort bg)
+inline short
+viper_color_pair(short fg, short bg)
 {
-	gshort             color_pair;
-	gshort             fg_color,bg_color;
-	gint               i;
-	extern guint32     viper_global_flags;
+	short               color_pair;
+	short               fg_color, bg_color;
+	int                 i;
+	extern uint32_t     viper_global_flags;
 
 	if(fg == COLOR_WHITE && bg == COLOR_BLACK) return 0;
 
 	/*	use fast color indexing when possible.	*/
 	if(viper_global_flags & VIPER_FASTCOLOR)
 	{
-		color_pair = (bg*COLORS)+(COLORS-fg-1);
+		color_pair = (bg * COLORS) +(COLORS - fg -1);
 		return color_pair;
 	}
 

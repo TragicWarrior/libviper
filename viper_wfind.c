@@ -24,7 +24,7 @@
 #include "list.h"
 
 WINDOW*
-viper_window_find_by_class(gpointer classid)
+viper_window_find_by_class(void *classid)
 {
     extern VIPER        *viper;
     VIPER_WND           *viper_wnd;
@@ -46,13 +46,13 @@ viper_window_find_by_class(gpointer classid)
 }
 
 WINDOW*
-viper_window_find_by_title(gchar *title)
+viper_window_find_by_title(char *title)
 {
     extern VIPER        *viper;
     VIPER_WND           *viper_wnd;
     struct list_head    *pos;
 
-    if(list_empty(&viper_wnd->list)) return NULL;
+    if(list_empty(&viper->wnd_list)) return NULL;
 
     list_for_each(pos, &viper->wnd_list)
     {

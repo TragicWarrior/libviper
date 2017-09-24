@@ -26,8 +26,8 @@ viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
-    gint            retval = 0;
-    gint            x, y;
+    int             retval = 0;
+    int             x, y;
 
     if(window == NULL) return ERR;
     if(vector_x == 0 && vector_y == 0) return 1;
@@ -53,13 +53,13 @@ viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y)
     return retval;
 }
 
-gint
-viper_mvwin_abs(WINDOW *window, gint x, gint y)
+int
+viper_mvwin_abs(WINDOW *window, int x, int y)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
-    gint            retval = 0;
-    gint            beg_x, beg_y;
+    int             retval = 0;
+    int             beg_x, beg_y;
 
     if(window == NULL) return ERR;
     if(list_empty(&viper->wnd_list)) return ERR;

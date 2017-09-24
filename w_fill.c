@@ -17,18 +17,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
+
 #include "viper.h"
 
 #ifdef _VIPER_WIDE
 void
-window_fill(WINDOW *window, cchar_t *ch, gshort color, attr_t attr)
+window_fill(WINDOW *window, cchar_t *ch, short color, attr_t attr)
 #else
 void
-window_fill(WINDOW *window, chtype ch, gshort color, attr_t attr)
+window_fill(WINDOW *window, chtype ch, short color, attr_t attr)
 #endif
 {
-    gint    width, height;
-    gint    i = 0;
+    int     width, height;
+    int     i = 0;
 
     getmaxyx(window, height, width);
     wmove(window, 0, 0);

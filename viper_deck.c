@@ -128,7 +128,6 @@ viper_deck_cycle(int vector)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
-    VIPER_WND       *first_wnd = NULL;
 
     if(list_empty(&viper->wnd_list)) return;
 
@@ -184,11 +183,11 @@ viper_deck_get_wndlist(void)
     return titles;
 }
 
-inline gboolean
+inline bool
 viper_deck_check_occlusion(VIPER_WND *top_wnd, VIPER_WND *bottom_wnd)
 {
-    gint    bx, by, bw, bh;
-    gint    tx, ty, tw, th;
+    int     bx, by, bw, bh;
+    int     tx, ty, tw, th;
 
     getbegyx(bottom_wnd->window, by, bx);
     getmaxyx(bottom_wnd->window, bh, bw);

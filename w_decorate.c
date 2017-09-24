@@ -17,6 +17,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,10 +26,10 @@
 #include "list.h"
 
 void
-window_decorate(WINDOW *window, char *title, gboolean border)
+window_decorate(WINDOW *window, char *title, bool border)
 {
     int             x,y;
-    static gchar    *term = NULL;
+    static char     *term = NULL;
 
     getmaxyx(window, y, x);
 
@@ -56,7 +58,7 @@ window_decorate(WINDOW *window, char *title, gboolean border)
 }
 
 void
-window_modify_border(WINDOW *window, int attrs, gshort colors)
+window_modify_border(WINDOW *window, int attrs, short colors)
 {
     chtype      char_attr;
     int         width, height;

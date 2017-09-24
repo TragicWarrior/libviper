@@ -2,7 +2,7 @@
 #include "viper_private.h"
 
 void
-viper_window_set_title(WINDOW *window, const gchar *title)
+viper_window_set_title(WINDOW *window, const char *title)
 {
     VIPER_WND    *viper_wnd;
 
@@ -14,7 +14,7 @@ viper_window_set_title(WINDOW *window, const gchar *title)
     viper_wnd->title = title;
 }
 
-const gchar*
+const char*
 viper_window_get_title(WINDOW *window)
 {
     VIPER_WND   *viper_wnd;
@@ -28,7 +28,7 @@ viper_window_get_title(WINDOW *window)
 }
 
 void
-viper_window_set_class(WINDOW *window, gpointer classid)
+viper_window_set_class(WINDOW *window, void *classid)
 {
     VIPER_WND    *viper_wnd;
 

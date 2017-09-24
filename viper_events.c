@@ -18,6 +18,7 @@
  *----------------------------------------------------------------------*/
 
 #include <string.h>
+#include <stdbool.h>
 
 #include "viper.h"
 #include "viper_private.h"
@@ -74,7 +75,7 @@ viper_event_set(WINDOW *window, char *event, VIPER_FUNC func, void *arg)
         viper_wnd = viper_get_viper_wnd(window);
         viper_event = (VIPER_EVENT*)calloc(1, sizeof(VIPER_EVENT));
 
-        list_add(viper_event, &viper_wnd->event_list);
+        list_add(&viper_event->list, &viper_wnd->event_list);
     }
 
     viper_event->event = event;
@@ -92,7 +93,7 @@ viper_event_exec(WINDOW *window, char *event, void *anything)
     VIPER_WND           *viper_wnd;
     VIPER_EVENT         *viper_event;
     struct list_head    *pos;
-    gboolean            broadcast = FALSE;
+    bool                broadcast = FALSE;
 
 
     if(window == NULL || event == NULL) return ERR;
@@ -102,7 +103,7 @@ viper_event_exec(WINDOW *window, char *event, void *anything)
     if(memcmp(window, VIPER_EVENT_BROADCAST, sizeof(VIPER_EVENT_BROADCAST)) == 0)
         broadcast = TRUE;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
+    if(list_empty(&viper->wnd_list)) return ERR;
 
     if(broadcast == TRUE)
     {

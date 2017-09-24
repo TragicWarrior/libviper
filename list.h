@@ -188,7 +188,7 @@ static inline int list_is_first(const struct list_head *list,
  * list_is_singular - tests whether a list has just one entry.
  * @head: the list to test.
  */
-static inline int list_is_singular(const struct list_head *head)
+static inline int list_is_singular(struct list_head *head)
 {
     return !list_empty(head) && (head->next == head->prev);
 }
