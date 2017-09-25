@@ -58,26 +58,64 @@ strdup_printf(char *fmt, ...)
 }
 
 char**
-strdupv(char **str_array)
+strsplitv(char *string, char *delim)
+{
+    char    **array;
+    char    *pos;
+    int     i = 0;
+
+    if(string == NULL) return NULL;
+    if(delim == NULL) return NULL;
+
+    if(strlen(string) < strlen(delim)) return NULL;
+
+    pos = string;
+    do
+    {
+        pos = strstr(pos, delim);
+        i++;
+    }
+    while(pos != NULL);
+
+    array = (char**)calloc(i + 1, sizeof(char*));
+
+    i = 0;
+
+    pos = string;
+    do
+    {
+        pos = strstr(pos, delim);
+        if(pos != NULL)
+        {
+            array[i] = strdup(pos);
+            i++;
+        }
+    }
+    while(pos != NULL);
+
+    return array;
+}
+
+char**
+strdupv(char **array)
 {
     int     i = 0;
     char    **retval;
 
-    if(str_array == NULL) return NULL;
+    if(array == NULL) return NULL;
 
     // how many items are there?
-    while(str_array[i]) i++;
+    while(array[i]) i++;
 
     // alloc first dimension
     retval = (char**)calloc(i + 1, sizeof(char*));
 
     i = 0;
-    while (str_array[i])
+    while(array[i])
     {
-        retval[i] = strdup(str_array[i]);
+        retval[i] = strdup(array[i]);
         i++;
     }
-    retval[i] = NULL;
 
     return retval;
 }

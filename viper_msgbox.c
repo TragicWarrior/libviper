@@ -23,6 +23,7 @@
 #include "viper.h"
 #include "viper_msgbox.h"
 #include "viper_events.h"
+#include "strings.h"
 
 WINDOW*
 viper_msgbox_create(char *title, float x, float y,
@@ -36,7 +37,6 @@ viper_msgbox_create(char *title, float x, float y,
                     VIPER_COLORS(COLOR_RED,COLOR_BLACK),
                     VIPER_COLORS(COLOR_BLUE,COLOR_BLACK)};
 
-    char        *msg_copy;
     char        **msg_dissect = NULL;
     char        **pos;
     int         longest_line;
@@ -47,8 +47,7 @@ viper_msgbox_create(char *title, float x, float y,
     int         tmp;
 
     if(msg == NULL) return NULL;
-    msg_copy = strdup(msg);
-    // msg_dissect = g_strsplit_set(msg_copy, "\n\r", 0);
+    msg_dissect = strsplitv(msg, "\n\r");
     longest_line = calc_msgbox_metrics(msg_dissect, &min_width, &min_height);
 
     if(height < 1) height = min_height;
@@ -82,7 +81,7 @@ viper_msgbox_create(char *title, float x, float y,
     if(idx != -1)
     {
         wattron(window, icon_colors[idx] | A_REVERSE);
-        wprintw(window, "%s", icons[idx], msg_copy);
+        wprintw(window, "%s", icons[idx], msg);
         wattroff(window, icon_colors[idx] | A_REVERSE);
         wprintw(window," ");
     }
@@ -95,8 +94,7 @@ viper_msgbox_create(char *title, float x, float y,
         else wprintw(window, "%s\n", *pos);
         pos++;
     }
-    // g_strfreev(msg_dissect);
-    free(msg_copy);
+    strfreev(msg_dissect);
 
     if(prompt != NULL)
     {

@@ -24,6 +24,8 @@
 
 char*   strdup_printf(char *fmt, ...);
 
+char**  strsplitv(char *string, char *delim);
+
 char**  strdupv(char **array);
 
 void    strfreev(char **array);
