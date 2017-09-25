@@ -47,7 +47,7 @@ viper_msgbox_create(char *title, float x, float y,
     int         tmp;
 
     if(msg == NULL) return NULL;
-    msg_dissect = strsplitv(msg, "\n\r");
+    msg_dissect = strsplitv(msg, "\r\n");
     longest_line = calc_msgbox_metrics(msg_dissect, &min_width, &min_height);
 
     if(height < 1) height = min_height;

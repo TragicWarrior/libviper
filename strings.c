@@ -62,24 +62,16 @@ strsplitv(char *string, char *delim)
 {
     char    **array;
     char    *pos;
+    char    *start;
     int     i = 0;
+    int     delim_len;
 
     if(string == NULL) return NULL;
     if(delim == NULL) return NULL;
 
-    if(strlen(string) < strlen(delim)) return NULL;
+    delim_len = strlen(delim);
 
-    pos = string;
-    do
-    {
-        pos = strstr(pos, delim);
-        i++;
-    }
-    while(pos != NULL);
-
-    array = (char**)calloc(i + 1, sizeof(char*));
-
-    i = 0;
+    if(strlen(string) < delim_len) return NULL;
 
     pos = string;
     do
@@ -87,11 +79,33 @@ strsplitv(char *string, char *delim)
         pos = strstr(pos, delim);
         if(pos != NULL)
         {
-            array[i] = strdup(pos);
+            pos += delim_len;
             i++;
         }
     }
     while(pos != NULL);
+
+    array = (char**)calloc(i + 2, sizeof(char*));
+
+    i = 0;
+    start = string;
+
+    do
+    {
+        pos = strstr(start, delim);
+
+        if(pos != NULL)
+        {
+            array[i] = strndup(start, (pos - start));
+            start = pos;
+            start += delim_len;
+            i++;
+        }
+    }
+    while(pos != NULL);
+
+
+    if(array[i] == NULL) array[i] = strdup(start);
 
     return array;
 }
