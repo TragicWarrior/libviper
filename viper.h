@@ -18,7 +18,7 @@
 #include <form.h>
 #endif
 
-#define LIBVIPER_VERSION            "1.5.0"
+#define LIBVIPER_VERSION            "1.6.0"
 
 #define VECTOR_TOP_TO_BOTTOM        1
 #define VECTOR_BOTTOM_TO_TOP        -1
