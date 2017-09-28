@@ -17,37 +17,37 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
 #include <string.h>
 
 #include "viper.h"
 #include "viper_msgbox.h"
 #include "viper_events.h"
+#include "strings.h"
 
 WINDOW*
-viper_msgbox_create(gchar *title, gfloat x, gfloat y,
-    gint width, gint height, gchar *msg, gint32 flags)
+viper_msgbox_create(char *title, float x, float y,
+    int width, int height, char *msg, uint32_t flags)
 {
     WINDOW      *window;
-    gchar       *icons[]={" II "," WW "," EE "," ?? "};
+    char        *icons[]={" II "," WW "," EE "," ?? "};
     chtype      icon_colors[] = {
                     VIPER_COLORS(COLOR_WHITE,COLOR_BLACK),
                     VIPER_COLORS(COLOR_YELLOW,COLOR_BLACK),
                     VIPER_COLORS(COLOR_RED,COLOR_BLACK),
                     VIPER_COLORS(COLOR_BLUE,COLOR_BLACK)};
 
-    gchar       *msg_copy;
-    gchar       **msg_dissect;
-    gchar       **pos;
-    gint        longest_line;
-    gint        min_width;
-    gint        min_height;
-    gchar       *prompt = NULL;
-    gint        idx=-1;
-    gint        tmp;
+    char        **msg_dissect = NULL;
+    char        **pos;
+    int         longest_line;
+    int         min_width;
+    int         min_height;
+    char        *prompt = NULL;
+    int         idx = -1;
+    int         tmp;
 
     if(msg == NULL) return NULL;
-    msg_copy = g_strdup(msg);
-    msg_dissect = g_strsplit_set(msg_copy, "\n\r", 0);
+    msg_dissect = strsplitv(msg, "\r\n");
     longest_line = calc_msgbox_metrics(msg_dissect, &min_width, &min_height);
 
     if(height < 1) height = min_height;
@@ -81,7 +81,7 @@ viper_msgbox_create(gchar *title, gfloat x, gfloat y,
     if(idx != -1)
     {
         wattron(window, icon_colors[idx] | A_REVERSE);
-        wprintw(window, "%s", icons[idx], msg_copy);
+        wprintw(window, "%s", icons[idx], msg);
         wattroff(window, icon_colors[idx] | A_REVERSE);
         wprintw(window," ");
     }
@@ -94,8 +94,7 @@ viper_msgbox_create(gchar *title, gfloat x, gfloat y,
         else wprintw(window, "%s\n", *pos);
         pos++;
     }
-    g_strfreev(msg_dissect);
-    g_free(msg_copy);
+    strfreev(msg_dissect);
 
     if(prompt != NULL)
     {
@@ -113,12 +112,15 @@ viper_msgbox_create(gchar *title, gfloat x, gfloat y,
     if(flags & MSGBOX_TYPE_OK)
         viper_window_set_key_func(window, viper_kbd_default_MSGBOX_OK);
 
+    // squelch compiler warning
+    (void)longest_line;
+
     return window;
 }
 
 /*    convenience function for msgbox flag MSGBOX_FLAG_OK    */
-gint
-viper_kbd_default_MSGBOX_OK(gint32 keystroke, WINDOW *window)
+int
+viper_kbd_default_MSGBOX_OK(int32_t keystroke, WINDOW *window)
 {
     if(keystroke != KEY_CRLF) return 1;
 
@@ -127,12 +129,12 @@ viper_kbd_default_MSGBOX_OK(gint32 keystroke, WINDOW *window)
     return 1;
 }
 
-gint
-calc_msgbox_metrics(gchar **msg_array, gint *width, gint *height)
+int
+calc_msgbox_metrics(char **msg_array, int *width, int *height)
 {
-    gint    line_width = 0;
-    gint    line_count = 0;
-    gint    idx = 0;
+    int     line_width = 0;
+    int     line_count = 0;
+    int     idx = 0;
 
     *height = 0;
     *width = 0;

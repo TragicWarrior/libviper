@@ -17,18 +17,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
+
 #include "viper.h"
 #include "viper_private.h"
 #include "viper_wdecorate.h"
 
-gint
-viper_wresize(WINDOW *window, gint width, gint height, gint8 flags)
+int
+viper_wresize(WINDOW *window, int width, int height, uint8_t flags)
 {
     extern WINDOW   *SCREEN_WINDOW;
     VIPER_WND       *viper_wnd;
     WINDOW          *copy_pad;
-    gint            beg_x, beg_y;
-    gint            max_x, max_y;
+    int             beg_x, beg_y;
+    int             max_x, max_y;
 
     /* saftey checks. */
     if(window == NULL) return ERR;
@@ -89,12 +91,12 @@ viper_wresize(WINDOW *window, gint width, gint height, gint8 flags)
     a macro for viper_wresize()
 */
 
-gint
-viper_wresize_rel(WINDOW *window, gint vector_x, gint vector_y)
+int
+viper_wresize_rel(WINDOW *window, int vector_x, int vector_y)
 {
     VIPER_WND       *viper_wnd;
-    gint            width, height;
-    gint            max_x, max_y;
+    int             width, height;
+    int             max_x, max_y;
 
     if(window == NULL) return ERR;
     if(vector_x == 0 && vector_y == 0) return 0;

@@ -17,18 +17,21 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
+#include <stdbool.h>
+
 #include "viper.h"
 
-gint
-viper_form_driver(FORM *form, gint request, guint32 flags,
-    chtype active, chtype normal, gshort cursor_color)
+int
+viper_form_driver(FORM *form, int request, uint32_t flags,
+    chtype active, chtype normal, short cursor_color)
 {
     WINDOW  *window;
     chtype  eraser;
     chtype  temp_ch;
-    gint    x, y;
-    gint    retval;
-    gshort  fg, bg;
+    int     x, y;
+    int     retval;
+    short   fg, bg;
 
     if(form == NULL) return ERR;
 
@@ -99,13 +102,13 @@ viper_form_colorize(FORM *form, chtype field_active, chtype field_normal,
 }
 
 void
-viper_form_destroy(FORM *form, gboolean free_windows)
+viper_form_destroy(FORM *form, bool free_windows)
 {
     WINDOW  *parent;
 	WINDOW	*window;
 	WINDOW	*subwin;
 	FIELD	**fields;
-	gint	count;
+    int	    count;
 
 	unpost_form(form);
 
@@ -119,10 +122,10 @@ viper_form_destroy(FORM *form, gboolean free_windows)
 
 	while(count > 0)
 	{
-		free_field(fields[count-1]);
+		free_field(fields[count - 1]);
 		count--;
 	}
-	g_free(fields);
+	free(fields);
 
     if(free_windows == FALSE) return;
 

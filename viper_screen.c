@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "viper.h"
 #include "viper_private.h"
@@ -36,7 +37,7 @@ viper_screen_get_wallpaper(void)
 }
 
 void
-viper_screen_set_wallpaper(WINDOW *wallpaper, VIPER_FUNC agent, gpointer arg)
+viper_screen_set_wallpaper(WINDOW *wallpaper, VIPER_FUNC agent, void *arg)
 {
     extern VIPER   *viper;
 
@@ -60,11 +61,11 @@ viper_screen_reset(void)
 }
 
 inline void
-viper_screen_redraw(gint32 update_mask)
+viper_screen_redraw(uint32_t update_mask)
 {
     extern WINDOW   *SCREEN_WINDOW;
     extern VIPER    *viper;
-    guint32         state_mask = 0;
+    uint32_t        state_mask = 0;
 
     /*
         redrawing the background window is a fairly simple operation.  the
@@ -94,7 +95,7 @@ viper_screen_redraw(gint32 update_mask)
     if(state_mask != 0)
     {
         viper_window_for_each(viper_callback_blit_window,
-            (gpointer)&state_mask,VECTOR_BOTTOM_TO_TOP);
+            (void*)&state_mask,VECTOR_BOTTOM_TO_TOP);
     }
 
     // draw the mouse on top

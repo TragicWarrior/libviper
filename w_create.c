@@ -17,16 +17,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+
 #include "viper.h"
 
 WINDOW*
-window_create(WINDOW *parent, gint x, gint y, gint width, gint height)
+window_create(WINDOW *parent, int x, int y, int width, int height)
 {
     extern WINDOW   *SCREEN_WINDOW;
     WINDOW          *window = NULL;
-    static gint     stagger_x = 3;
-    static gint     stagger_y = 3;
-    gint            max_x, max_y;
+    static int      stagger_x = 3;
+    static int      stagger_y = 3;
+    int             max_x, max_y;
 
     if(x == WPOS_STAGGERED || y == WPOS_STAGGERED)
     {

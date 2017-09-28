@@ -22,12 +22,12 @@
 #include "viper_callbacks.h"
 #include "viper_states.h"
 
-gint
-viper_callback_change_focus(WINDOW *window, gpointer arg)
+int
+viper_callback_change_focus(WINDOW *window, void *arg)
 {
 	VIPER_WND	   *viper_wnd;
 
-	viper_wnd=viper_get_viper_wnd(window);
+	viper_wnd = viper_get_viper_wnd(window);
 
 	if(is_viper_window_allowed_focus(window) == FALSE) return 0;
 
@@ -50,8 +50,8 @@ viper_callback_change_focus(WINDOW *window, gpointer arg)
 	return 0;
 }
 
-gint
-viper_callback_change_eminency(WINDOW *window, gpointer arg)
+int
+viper_callback_change_eminency(WINDOW *window, void *arg)
 {
 	VIPER_WND   	*viper_wnd;
 
@@ -63,8 +63,8 @@ viper_callback_change_eminency(WINDOW *window, gpointer arg)
 	return 0;
 }
 
-gint
-viper_callback_touchwin(WINDOW *window, gpointer arg)
+int
+viper_callback_touchwin(WINDOW *window, void *arg)
 {
 	VIPER_WND	*viper_wnd;
 
@@ -81,21 +81,21 @@ viper_callback_touchwin(WINDOW *window, gpointer arg)
 	return 0;
 }
 
-inline gint
-viper_callback_blit_window(WINDOW *window,gpointer arg)
+inline int
+viper_callback_blit_window(WINDOW *window, void *arg)
 {
     extern WINDOW   *SCREEN_WINDOW;
 	VIPER_WND	    *viper_wnd;
 	WINDOW		    *shadow_window;
-    guint32         state_mask = 0;
-    gint            idx = 0;
+    uint32_t        state_mask = 0;
+    int             idx = 0;
 
 	if(window == NULL) return ERR;
 	viper_wnd = viper_get_viper_wnd(window);
 	if(viper_wnd == NULL) return ERR;
 
 	if(!(viper_wnd->window_state & STATE_VISIBLE)) return 0;
-	if(arg != NULL) state_mask = *(guint32*)arg;
+	if(arg != NULL) state_mask = *(uint32_t*)arg;
 	else state_mask = ~0;
 
 	if(viper_wnd->window_state & state_mask)
@@ -107,7 +107,7 @@ viper_callback_blit_window(WINDOW *window,gpointer arg)
             if(viper_wnd->border_agent[idx] != NULL)
             {
                 viper_wnd->border_agent[idx](viper_wnd->window,
-                    (gpointer)viper_wnd);
+                    (void*)viper_wnd);
             }
         }
 
@@ -126,18 +126,18 @@ viper_callback_blit_window(WINDOW *window,gpointer arg)
 }
 
 void
-viper_callback_del_event(gpointer data, gpointer anything)
+viper_callback_del_event(void *data, void *anything)
 {
-	g_free(data);
+	free(data);
 	return;
 }
 
-gint
-viper_default_wallpaper_agent(WINDOW *window, gpointer arg)
+int
+viper_default_wallpaper_agent(WINDOW *window, void *arg)
 {
     extern WINDOW   *SCREEN_WINDOW;
     WINDOW          *screen_window;
-	gint			width,height;
+    int			    width, height;
 #ifdef _VIPER_WIDE
 	static cchar_t	bg_char;
 	wchar_t			wch[] = {0x0020, 0x0000};
@@ -160,28 +160,28 @@ viper_default_wallpaper_agent(WINDOW *window, gpointer arg)
 	return 0;
 }
 
-gint
-viper_default_border_agent_focus(WINDOW *window, gpointer anything)
+int
+viper_default_border_agent_focus(WINDOW *window, void *anything)
 {
     VIPER_WND   *viper_wnd;
 
     viper_wnd = (VIPER_WND*)anything;
 
-    window_decorate(window, (gchar*)viper_wnd->title, TRUE);
+    window_decorate(window, (char*)viper_wnd->title, TRUE);
     window_modify_border(viper_wnd->window, A_NORMAL,
       viper_color_pair(COLOR_MAGENTA, COLOR_WHITE));
 
     return 0;
 }
 
-gint
-viper_default_border_agent_unfocus(WINDOW *window, gpointer anything)
+int
+viper_default_border_agent_unfocus(WINDOW *window, void *anything)
 {
     VIPER_WND   *viper_wnd;
 
     viper_wnd = (VIPER_WND*)anything;
 
-    window_decorate(window,(gchar*)viper_wnd->title,TRUE);
+    window_decorate(window,(char*)viper_wnd->title,TRUE);
     window_modify_border(viper_wnd->window,A_BOLD,
         viper_color_pair(COLOR_BLACK,COLOR_WHITE));
 

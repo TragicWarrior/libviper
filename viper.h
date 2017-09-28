@@ -1,10 +1,11 @@
 #ifndef _VIPER_H
 #define _VIPER_H
 
-#include <glib.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <stdbool.h>
+
 #include <sys/types.h>
 
 #ifdef _VIPER_WIDE
@@ -107,10 +108,10 @@
 #define VIPER_GPM_SIGIO             (1 << 2)
 
 /* callback definitions */
-typedef gint (*VIPER_FUNC)(WINDOW *window, gpointer arg);
-typedef gint (*VIPER_KEY_FUNC)(gint32 keystroke, gpointer anything);
-typedef gint (*VIPER_WKEY_FUNC)(gint32 keystroke, WINDOW *window);
-typedef gint32 (*VIPER_KMIO_HOOK)(gint32 keystroke);
+typedef int     (*VIPER_FUNC)(WINDOW *window, void *arg);
+typedef int     (*VIPER_KEY_FUNC)(int32_t keystroke, void *anything);
+typedef int     (*VIPER_WKEY_FUNC)(int32_t keystroke, WINDOW *window);
+typedef int32_t (*VIPER_KMIO_HOOK)(int32_t keystroke);
 
 typedef struct _viper_s             VIPER;
 typedef struct _viper_wnd_s         VIPER_WND;
@@ -119,31 +120,31 @@ typedef struct _viper_event_s       viper_event_t;
 
 
 /* basic window routines    */
-WINDOW*             window_create(WINDOW *parent, gint x, gint y,
-                        gint width, gint height);
-void                window_decorate(WINDOW *wnd, gchar *title, gboolean border);
+WINDOW*             window_create(WINDOW *parent, int x, int y,
+                        int width, int height);
+void                window_decorate(WINDOW *wnd, char *title, bool border);
 void                window_modify_border(WINDOW *window,
-                        gint attrs, gshort colors);
+                        int attrs, short colors);
 WINDOW*             window_create_shadow(WINDOW *window, WINDOW *window_below);
 
 #ifdef _VIPER_WIDE
 void                window_fill(WINDOW *window, cchar_t *ch,
-                        gshort color, attr_t attr);
+                        short color, attr_t attr);
 #else
 void                window_fill(WINDOW *window, chtype ch,
-                        gshort color, attr_t attr);
+                        short color, attr_t attr);
 #endif
 
 void                window_write_to_eol(WINDOW *window,
-                        gint x, gint y, chtype ch);
-void                window_get_center(WINDOW *window, gint *x, gint *y);
-gint                window_check_width(WINDOW *window);
-gint                window_check_height(WINDOW *window);
+                        int x, int y, chtype ch);
+void                window_get_center(WINDOW *window, int *x, int *y);
+int                 window_check_width(WINDOW *window);
+int                 window_check_height(WINDOW *window);
 void                window_get_size_scaled(WINDOW *refrence,
-                        gint *width, gint *height,
-                        gfloat hscale, gfloat vscale);
-gint                window_move_rel(WINDOW *window,
-                        gint vector_x, gint vector_y);
+                        int *width, int *height,
+                        float hscale, float vscale);
+int                 window_move_rel(WINDOW *window,
+                        int vector_x, int vector_y);
 void                subwin_move_realign(WINDOW *subwin);
 
 /*
@@ -165,65 +166,67 @@ int             is_cursor_at(WINDOW *window, uint16_t mask);
 #define         is_curs_at_lower_right(x)   is_cursor_at(x, CURS_LOWER_RIGHT)
 
 /* initialization facilities  */
-VIPER*          viper_init(guint32 flags);
+VIPER*          viper_init(uint32_t flags);
 void            viper_end(void);
-void            viper_set_border_agent(VIPER_FUNC agent, gint id);
+void            viper_set_border_agent(VIPER_FUNC agent, int id);
 
 /* viper screen facilities */
 WINDOW*         viper_screen_get_wallpaper();
 void            viper_screen_set_wallpaper(WINDOW *wallpaper,
-                    VIPER_FUNC agent,gpointer arg);
-void            viper_screen_redraw(gint32 update_mask);
+                    VIPER_FUNC agent, void *arg);
+void            viper_screen_redraw(uint32_t update_mask);
 
 /* viper color facilities  */
-gshort          viper_color_pair(gshort fg,gshort bg);
+short           viper_color_pair(short fg, short bg);
 #define         VIPER_COLORS(fg,bg)    (COLOR_PAIR(viper_color_pair(fg, bg)))
 
 /* window construction and destruction */
-WINDOW*         viper_window_create(gchar *title, gfloat x, gfloat y,
-                    gfloat width, gfloat height, gboolean managed);
-void            viper_window_set_class(WINDOW *window, gpointer classid);
-void            viper_window_set_title(WINDOW *window, const gchar *title);
-const gchar*    viper_window_get_title(WINDOW *window);
-gint            viper_window_set_limits(WINDOW *window,
-                    gint min_width, gint min_height,
-                    gint max_width, gint max_height);
+WINDOW*         viper_window_create(char *title, float x, float y,
+                    float width, float height, bool managed);
+void            viper_window_set_class(WINDOW *window, void *classid);
+void            viper_window_set_title(WINDOW *window, const char *title);
+const char*     viper_window_get_title(WINDOW *window);
+int             viper_window_set_limits(WINDOW *window,
+                    int min_width, int min_height,
+                    int max_width, int max_height);
 void            viper_window_modify_border(WINDOW *window,
-                    gint attrs, gshort colors);
+                    int attrs, short colors);
 #define         viper_window_close(window) \
                     (viper_event_run(window, "window-close"))
-gint            viper_window_destroy(WINDOW *window);
+int             viper_window_destroy(WINDOW *window);
 
 /* special construction:  a message dialog box  */
-WINDOW*         viper_msgbox_create(gchar *title, gfloat x, gfloat y,
-                    gint width, gint height, gchar *msg, gint32 flags);
+WINDOW*         viper_msgbox_create(char *title, float x, float y,
+                    int width, int height, char *msg, uint32_t flags);
 
 /* special construction:  a file/directory load/save dialog box   */
-WINDOW*         viper_filedlg_create(WINDOW *parent, gchar *title,
-                    gfloat x, gfloat y, gfloat width, gfloat height,
-                    gchar *dir, gint32 flags);
+/*
+WINDOW*         viper_filedlg_create(WINDOW *parent, char *title,
+                    float x, float y, float width, float height,
+                    char *dir, uint32_t flags);
+*/
 
 /* window placement */
-WINDOW*         viper_window_get_top(guint32 state_mask);
+WINDOW*         viper_window_get_top(uint32_t state_mask);
 void            viper_window_set_top(WINDOW *window);
-gint            viper_mvwin_rel(WINDOW *window, gint vector_x, gint vector_y);
-gint            viper_mvwin_abs(WINDOW *window, gint x, gint y);
-gint            viper_wresize(WINDOW *window,
-                    gint width, gint height, gint8 flags);
+int             viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y);
+int             viper_mvwin_abs(WINDOW *window, int x, int y);
+int             viper_wresize(WINDOW *window,
+                    int width, int height, uint8_t flags);
 #define         viper_wresize_abs(window, width, height) \
                     (viper_wresize(window, width, height, 0))
-gint            viper_wresize_rel(WINDOW *window, gint vector_x, gint vector_y);
+int             viper_wresize_rel(WINDOW *window, int vector_x, int vector_y);
 #define         TOPMOST_WINDOW (viper_window_get_top(STATE_VISIBLE))
 
 /* window search facilities */
-WINDOW*         viper_window_find_by_class(gpointer classid);
-WINDOW*         viper_window_find_by_title(gchar *title);
+WINDOW*         viper_window_find_by_class(void *classid);
+WINDOW*         viper_window_find_by_title(char *title);
 
 /* window display and state modification */
-void            viper_window_set_state(WINDOW *window, guint32 state);
-guint32         viper_window_get_state(WINDOW *window);
+void            viper_window_set_state(WINDOW *window, uint32_t state);
+uint32_t        viper_window_get_state(WINDOW *window);
 void            viper_window_set_border_agent(WINDOW *window,
-                    VIPER_FUNC agent, gint id);
+                    VIPER_FUNC agent, int id);
 void            viper_window_show(WINDOW *window);
 void            viper_window_touch(WINDOW *window);
 void            viper_window_redraw(WINDOW *window);
@@ -235,9 +238,9 @@ void            viper_window_redraw(WINDOW *window);
                     (viper_window_set_state(window, STATE_UNSET | STATE_VISIBLE))
 
 /* kmio faclilities (keyboard & mouse i/o)   */
-gint32          viper_kmio_fetch(MEVENT *mouse_event);
-void            viper_kmio_dispatch(gint32 keystroke, MEVENT *mouse_event);
-void            viper_kmio_dispatch_set_hook(gint sequence, VIPER_KMIO_HOOK hook);
+int32_t         viper_kmio_fetch(MEVENT *mouse_event);
+void            viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event);
+void            viper_kmio_dispatch_set_hook(int sequence, VIPER_KMIO_HOOK hook);
 void            viper_window_set_key_func(WINDOW *window, VIPER_WKEY_FUNC func);
 
 /* event handling */
@@ -250,20 +253,20 @@ int             viper_event_exec(WINDOW *window, char *event, void *anything);
 #define         VIPER_EVENT_BROADCAST           ((WINDOW*)"ALL_VIPER_WINDOWS")
 #define         VIPER_EVENT_WINDOW_DESIST       (viper_window_destroy(window))
 #define         VIPER_EVENT_WINDOW_PERSIST      0
-void            viper_window_for_each(VIPER_FUNC func, gpointer arg, gint vector);
+void            viper_window_for_each(VIPER_FUNC func, void *arg, int vector);
 
 /* viper window deck functions */
-void            viper_deck_cycle(gint vector);
-WINDOW*         viper_deck_hit_test(gint x, gint y);
-gchar**         viper_deck_get_wndlist(void);
+void            viper_deck_cycle(int vector);
+WINDOW*         viper_deck_hit_test(int x, int y);
+char**          viper_deck_get_wndlist(void);
 
 /* menu helpers */
-MENU*           viper_menu_create(gchar **items);
-void            viper_menu_items_add(MENU *menu, gchar **items);
-void            viper_menu_items_change(MENU *menu, gchar **items);
-WINDOW*         viper_menu_bind(MENU *menu, WINDOW *parent, gfloat x, gfloat y,
-                    gfloat width, gfloat height);
-void            viper_menu_destroy(MENU *menu, gboolean free_windows);
+MENU*           viper_menu_create(char **items);
+void            viper_menu_items_add(MENU *menu, char **items);
+void            viper_menu_items_change(MENU *menu, char **items);
+WINDOW*         viper_menu_bind(MENU *menu, WINDOW *parent, float x, float y,
+                    float width, float height);
+void            viper_menu_destroy(MENU *menu, bool free_windows);
 #define         CURRENT_MENU_ITEM(menu)    (item_index(current_item(menu)))
 
 /* form helpers */
@@ -271,20 +274,20 @@ void            viper_form_colorize(FORM *form, chtype field_active,
                     chtype field_normal, chtype text_active, chtype text_normal);
 #define         viper_form_normalize(form, fcolors, tcolors)   \
                     (viper_form_colorize(form, fcolors, fcolors, tcolors, tcolors))
-void            viper_form_destroy(FORM *form, gboolean free_windows);
-gint            viper_form_driver(FORM *form, gint request, guint32 flags,
-                    chtype active, chtype normal, gshort cursor_color);
+void            viper_form_destroy(FORM *form, bool free_windows);
+int             viper_form_driver(FORM *form, int request, uint32_t flags,
+                    chtype active, chtype normal, short cursor_color);
 #define         CURRENT_FORM_ITEM(form)    (field_index(current_field(form)))
 
 /* miscellaneous functions */
-void            viper_window_set_userptr(WINDOW *window, gpointer anything);
-gpointer        viper_window_get_userptr(WINDOW *window);
+void            viper_window_set_userptr(WINDOW *window, void *anything);
+void*           viper_window_get_userptr(WINDOW *window);
 #define         WINDOW_FRAME(window)          (viper_get_window_frame(window))
 
 
 /* INTERNAL USE ONLY:  core */
 VIPER_WND*      viper_get_viper_wnd(WINDOW *window);
-VIPER_EVENT*    viper_get_viper_event(WINDOW *window, gchar *event);
+VIPER_EVENT*    viper_get_viper_event(WINDOW *window, char *event);
 WINDOW*         viper_get_window_frame(WINDOW *window);
 
 #endif

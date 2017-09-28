@@ -17,6 +17,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
+
 #include "viper.h"
 
 WINDOW*
@@ -24,14 +26,14 @@ window_create_shadow(WINDOW *window, WINDOW *window_below)
 {
     extern WINDOW   *SCREEN_WINDOW;
     WINDOW          *shadow_window;
-    gint            width, height;
-    gint            beg_x, beg_y;
-    gint            x, y;
+    int             width, height;
+    int             beg_x, beg_y;
+     int            x, y;
 #ifdef _VIPER_WIDE
     cchar_t         wcval;
     wchar_t         wch;
     attr_t          attrs;
-    short           color_pair;
+    int8_t          color_pair;
 #else
     chtype          char_attr;
 #endif

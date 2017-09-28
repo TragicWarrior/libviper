@@ -17,11 +17,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <inttypes.h>
+
 #include "viper.h"
 
-gint window_move_rel(WINDOW *window, gint vector_x, gint vector_y)
+int
+window_move_rel(WINDOW *window, int vector_x, int vector_y)
 {
-    gint    curr_x, curr_y;
+    int     curr_x, curr_y;
 
     if(window == NULL) return ERR;
 
@@ -55,7 +58,7 @@ void
 subwin_move_realign(WINDOW *subwin)
 {
     WINDOW  *target;
-    gint    x = 0, y = 0;
+    int     x = 0, y = 0;
 
     /* make sure this is a subwin */
     if(subwin->_parent == NULL) return;

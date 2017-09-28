@@ -17,6 +17,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <stdbool.h>
+#include <inttypes.h>
+
 #include "viper.h"
 #include "viper_private.h"
 #include "viper_callbacks.h"
@@ -68,14 +71,14 @@ viper_window_set_state(WINDOW *window, uint32_t state)
     */
     if(state & STATE_FOCUS)
     {
-        viper_window_for_each(viper_callback_change_focus, (gpointer)window,
+        viper_window_for_each(viper_callback_change_focus, (void*)window,
             VECTOR_TOP_TO_BOTTOM);
         viper_screen_redraw(REDRAW_ALL);
     }
 
     if(state & STATE_EMINENT)
     {
-        viper_window_for_each(viper_callback_change_eminency, (gpointer)window,
+        viper_window_for_each(viper_callback_change_eminency, (void*)window,
             VECTOR_TOP_TO_BOTTOM);
         viper_window_set_top(window);
         viper_window_redraw(window);
@@ -86,7 +89,7 @@ viper_window_set_state(WINDOW *window, uint32_t state)
     return;
 }
 
-guint32
+uint32_t
 viper_window_get_state(WINDOW *window)
 {
     extern VIPER    *viper;
@@ -183,7 +186,7 @@ viper_window_redraw(WINDOW *window)
     return;
 }
 
-gboolean
+bool
 is_viper_window_allowed_focus(WINDOW *window)
 {
     extern VIPER    *viper;

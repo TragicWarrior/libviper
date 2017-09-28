@@ -132,11 +132,11 @@ window_check_height(WINDOW *window)
 }
 
 void
-window_get_size_scaled(WINDOW *refrence, gint *width, gint *height,
-    gfloat hscale, gfloat vscale)
+window_get_size_scaled(WINDOW *refrence, int *width, int *height,
+    float hscale, float vscale)
 {
     extern WINDOW   *SCREEN_WINDOW;
-    gint            max_width, max_height;
+    int             max_width, max_height;
 
     if(refrence == NULL) refrence = SCREEN_WINDOW;
 

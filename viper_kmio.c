@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "viper.h"
 #include "viper_private.h"
@@ -11,7 +12,7 @@
 #if !defined(_NO_GPM) && defined(__linux)
 
 #define  X_GPM(a,b,c,d)    a,
-guint x_gpm_mode[]={
+uint16_t x_gpm_mode[]={
 #include "viper_gpm.def"
 };
 #undef   X_GPM
@@ -38,12 +39,12 @@ unsigned short x_gpm_event[]={
 
 static void viper_kmio_show_mouse(MEVENT *mouse_event);
 
-gint32
+int32_t
 viper_kmio_fetch(MEVENT *mouse_event)
 {
-    gint32          keystroke = -1;
-    gint32          key_code = 0;
-    guint           shift_op = 4;
+    int32_t         keystroke = -1;
+    int32_t         key_code = 0;
+    uint8_t         shift_op = 4;
 
 #if !defined(_NO_GPM) && defined(__linux)
     viper_kmio_gpm(mouse_event, 0);
@@ -75,16 +76,16 @@ viper_kmio_fetch(MEVENT *mouse_event)
 
 
 void
-viper_kmio_dispatch(gint32 keystroke, MEVENT *mouse_event)
+viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 {
     extern VIPER            *viper;
     static WINDOW           *event_window = NULL;
     static MEVENT           previous_mouse_event;
     static VIPER_WKEY_FUNC  func;
-    static gint             event_mode = 0;
+    static int              event_mode = 0;
     VIPER_KMIO_HOOK         kmio_dispatch_hook;
-    gint                    beg_x,beg_y;
-    gint                    max_x,max_y;
+    int                     beg_x,beg_y;
+    int                     max_x,max_y;
     MEVENT                  *new_mouse = NULL;     /* strictly for      */
     MEVENT                  *old_mouse = NULL;     /* for readability   */
 #if !defined(_NO_GPM) && defined(__linux)
@@ -217,7 +218,7 @@ viper_kmio_dispatch(gint32 keystroke, MEVENT *mouse_event)
     if(keystroke != KEY_RESIZE && keystroke != -1)
     {
         func = viper_window_get_key_func(TOPMOST_WINDOW);
-        if(func != NULL) func(keystroke, (gpointer)TOPMOST_WINDOW);
+        if(func != NULL) func(keystroke, (void*)TOPMOST_WINDOW);
     }
 
 #if !defined(_NO_GPM) && defined(__linux)
@@ -230,7 +231,7 @@ viper_kmio_dispatch(gint32 keystroke, MEVENT *mouse_event)
 }
 
 void
-viper_kmio_dispatch_set_hook(gint sequence, VIPER_KMIO_HOOK hook)
+viper_kmio_dispatch_set_hook(int sequence, VIPER_KMIO_HOOK hook)
 {
     extern VIPER    *viper;
 
@@ -250,7 +251,7 @@ viper_kmio_show_mouse(MEVENT *mouse_event)
     extern WINDOW    *SCREEN_WINDOW;
     WINDOW           *screen_window;
     static chtype    color;
-    gshort           fg, bg;
+    short            fg, bg;
 
     screen_window = SCREEN_WINDOW;
 
@@ -282,19 +283,19 @@ viper_kmio_show_mouse(MEVENT *mouse_event)
 }
 
 #if !defined(_NO_GPM) && defined(__linux)
-gint
-viper_kmio_gpm(MEVENT *mouse_event, guint cmd)
+int
+viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 {
-    extern guint32      viper_global_flags;
+    extern uint32_t     viper_global_flags;
     extern int          gpm_tried;
     extern int          gpm_fd;
     struct pollfd       mio_poll;
-    struct timespec     sleep_time = {.tv_sec = 0,.tv_nsec = 5000};
+    struct timespec     sleep_time = {.tv_sec = 0, .tv_nsec = 5000};
     static int          mio_fd = -1;
     Gpm_Connect         gpm_connect;
     Gpm_Event           g_event;
-    gint                array_sz;
-    gint                i;
+    int                 array_sz;
+    int                 i;
 	int					fflags;
 
     if(cmd == CMD_GPM_CLOSE)

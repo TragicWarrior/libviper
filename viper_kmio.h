@@ -1,7 +1,7 @@
 #ifndef _VIPER_KMIO_H_
 #define _VIPER_KMIO_H_
 
-#include <glib.h>
+#include <inttypes.h>
 
 #ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
@@ -22,7 +22,7 @@ enum
 
 #if !defined(_NO_GPM) && defined(__linux)
 
-gint    viper_kmio_gpm(MEVENT *mouse_event, guint cmd);
+int    viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd);
 
 #define CMD_GPM_CLOSE       (1<<1)
 

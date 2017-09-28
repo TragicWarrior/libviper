@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "viper.h"
 #include "viper_color.h"
@@ -29,17 +30,17 @@
 
 WINDOW      *SCREEN_WINDOW = NULL;
 VIPER       *viper = NULL;
-guint32     viper_global_flags;
+uint32_t    viper_global_flags;
 
 VIPER*
-viper_init(guint32 init_flags)
+viper_init(uint32_t init_flags)
 {
     extern VIPER                *viper;
     extern WINDOW               *SCREEN_WINDOW;
-    gint                        width,height;
-    gchar                       *env;
+    int                         width, height;
+    char                        *env;
     mmask_t                     mouse_mask = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
-    extern guint32              viper_global_flags;
+    extern uint32_t             viper_global_flags;
     struct termios              term_desc;
 
     if(viper == NULL)
@@ -49,10 +50,10 @@ viper_init(guint32 init_flags)
         SCREEN_WINDOW = initscr();
 
         viper_global_flags |= init_flags;
-        viper = (VIPER*)g_malloc0(sizeof(VIPER));
+        viper = (VIPER*)calloc(1, sizeof(VIPER));
         viper_color_init();
         env = getenv("TERM");
-        if(g_strrstr(env,"xterm") != NULL) viper->xterm=TRUE;
+        if(strstr(env, "xterm") != NULL) viper->xterm=TRUE;
         viper->user = getuid();
         getmaxyx(SCREEN_WINDOW, height, width);
         viper->wallpaper = newwin(height, width, 0, 0);
@@ -102,7 +103,7 @@ viper_end(void)
 
     if(viper != NULL)
     {
-        g_free(viper);
+        free(viper);
         viper = NULL;
     }
 
@@ -120,7 +121,7 @@ viper_end(void)
 
 
 void
-viper_set_border_agent(VIPER_FUNC agent, gint id)
+viper_set_border_agent(VIPER_FUNC agent, int id)
 {
     extern VIPER    *viper;
 
@@ -173,7 +174,7 @@ viper_get_viper_wnd(WINDOW *window)
 
 
 inline void
-viper_window_for_each(VIPER_FUNC func, gpointer arg, gint vector)
+viper_window_for_each(VIPER_FUNC func, void *arg, int vector)
 {
     extern VIPER        *viper;
     VIPER_WND           *viper_wnd;

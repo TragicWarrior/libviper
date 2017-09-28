@@ -1,7 +1,7 @@
 #ifndef _VIPER_PRIVATE_H_
 #define _VIPER_PRIVATE_H_
 
-#include <glib.h>
+#include <inttypes.h>
 
 #ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
@@ -18,10 +18,10 @@ struct _viper_s
     WINDOW                  *console_mouse;
     WINDOW                  *wallpaper;
     VIPER_FUNC              wallpaper_agent;
-    gpointer                wallpaper_arg;
+    void                    *wallpaper_arg;
     VIPER_FUNC              border_agent[2];
     VIPER_KMIO_HOOK         kmio_dispatch_hook[2];
-    gint8                   xterm;
+    int8_t                  xterm;
     uid_t                   user;
     WINDOW                  *redraw_catalyst;
 };
@@ -38,18 +38,18 @@ struct _viper_wnd_s
 {
     WINDOW                  *window;
     WINDOW                  *user_window;
-    const gchar             *title;
+    const char              *title;
     struct list_head        list;
-    gint                    min_width;
-    gint                    min_height;
-    gint                    max_width;
-    gint                    max_height;
-    guint32                 window_state;
+    int                     min_width;
+    int                     min_height;
+    int                     max_width;
+    int                     max_height;
+    uint32_t                window_state;
     struct list_head        event_list;
     VIPER_WKEY_FUNC         key_func;
     VIPER_FUNC              border_agent[2];
-    gpointer                userptr;
-    gpointer                classid;
+    void                    *userptr;
+    void                    *classid;
 };
 
 

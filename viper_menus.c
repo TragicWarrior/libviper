@@ -18,30 +18,31 @@
  *----------------------------------------------------------------------*/
 
 #include <string.h>
+#include <stdbool.h>
 
 #include "viper.h"
-
+#include "strings.h"
 
 MENU*
-viper_menu_create(gchar **items)
+viper_menu_create(char **items)
 {
     MENU    *menu;
     ITEM    **item_list;
-    gchar   *item;
-    gint    count = 0;
-    gint    i;
+    char    *item;
+    int     count = 0;
+    int     i;
 
     if(items[0] == NULL) return NULL;
     while(items[count] != NULL) count++;
 
     /* new_menu() expects a NULL terminated list.  add 1 item to count */
-    item_list = (ITEM**)g_malloc0(sizeof(ITEM*) * (count + 1));
+    item_list = (ITEM**)calloc(1, sizeof(ITEM*) * (count + 1));
     for(i = 0;i < count;i++)
     {
         /*    create a copy of the item so the user does not have to worry about
             maintaining the item statically and/or accidentaly freeing the
             item and causing a seg fault    */
-        item = g_strdup(items[i]);
+        item = strdup(items[i]);
         item_list[i] = new_item(item, NULL);
     }
 
@@ -53,15 +54,15 @@ viper_menu_create(gchar **items)
 }
 
 void
-viper_menu_items_add(MENU *menu, gchar **items)
+viper_menu_items_add(MENU *menu, char **items)
 {
-    gchar   **list_copy;
+    char    **list_copy;
     ITEM    **item_list_old;
     ITEM    **item_list_new;
-    gint    new_count = 0;
-    gint    old_count = 0;
-    gint    count;
-    gint    i = 0;
+    int     new_count = 0;
+    int     old_count = 0;
+    int     count;
+    int     i = 0;
 
     if(items == NULL) return;
     if(items[0] == NULL) return;
@@ -74,14 +75,14 @@ viper_menu_items_add(MENU *menu, gchar **items)
     count = old_count + new_count;
 
     /* allocate storage for total number of items   */
-    item_list_new = (ITEM**)g_malloc0((count + 1) * sizeof(ITEM*));
+    item_list_new = (ITEM**)calloc(1, (count + 1) * sizeof(ITEM*));
     item_list_old = menu_items(menu);
 
     /* copy the old text items into the combined list  */
     memcpy(item_list_new, item_list_old,count * sizeof(ITEM*));
 
     /* copy the users addtl item list   */
-    list_copy = g_strdupv(items);
+    list_copy = strdupv(items);
 
     for(i = old_count;i < count;i++)
     {
@@ -89,22 +90,22 @@ viper_menu_items_add(MENU *menu, gchar **items)
     }
 
     /* copy the new text items into the combined list  */
-    g_free(list_copy);
+    free(list_copy);
     set_menu_items(menu, item_list_new);
-    g_free(item_list_old);
+    free(item_list_old);
 
     return;
 }
 
 void
-viper_menu_items_change(MENU *menu,gchar **items)
+viper_menu_items_change(MENU *menu, char **items)
 {
     ITEM    **item_list_old;
     ITEM    **item_list_new;
-    gchar   *item;
-    gint    new_count = 0;
-    gint    old_count;
-    gint    i;
+    char    *item;
+    int     new_count = 0;
+    int     old_count;
+    int     i;
 
     if(items == NULL) return;
     if(items[0] == NULL) return;
@@ -116,7 +117,7 @@ viper_menu_items_change(MENU *menu,gchar **items)
     old_count = item_count(menu);
     item_list_old = menu_items(menu);
 
-    item_list_new = (ITEM**)g_malloc0(sizeof(ITEM*) * (new_count + 1));
+    item_list_new = (ITEM**)calloc(1, sizeof(ITEM*) * (new_count + 1));
     for(i = 0;i < new_count;i++)
     {
         /*
@@ -124,7 +125,7 @@ viper_menu_items_change(MENU *menu,gchar **items)
             maintaining the item statically and/or accidentaly freeing the
             item and causing a seg fault
         */
-        item = g_strdup(items[i]);
+        item = strdup(items[i]);
         item_list_new[i] = new_item(item,NULL);
     }
 
@@ -137,11 +138,11 @@ viper_menu_items_change(MENU *menu,gchar **items)
     /* free all of the text associated with the old menu items  */
     for(i = 0;i < old_count;i++)
     {
-        item = (gchar*)item_name(item_list_old[i]);
+        item = (char*)item_name(item_list_old[i]);
         free_item(item_list_old[i]);
-        g_free(item);
+        free(item);
     }
-    g_free(item_list_old);
+    free(item_list_old);
 
     return;
 }
@@ -154,13 +155,13 @@ viper_menu_items_change(MENU *menu,gchar **items)
     be used if possible.
 */
 WINDOW*
-viper_menu_bind(MENU *menu, WINDOW *parent, gfloat x, gfloat y,
-         gfloat width, gfloat height)
+viper_menu_bind(MENU *menu, WINDOW *parent, float x, float y,
+         float width, float height)
 {
     WINDOW  *container;
-    gint    tmp_width;
-    gint    tmp_height;
-    gint    retval;
+    int     tmp_width;
+    int     tmp_height;
+    int     retval;
 
     if(parent == NULL || menu == NULL) return NULL;
 
@@ -208,15 +209,15 @@ viper_menu_bind(MENU *menu, WINDOW *parent, gfloat x, gfloat y,
     allocates storage for both of these.
 */
 void
-viper_menu_destroy(MENU *menu, gboolean free_windows)
+viper_menu_destroy(MENU *menu, bool free_windows)
 {
     WINDOW  *parent;
     WINDOW  *window;
     WINDOW  *subwin;
     ITEM    **items;
-    gint    count;
-    gchar   *text;
-    gint    i = 0;
+    int     count;
+    char    *text;
+    int     i = 0;
 
     unpost_menu(menu);
 
@@ -235,13 +236,13 @@ viper_menu_destroy(MENU *menu, gboolean free_windows)
 
     for(i = 0;i < count;i++)
     {
-        text = (gchar*)item_name(items[i]);
-        if(text != NULL) g_free(text);
+        text = (char*)item_name(items[i]);
+        if(text != NULL) free(text);
         free_item(items[i]);
     }
 
     /* free the list which contained the items   */
-    g_free(items);
+    free(items);
 
     if(free_windows == FALSE) return;
 

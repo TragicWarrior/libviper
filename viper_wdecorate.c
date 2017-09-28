@@ -23,7 +23,7 @@
 #include "list.h"
 
 void
-viper_window_modify_border(WINDOW *window, gint attrs, gshort colors)
+viper_window_modify_border(WINDOW *window, int attrs, short colors)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
