@@ -1,3 +1,7 @@
+Version 1.6.1
+
+*  [Bryan Christ] Moved build system to cmake.
+
 Version 1.6.0
 
 *  [Bryan Christ] Completely removed Glib requirements and replaced
