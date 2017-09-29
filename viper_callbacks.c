@@ -78,6 +78,8 @@ viper_callback_touchwin(WINDOW *window, void *arg)
 		touchwin(viper_wnd->window);
 	}
 
+    (void)arg;
+
 	return 0;
 }
 
@@ -129,6 +131,10 @@ void
 viper_callback_del_event(void *data, void *anything)
 {
 	free(data);
+
+    // suppress compiler warnings
+    (void)anything;
+
 	return;
 }
 

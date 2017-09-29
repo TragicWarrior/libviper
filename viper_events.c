@@ -100,8 +100,12 @@ viper_event_exec(WINDOW *window, char *event, void *anything)
 
     /*  if the user wants to send a broadcast event, the value of *window will
         be VIPER_EVENT_BROADCAST.   */
-    if(memcmp(window, VIPER_EVENT_BROADCAST, sizeof(VIPER_EVENT_BROADCAST)) == 0)
+
+    if(memcmp(window, VIPER_EVENT_BROADCAST,
+        strlen((char*)VIPER_EVENT_BROADCAST)) == 0)
+    {
         broadcast = TRUE;
+    }
 
     if(list_empty(&viper->wnd_list)) return ERR;
 
@@ -210,12 +214,19 @@ viper_event_default_TERM_RESIZE(WINDOW *window, void *arg)
 
     viper_screen_redraw(REDRAW_ALL);
 
+    (void)arg;
+
     return 0;
 }
 
 int
 viper_event_default_WINDOW_CLOSE(WINDOW *window, void *arg)
 {
+
+    // suppress compiler warnings
+    (void)window;
+    (void)arg;
+
     return VIPER_EVENT_WINDOW_DESIST;
 }
 
@@ -227,5 +238,10 @@ int
 viper_event_default_MSGBOX_CLOSE(WINDOW *window, void *arg)
 {
     beep();
+
+    // suppress compiler warnings
+    (void)window;
+    (void)arg;
+
     return VIPER_EVENT_WINDOW_PERSIST;
 }

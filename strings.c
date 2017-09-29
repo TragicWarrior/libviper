@@ -18,7 +18,6 @@
  */
 
 #define _POSIX_C_SOURCE 200809L // for getline
-#define _GNU_SOURCE             // for getline on old systems
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -60,11 +59,11 @@ strdup_printf(char *fmt, ...)
 char**
 strsplitv(char *string, char *delim)
 {
-    char    **array;
-    char    *pos;
-    char    *start;
-    int     i = 0;
-    int     delim_len;
+    char            **array;
+    char            *pos;
+    char            *start;
+    int             i = 0;
+    unsigned int    delim_len;
 
     if(string == NULL) return NULL;
     if(delim == NULL) return NULL;
