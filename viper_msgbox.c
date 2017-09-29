@@ -90,7 +90,7 @@ viper_msgbox_create(char *title, float x, float y,
     pos = msg_dissect;
     while(*pos != NULL)
     {
-        if(strlen(*pos) == width - 2) wprintw(window, "%s", *pos);
+        if(strlen(*pos) == (unsigned)(width - 2)) wprintw(window, "%s", *pos);
         else wprintw(window, "%s\n", *pos);
         pos++;
     }
