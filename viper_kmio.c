@@ -173,7 +173,7 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
             if(event_window != NULL)
             {
                 viper_window_set_top(event_window);
-                viper_window_redraw(event_window);
+                viper_screen_redraw(REDRAW_ALL);
 
                 getbegyx(WINDOW_FRAME(event_window), beg_y, beg_x);
                 getmaxyx(WINDOW_FRAME(event_window), max_y, max_x);
