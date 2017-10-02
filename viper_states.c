@@ -189,8 +189,10 @@ viper_window_redraw(WINDOW *window)
 bool
 is_viper_window_allowed_focus(WINDOW *window)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    VIPER_WND           *other_wnd;
+    struct list_head    *pos;
 
     if(window == NULL) return FALSE;
     if(list_empty(&viper->wnd_list)) return FALSE;
@@ -206,6 +208,19 @@ is_viper_window_allowed_focus(WINDOW *window)
 
     if((viper_wnd->window_state & STATE_MANAGED) &&
         (viper_wnd->window_state & STATE_VISIBLE)) return TRUE;
+
+    // make sure there aren't any eminent windows in the deck
+    list_for_each(pos, &viper->wnd_list)
+    {
+        other_wnd = list_entry(pos, VIPER_WND, list);
+
+        if(other_wnd->window_state & STATE_EMINENT)
+        {
+            if(other_wnd != viper_wnd) return FALSE;
+        }
+
+        other_wnd = NULL;
+    }
 
     return FALSE;
 }
