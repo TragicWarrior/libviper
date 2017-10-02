@@ -1,3 +1,7 @@
+Version 1.7.0
+
+*  [Bryan Christ] Make API more intuitive and simplify deck logic.
+
 Version 1.6.1
 
 *  [Bryan Christ] Moved build system to cmake.
