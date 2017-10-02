@@ -27,68 +27,6 @@
 #include "viper_states.h"
 #include "list.h"
 
-void
-viper_window_set_state(WINDOW *window, uint32_t state)
-{
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-
-    if(window == NULL) return;
-
-    if(list_empty(&viper->wnd_list)) return;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    /*
-        this is really the worst way to handle bitmask changes, but for the
-        time being it will remain.
-    */
-    if(state & STATE_UNSET)
-    {
-        if(state & STATE_EMINENT)
-            viper_wnd->window_state &= ~STATE_EMINENT;
-
-        if(state & STATE_NORESIZE)
-            viper_wnd->window_state &= ~STATE_NORESIZE;
-
-        if(state & STATE_SHADOWED)
-            viper_wnd->window_state &= ~STATE_SHADOWED;
-
-        if(state & STATE_VISIBLE)
-        {
-            viper_wnd->window_state &= ~STATE_VISIBLE;
-            viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
-        }
-
-        viper_screen_redraw(REDRAW_ALL);
-        return;
-    }
-
-    /*
-        in order to set window focus we need to clear all windows of
-        the focus state flag.  then we set the flag as we would any other
-        flag.  finally, we redraw the deck
-    */
-    if(state & STATE_FOCUS)
-    {
-        viper_window_for_each(viper_callback_change_focus, (void*)window,
-            VECTOR_TOP_TO_BOTTOM);
-        viper_screen_redraw(REDRAW_ALL);
-    }
-
-    if(state & STATE_EMINENT)
-    {
-        viper_window_for_each(viper_callback_change_eminency, (void*)window,
-            VECTOR_TOP_TO_BOTTOM);
-        viper_window_set_top(window);
-        viper_window_redraw(window);
-    }
-
-    viper_wnd->window_state |= state;
-
-    return;
-}
-
 uint32_t
 viper_window_get_state(WINDOW *window)
 {
@@ -103,9 +41,65 @@ viper_window_get_state(WINDOW *window)
     return viper_wnd->window_state;
 }
 
+void
+viper_window_set_eminency(WINDOW *window, bool value)
+{
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
+
+    if(window == NULL) return;
+    if(list_empty(&viper->wnd_list)) return;
+
+    if(value == FALSE)
+    {
+        viper_wnd = viper_get_viper_wnd(window);
+        if(viper_wnd == NULL) return;
+
+        viper_wnd->window_state &= ~STATE_EMINENT;
+        return;
+    }
+
+    // never allow a hidden window to be set eminent
+    if(is_viper_window_visible(window) == FALSE) return;
+
+    list_for_each(pos, &viper->wnd_list)
+    {
+        viper_wnd = list_entry(pos, VIPER_WND, list);
+
+        // clear all eminency flags
+        viper_wnd->window_state &= ~STATE_EMINENT;
+    }
+
+    viper_wnd = viper_get_viper_wnd(window);
+    viper_wnd->window_state |= STATE_EMINENT;
+
+    list_move(&viper->wnd_list, &viper_wnd->list);
+
+    return;
+}
+
 
 void
-viper_window_show(WINDOW *window)
+viper_window_set_shadow(WINDOW *window, bool value)
+{
+    VIPER_WND       *viper_wnd;
+
+    if(window == NULL) return;
+    viper_wnd = viper_get_viper_wnd(window);
+    if(viper_wnd == NULL) return;
+
+    if(value == TRUE)
+        viper_wnd->window_state |= STATE_SHADOWED;
+    else
+        viper_wnd->window_state &= ~STATE_SHADOWED;
+
+    return;
+}
+
+
+void
+viper_window_set_visible(WINDOW *window, bool value)
 {
     VIPER_WND   *viper_wnd;
 
@@ -113,12 +107,61 @@ viper_window_show(WINDOW *window)
     viper_wnd = viper_get_viper_wnd(window);
     if(viper_wnd == NULL) return;
 
-    if((viper_wnd->window_state & STATE_VISIBLE) == FALSE)
-        viper_window_unhide(window);
-
-    viper_window_redraw(window);
+    if(value == TRUE)
+        viper_wnd->window_state |= STATE_VISIBLE;
+    else
+        viper_wnd->window_state &= ~STATE_VISIBLE;
 
     return;
+}
+
+void
+viper_window_set_resizable(WINDOW *window, bool value)
+{
+    VIPER_WND       *viper_wnd;
+
+    if(window == NULL) return;
+    viper_wnd = viper_get_viper_wnd(window);
+    if(viper_wnd == NULL) return;
+
+    if(value == TRUE)
+        viper_wnd->window_state &= ~STATE_NORESIZE;
+    else
+        viper_wnd->window_state |= ~STATE_NORESIZE;
+
+    return;
+}
+
+
+bool
+viper_window_set_focus(WINDOW *window)
+{
+    extern VIPER        *viper;
+    VIPER_WND           *viper_wnd;
+    struct list_head    *pos;
+
+    if(window == NULL) return FALSE;
+
+    if(is_viper_window_allowed_focus(window) == FALSE) return FALSE;
+
+    // remove focus from all other windows
+    list_for_each(pos, &viper->wnd_list)
+    {
+        viper_wnd = list_entry(pos, VIPER_WND, list);
+
+        if(viper_wnd->window_state & STATE_FOCUS)
+            viper_event_run(window, "window-deactivate");
+        viper_wnd->window_state &= ~STATE_FOCUS;
+        viper_event_run(window, "window-unfocus");
+    }
+
+    viper_wnd = viper_get_viper_wnd(window);
+
+    viper_wnd->window_state |= STATE_FOCUS;
+    viper_event_run(window, "window-focus");
+    viper_event_run(window, "window-activate");
+
+    return TRUE;
 }
 
 void
@@ -184,6 +227,20 @@ viper_window_redraw(WINDOW *window)
     }
 
     return;
+}
+
+bool
+is_viper_window_visible(WINDOW *window)
+{
+    VIPER_WND           *viper_wnd;
+
+    if(window == NULL) return FALSE;
+
+    viper_wnd = viper_get_viper_wnd(window);
+
+    if(viper_wnd->window_state & STATE_VISIBLE) return TRUE;
+
+    return FALSE;
 }
 
 bool

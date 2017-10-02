@@ -81,46 +81,26 @@ viper_window_get_top(uint32_t state_mask)
 }
 
 
-void
+bool
 viper_window_set_top(WINDOW *window)
 {
     extern VIPER    *viper;
-    VIPER_WND       *viper_wnd = NULL;
-    VIPER_WND       *top_wnd = NULL;
+    VIPER_WND       *viper_wnd;
 
-    if(list_empty(&viper->wnd_list)) return;
+    if(list_empty(&viper->wnd_list)) return FALSE;
 
     viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return;
+    if(viper_wnd == NULL) return FALSE;
 
-    /*	only allow those windows which can catch focus to be placed on top	*/
-    if(is_viper_window_allowed_focus(window) == FALSE) return;
+    // only allow those windows which can catch focus to be placed on top
+    if(is_viper_window_allowed_focus(window) == FALSE) return FALSE;
 
-    /*	is this window already on top?  if so, nothing to be done	*/
-    top_wnd = list_entry(&viper->wnd_list, VIPER_WND, list);
-    if(viper_wnd == top_wnd) return;
+    if(viper_window_set_focus(window) == FALSE) return FALSE;
 
-    /*	place eminent window on top... "no questions asked"	*/
-    if(viper_wnd->window_state & STATE_EMINENT)
-    {
-        list_del(&viper_wnd->list);
-        list_add(&viper_wnd->list, &viper->wnd_list);
+    // move window to the front of the deck
+    list_move(&viper_wnd->list, &viper->wnd_list);
 
-        viper_window_focus(window);
-
-        return;
-    }
-
-    /* if there aren't any eminent windows in the deck, fulfill request	*/
-    if(viper_window_get_top(STATE_EMINENT) == NULL)
-    {
-        list_del(&viper_wnd->list);
-        list_add(&viper_wnd->list, &viper->wnd_list);
-
-        viper_window_focus(window);
-    }
-
-    return;
+    return TRUE;
 }
 
 void
@@ -128,6 +108,7 @@ viper_deck_cycle(int vector)
 {
     extern VIPER    *viper;
     VIPER_WND       *viper_wnd;
+    VIPER_WND       *first_wnd = NULL;
 
     if(list_empty(&viper->wnd_list)) return;
 
@@ -149,10 +130,24 @@ viper_deck_cycle(int vector)
 
         // get what's on top now
         viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
+
+        if(first_wnd == NULL)
+        {
+            first_wnd = viper_wnd;
+            continue;
+        }
+
+        // we've gone in a complete circle
+        if(first_wnd == viper_wnd) break;
     }
     while(is_viper_window_allowed_focus(viper_wnd->window) == FALSE);
 
-    viper_window_focus(TOPMOST_WINDOW);
+    if(viper_window_set_top(viper_wnd->window) == TRUE)
+    {
+        viper_window_redraw(viper_wnd->window);
+        viper_screen_redraw(REDRAW_ALL);
+    }
+
     return;
 }
 

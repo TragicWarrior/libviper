@@ -104,7 +104,7 @@ viper_msgbox_create(char *title, float x, float y,
 
     if(flags & MSGBOX_FLAG_EMINENT)
     {
-        viper_window_set_state(window, STATE_EMINENT);
+        viper_window_set_eminency(window, TRUE);
         viper_event_set(window, "window-close",
             viper_event_default_MSGBOX_CLOSE,NULL);
     }

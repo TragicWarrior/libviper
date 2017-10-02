@@ -51,9 +51,11 @@ viper_window_destroy(WINDOW *window)
         list_del(&viper_wnd->list);
         free(viper_wnd);
 
-        // viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
-        viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
-        viper_window_focus(viper_wnd->window);
+        /*
+            cycle the deck will cause us to iterate to the first window
+            that is allowed focus... or none at all.
+        */
+        viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
         viper_screen_redraw(REDRAW_ALL);
     }
 

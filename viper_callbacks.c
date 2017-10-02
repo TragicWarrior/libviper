@@ -23,47 +23,6 @@
 #include "viper_states.h"
 
 int
-viper_callback_change_focus(WINDOW *window, void *arg)
-{
-	VIPER_WND	   *viper_wnd;
-
-	viper_wnd = viper_get_viper_wnd(window);
-
-	if(is_viper_window_allowed_focus(window) == FALSE) return 0;
-
-	/* set focus for only the designated window */
-	if(window == (WINDOW*)arg)
-	{
-		viper_wnd->window_state |= STATE_FOCUS;
-		viper_event_run(window, "window-focus");
-		viper_event_run(window, "window-activate");
-	}
-	/* remove focus from all other windows */
-	else
-	{
-		if(viper_wnd->window_state & STATE_FOCUS)
-			viper_event_run(window, "window-deactivate");
-		viper_wnd->window_state &= ~STATE_FOCUS;
-		viper_event_run(window, "window-unfocus");
-	}
-
-	return 0;
-}
-
-int
-viper_callback_change_eminency(WINDOW *window, void *arg)
-{
-	VIPER_WND   	*viper_wnd;
-
-	viper_wnd = viper_get_viper_wnd(window);
-
-	if(window == (WINDOW*)arg) viper_wnd->window_state |= STATE_EMINENT;
-	else viper_wnd->window_state &= ~STATE_EMINENT;
-
-	return 0;
-}
-
-int
 viper_callback_touchwin(WINDOW *window, void *arg)
 {
 	VIPER_WND	*viper_wnd;

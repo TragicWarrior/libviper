@@ -208,7 +208,7 @@ WINDOW*         viper_filedlg_create(WINDOW *parent, char *title,
 
 /* window placement */
 WINDOW*         viper_window_get_top(uint32_t state_mask);
-void            viper_window_set_top(WINDOW *window);
+bool            viper_window_set_top(WINDOW *window);
 int             viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y);
 int             viper_mvwin_abs(WINDOW *window, int x, int y);
 int             viper_wresize(WINDOW *window,
@@ -223,19 +223,20 @@ WINDOW*         viper_window_find_by_class(void *classid);
 WINDOW*         viper_window_find_by_title(char *title);
 
 /* window display and state modification */
-void            viper_window_set_state(WINDOW *window, uint32_t state);
 uint32_t        viper_window_get_state(WINDOW *window);
+void            viper_window_set_shadow(WINDOW *window, bool value);
+void            viper_window_set_eminency(WINDOW *window, bool value);
+void            viper_window_set_visible(WINDOW *window, bool value);
+void            viper_window_set_resizable(WINDOW *window, bool value);
+bool            viper_window_set_focus(WINDOW *window);
+#define         viper_window_show(window) \
+                    viper_window_set_visible(window, TRUE);
+#define         viper_window_hide(window) \
+                    viper_window_set_visible(window, FALSE);
 void            viper_window_set_border_agent(WINDOW *window,
                     VIPER_FUNC agent, int id);
-void            viper_window_show(WINDOW *window);
 void            viper_window_touch(WINDOW *window);
 void            viper_window_redraw(WINDOW *window);
-#define         viper_window_unhide(window)   \
-                    (viper_window_set_state(window, STATE_VISIBLE))
-#define         viper_window_focus(window)    \
-                    (viper_window_set_state(window, STATE_FOCUS))
-#define         viper_window_hide(window)     \
-                    (viper_window_set_state(window, STATE_UNSET | STATE_VISIBLE))
 
 /* kmio faclilities (keyboard & mouse i/o)   */
 int32_t         viper_kmio_fetch(MEVENT *mouse_event);
