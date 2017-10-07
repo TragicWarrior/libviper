@@ -1,3 +1,8 @@
+Version 1.7.1
+
+*  [Bryan Christ] Cause GCC to make to strip symbols to produce
+   a smaller binary.
+
 Version 1.7.0
 
 *  [Bryan Christ] Make API more intuitive and simplify deck logic.
