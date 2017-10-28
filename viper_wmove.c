@@ -22,67 +22,60 @@
 #include "list.h"
 
 int
-viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y)
+viper_mvwin_rel(vwnd_t *vwnd, int vector_x, int vector_y)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
     int             retval = 0;
     int             x, y;
 
-    if(window == NULL) return ERR;
     if(vector_x == 0 && vector_y == 0) return 1;
-    if(list_empty(&viper->wnd_list)) return ERR;
 
-    viper_wnd = viper_get_viper_wnd(window);
-
-    if(viper_wnd != NULL)
+    if(vwnd != NULL)
     {
-        retval = window_move_rel(viper_wnd->window, vector_x, vector_y);
+        retval = window_move_rel(vwnd->window_frame, vector_x, vector_y);
+
         /* this is a hack until mvwin is fixed */
-        if((viper_wnd->window_state & STATE_MANAGED) && retval != ERR)
+        if((vwnd->ctx->managed == TRUE) && retval != ERR)
         {
-            getbegyx(viper_wnd->window, y, x);
-            viper_wnd->user_window->_begy = y + viper_wnd->user_window->_pary;
-            viper_wnd->user_window->_begx = x + viper_wnd->user_window->_parx;
+            getbegyx(vwnd->window_frame, y, x);
+            vwnd->user_window->_begy = y + vwnd->user_window->_pary;
+            vwnd->user_window->_begx = x + vwnd->user_window->_parx;
         }
         /* end of hack */
-        viper_event_run(window, "window-move");
-        viper_screen_redraw(REDRAW_ALL);
+
+        viper_event_run(vwnd, "window-move");
+
+        viper_screen_redraw(vwnd->ctx->screen_id, REDRAW_ALL);
     }
 
     return retval;
 }
 
 int
-viper_mvwin_abs(WINDOW *window, int x, int y)
+viper_mvwin_abs(vwnd_t *vwnd, int x, int y)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
     int             retval = 0;
     int             beg_x, beg_y;
 
-    if(window == NULL) return ERR;
-    if(list_empty(&viper->wnd_list)) return ERR;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    getbegyx(viper_wnd->window, beg_y, beg_x);
+    getbegyx(vwnd->window_frame, beg_y, beg_x);
     if(x == WPOS_UNCHANGED) x = beg_x;
     if(y == WPOS_UNCHANGED) y = beg_y;
 
-    if(viper_wnd != NULL)
+    if(vwnd != NULL)
     {
-        retval = mvwin(viper_wnd->window, y, x);
+        retval = mvwin(vwnd->window_frame, y, x);
+
         /* this is a hack until mvwin is fixed */
-        if((viper_wnd->window_state & STATE_MANAGED) && retval!=ERR)
+        if((vwnd->ctx->managed == TRUE) && retval != ERR)
         {
-            getbegyx(viper_wnd->window, y, x);
-            viper_wnd->user_window->_begy = y + viper_wnd->user_window->_pary;
-            viper_wnd->user_window->_begx = x + viper_wnd->user_window->_parx;
+            getbegyx(vwnd->window_frame, y, x);
+            vwnd->user_window->_begy = y + vwnd->user_window->_pary;
+            vwnd->user_window->_begx = x + vwnd->user_window->_parx;
         }
         /* end of hack */
-        viper_event_run(window, "window-move");
-        viper_screen_redraw(REDRAW_ALL);
+
+        viper_event_run(vwnd, "window-move");
+
+        viper_screen_redraw(vwnd->ctx->screen_id, REDRAW_ALL);
     }
 
     return retval;

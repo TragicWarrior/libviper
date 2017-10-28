@@ -19,44 +19,51 @@
 
 #include "viper.h"
 #include "viper_private.h"
+#include "viper_wdestroy.h"
+#include "viper_events.h"
 #include "list.h"
 
 int
-viper_window_destroy(WINDOW *window)
+viper_window_destroy(vwnd_t *vwnd)
 {
     extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    VIPER_EVENT     *viper_event;
+    viper_event_t   *viper_event;
+    int             screen_id;
+    bool            managed;
 
-    if(list_empty(&viper->wnd_list)) return ERR;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    if(viper_wnd != NULL)
+    if(vwnd != NULL)
     {
         // execute "window-destroy" event if it exists
-        viper_event = viper_get_viper_event(window, "window-destroy");
+        viper_event = viper_get_viper_event(vwnd, "window-destroy");
         if(viper_event != NULL)
-            viper_event->func(viper_wnd->window, viper_event->arg);
-        viper_event_del(viper_wnd->window, "*");
+            viper_event->func(vwnd, viper_event->arg);
+        viper_event_del(vwnd, "*");
 
         // destroy viper_wnd and associated windows
-        if(viper_wnd->user_window != viper_wnd->window)
+        if(vwnd->user_window != vwnd->window_frame)
         {
-            delwin(viper_wnd->user_window);
-            delwin(viper_wnd->window);
+            delwin(vwnd->user_window);
+            delwin(vwnd->window_frame);
         }
-        else delwin(viper_wnd->window);
+        else delwin(vwnd->window_frame);
 
-        list_del(&viper_wnd->list);
-        free(viper_wnd);
+        // store these because we'll need them after the vwnd_t is freed
+        screen_id = vwnd->ctx->screen_id;
+        managed = vwnd->ctx->managed;
+
+        if(vwnd->ctx->managed == TRUE)
+            list_del(&viper->managed_list[screen_id]);
+        else
+            list_del(&viper->unmanaged_list[screen_id]);
+
+        free(vwnd);
 
         /*
             cycle the deck will cause us to iterate to the first window
             that is allowed focus... or none at all.
         */
-        viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
-        viper_screen_redraw(REDRAW_ALL);
+        viper_deck_cycle(screen_id, managed, VECTOR_BOTTOM_TO_TOP);
+        viper_screen_redraw(screen_id, REDRAW_ALL);
     }
 
     return 0;

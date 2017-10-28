@@ -79,11 +79,11 @@ void
 viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 {
     extern VIPER            *viper;
-    static WINDOW           *event_window = NULL;
+    static vwnd_t           *event_wnd = NULL;
     static MEVENT           previous_mouse_event;
-    static VIPER_WKEY_FUNC  func;
+    static ViperWkeyFunc    func;
     static int              event_mode = 0;
-    VIPER_KMIO_HOOK         kmio_dispatch_hook;
+    ViperKmioHook           kmio_dispatch_hook;
     int                     beg_x,beg_y;
     int                     max_x,max_y;
     MEVENT                  *new_mouse = NULL;     /* strictly for      */
@@ -106,7 +106,8 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
         viper_event_run(VIPER_EVENT_BROADCAST, "term-resized");
 
         /* todo event handle for screen window instead  */
-        viper_screen_redraw(REDRAW_ALL | REDRAW_BACKGROUND);
+        viper_screen_redraw(CURRENT_SCREEN_ID,
+            REDRAW_ALL | REDRAW_BACKGROUND);
     }
 
     if(keystroke == KEY_MOUSE && mouse_event != NULL)
@@ -117,29 +118,29 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
         if((new_mouse->bstate & REPORT_MOUSE_POSITION)
             && event_mode == EVENTMODE_MOVE)
         {
-            viper_mvwin_rel(event_window, new_mouse->x-old_mouse->x,
-                new_mouse->y-old_mouse->y);
-            memcpy(old_mouse,new_mouse,sizeof(MEVENT));
+            viper_mvwin_rel(event_wnd, new_mouse->x - old_mouse->x,
+                new_mouse->y - old_mouse->y);
+            memcpy(old_mouse, new_mouse, sizeof(MEVENT));
         }
 
         if((new_mouse->bstate & REPORT_MOUSE_POSITION)
             && event_mode == EVENTMODE_RESIZE)
         {
-            viper_wresize_rel(event_window, new_mouse->x-old_mouse->x,
-                new_mouse->y-old_mouse->y);
-            memcpy(old_mouse,new_mouse,sizeof(MEVENT));
+            viper_wresize_rel(event_wnd, new_mouse->x - old_mouse->x,
+                new_mouse->y - old_mouse->y);
+            memcpy(old_mouse, new_mouse, sizeof(MEVENT));
         }
 
         /* check for a button press and a window hit */
         if((new_mouse->bstate & BUTTON1_PRESSED) && event_mode == EVENTMODE_IDLE)
         {
-            event_window = viper_deck_hit_test(new_mouse->x, new_mouse->y);
-            if(event_window != NULL)
+            event_wnd = viper_deck_hit_test(-1, TRUE, new_mouse->x, new_mouse->y);
+            if(event_wnd != NULL)
             {
-                viper_window_set_top(event_window);
+                viper_window_set_top(event_wnd);
                 memcpy(old_mouse, new_mouse, sizeof(MEVENT));
-                getbegyx(WINDOW_FRAME(event_window), beg_y, beg_x);
-                getmaxyx(WINDOW_FRAME(event_window), max_y, max_x);
+                getbegyx(WINDOW_FRAME(event_wnd), beg_y, beg_x);
+                getmaxyx(WINDOW_FRAME(event_wnd), max_y, max_x);
                 if(new_mouse->x == (beg_x + max_x - 1) &&
                 new_mouse->y == (beg_y + max_y) - 1) event_mode = EVENTMODE_RESIZE;
                 else event_mode = EVENTMODE_MOVE;
@@ -151,58 +152,58 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
         {
             if(!(new_mouse->bstate & REPORT_MOUSE_POSITION))
             {
-                if(event_mode == EVENTMODE_MOVE) viper_mvwin_rel(event_window,
+                if(event_mode == EVENTMODE_MOVE) viper_mvwin_rel(event_wnd,
                     new_mouse->x - old_mouse->x,new_mouse->y - old_mouse->y);
 
                 /* resize window  */
                 if(event_mode == EVENTMODE_RESIZE)
                 {
-                    viper_wresize_rel(event_window, new_mouse->x - old_mouse->x,
+                    viper_wresize_rel(event_wnd, new_mouse->x - old_mouse->x,
                         new_mouse->y - old_mouse->y);
-                    viper_screen_redraw(REDRAW_ALL);
+                    viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
                 }
             }
 
-            event_window = NULL;
+            event_wnd = NULL;
             event_mode = EVENTMODE_IDLE;
         }
 
         if(new_mouse->bstate & BUTTON1_CLICKED)
         {
-            event_window = viper_deck_hit_test(new_mouse->x, new_mouse->y);
-            if(event_window != NULL)
+            event_wnd = viper_deck_hit_test(-1, TRUE, new_mouse->x, new_mouse->y);
+            if(event_wnd != NULL)
             {
-                viper_window_set_top(event_window);
-                viper_screen_redraw(REDRAW_ALL);
+                viper_window_set_top(event_wnd);
+                viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
 
-                getbegyx(WINDOW_FRAME(event_window), beg_y, beg_x);
-                getmaxyx(WINDOW_FRAME(event_window), max_y, max_x);
+                getbegyx(WINDOW_FRAME(event_wnd), beg_y, beg_x);
+                getmaxyx(WINDOW_FRAME(event_wnd), max_y, max_x);
                 if(new_mouse->x == (beg_x + max_x - 2) && new_mouse->y == beg_y)
                 {
-                    viper_window_close(event_window);
+                    viper_window_close(event_wnd);
                     keystroke = -1;
                 }
                 if(new_mouse->x == (beg_x + max_x - 4) && new_mouse->y == beg_y)
                 {
-                    viper_window_hide(event_window);
-                    viper_deck_cycle(VECTOR_BOTTOM_TO_TOP);
+                    viper_window_hide(event_wnd);
+                    viper_deck_cycle(-1, TRUE, VECTOR_BOTTOM_TO_TOP);
                     keystroke =- 1;
                 }
             }
-            event_window = NULL;
+            event_wnd = NULL;
             event_mode = EVENTMODE_IDLE;
         }
 
         if(new_mouse->bstate & BUTTON1_DOUBLE_CLICKED)
         {
-            event_window = viper_deck_hit_test(new_mouse->x, new_mouse->y);
-            if(event_window != NULL)
+            event_wnd = viper_deck_hit_test(-1, TRUE, new_mouse->x, new_mouse->y);
+            if(event_wnd != NULL)
             {
-                viper_window_set_top(event_window);
-                viper_window_redraw(event_window);
+                viper_window_set_top(event_wnd);
+                viper_window_redraw(event_wnd);
             }
 
-            event_window = NULL;
+            event_wnd = NULL;
             event_mode = EVENTMODE_IDLE;
         }
     }
@@ -217,21 +218,21 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
     // pass keystroke on to toplevel window
     if(keystroke != KEY_RESIZE && keystroke != -1)
     {
-        func = viper_window_get_key_func(TOPMOST_WINDOW);
-        if(func != NULL) func(keystroke, (void*)TOPMOST_WINDOW);
+        func = viper_window_get_key_func(TOPMOST_MANAGED);
+        if(func != NULL) func(keystroke, (void*)TOPMOST_MANAGED);
     }
 
 #if !defined(_NO_GPM) && defined(__linux)
 	if(gpm_fd > 0)
 	{
    	    viper_kmio_show_mouse(new_mouse);
-   	    viper_screen_redraw(REDRAW_ALL);
+   	    viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
 	}
 #endif
 }
 
 void
-viper_kmio_dispatch_set_hook(int sequence, VIPER_KMIO_HOOK hook)
+viper_kmio_dispatch_set_hook(int sequence, ViperKmioHook hook)
 {
     extern VIPER    *viper;
 
@@ -248,20 +249,21 @@ static void
 viper_kmio_show_mouse(MEVENT *mouse_event)
 {
     extern VIPER     *viper;
-    extern WINDOW    *SCREEN_WINDOW;
     WINDOW           *screen_window;
     static chtype    color;
     short            fg, bg;
 
-    screen_window = SCREEN_WINDOW;
+    screen_window = CURRENT_SCREEN;
 
     if(viper->console_mouse == NULL)
     {
-        viper->console_mouse = newwin(1,1,0,0);
+        viper->console_mouse = newwin(1, 1, 0, 0);
         color = mvwinch(screen_window, 0, 0);
         pair_content(PAIR_NUMBER(color & A_COLOR), &fg, &bg);
+
         if(bg == COLOR_RED || bg == COLOR_YELLOW || bg == COLOR_MAGENTA)
             color = VIPER_COLORS(COLOR_CYAN,COLOR_CYAN);
+
         if(bg == COLOR_CYAN || bg == COLOR_BLUE)
             color = VIPER_COLORS(COLOR_YELLOW,COLOR_YELLOW);
     }
@@ -270,10 +272,12 @@ viper_kmio_show_mouse(MEVENT *mouse_event)
     {
         color = mvwinch(screen_window, mouse_event->y, mouse_event->x);
         pair_content(PAIR_NUMBER(color & A_COLOR), &fg, &bg);
+
         if(bg == COLOR_RED || bg == COLOR_YELLOW || bg == COLOR_MAGENTA)
             color = VIPER_COLORS(COLOR_CYAN,COLOR_CYAN);
         else
             color = VIPER_COLORS(COLOR_YELLOW,COLOR_YELLOW);
+
         mvwin(viper->console_mouse, mouse_event->y, mouse_event->x);
     }
 
@@ -349,7 +353,7 @@ viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
         for(i = 0;i < array_sz;i++)
         {
             /* sift by mode... ignore COOKED table entries        */
-            if(x_gpm_mode[i]==X_GPM_COOKED) continue;
+            if(x_gpm_mode[i] == X_GPM_COOKED) continue;
 
             /* sift raw event... GPM_UP, GPM_DOWN, etc.           */
             if(!(g_event.type & x_gpm_event[i])) continue;

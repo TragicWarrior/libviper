@@ -2,42 +2,27 @@
 #include "viper_private.h"
 
 void
-viper_window_set_title(WINDOW *window, const char *title)
+viper_window_set_title(vwnd_t *vwnd, const char *title)
 {
-    VIPER_WND    *viper_wnd;
+    if(vwnd == NULL) return;
 
-    if(window == NULL) return;
-
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return;
-
-    viper_wnd->title = title;
+    vwnd->title = title;
 }
 
 const char*
-viper_window_get_title(WINDOW *window)
+viper_window_get_title(vwnd_t *vwnd)
 {
-    VIPER_WND   *viper_wnd;
+    if(vwnd == NULL) return NULL;
 
-    if(window == NULL) return NULL;
-
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return NULL;
-
-    return viper_wnd->title;
+    return vwnd->title;
 }
 
 void
-viper_window_set_class(WINDOW *window, void *classid)
+viper_window_set_class(vwnd_t *vwnd, void *classid)
 {
-    VIPER_WND    *viper_wnd;
+    if(vwnd == NULL) return;
 
-    if(window == NULL) return;
-
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return;
-
-    viper_wnd->classid = classid;
+    vwnd->classid = classid;
 
     return;
 }

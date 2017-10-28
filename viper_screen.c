@@ -29,43 +29,80 @@
 
 
 WINDOW*
-viper_screen_get_wallpaper(void)
+viper_screen_get_wallpaper(int screen_id)
 {
     extern VIPER   *viper;
 
-    return viper->wallpaper;
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    return viper->wallpaper[screen_id];
 }
 
 void
-viper_screen_set_wallpaper(WINDOW *wallpaper, VIPER_FUNC agent, void *arg)
+viper_screen_set_wallpaper(int screen_id, WINDOW *wallpaper, ViperBkgdFunc agent)
 {
     extern VIPER   *viper;
 
-    viper->wallpaper = wallpaper;
-    viper->wallpaper_agent = agent;
-    viper->wallpaper_arg = arg;
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    viper->wallpaper[screen_id] = wallpaper;
+    viper->wallpaper_agent[screen_id] = agent;
 
     return;
 }
 
-void
-viper_screen_reset(void)
+WINDOW*
+viper_get_screen_window(int screen_id)
 {
-    extern WINDOW   *SCREEN_WINDOW;
+    extern VIPER    *viper;
+    WINDOW          *screen;
+
+    if(screen_id == -1)
+        screen_id = viper->cur_scr_id;
+
+    screen = viper->screen[screen_id];
+
+    return screen;
+}
+
+int
+viper_get_active_screen(void)
+{
     extern VIPER    *viper;
 
-    if(viper->wallpaper != NULL) overwrite(viper->wallpaper, SCREEN_WINDOW);
-    else werase(SCREEN_WINDOW);
+    return viper->cur_scr_id;
+}
+
+void
+viper_screen_reset(int screen_id)
+{
+    extern VIPER    *viper;
+
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    // don't erase and inactive screen
+    if(screen_id != CURRENT_SCREEN_ID) return;
+
+    if(viper->wallpaper[screen_id] != NULL)
+        overwrite(viper->wallpaper[screen_id], viper->screen[screen_id]);
+    else
+        werase(viper->screen[screen_id]);
 
     return;
 }
 
-inline void
-viper_screen_redraw(uint32_t update_mask)
+void
+viper_screen_redraw(int screen_id, uint32_t update_mask)
 {
-    extern WINDOW   *SCREEN_WINDOW;
     extern VIPER    *viper;
     uint32_t        state_mask = 0;
+    ViperBkgdFunc   wallpaper_agent = NULL;
+
+    // set to current screen if -1;
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    // don't update any inactive screens
+    if(screen_id != CURRENT_SCREEN_ID) return;
 
     /*
         redrawing the background window is a fairly simple operation.  the
@@ -74,8 +111,12 @@ viper_screen_redraw(uint32_t update_mask)
     */
     if(update_mask & REDRAW_BACKGROUND)
     {
-        if(viper->wallpaper != NULL && viper->wallpaper_agent != NULL)
-            viper->wallpaper_agent(viper->wallpaper,viper->wallpaper_arg);
+        if(viper->wallpaper[screen_id] != NULL)
+        {
+            wallpaper_agent = viper->wallpaper_agent[screen_id];
+
+            if(wallpaper_agent != NULL) wallpaper_agent(screen_id);
+        }
     }
 
     /*
@@ -83,28 +124,32 @@ viper_screen_redraw(uint32_t update_mask)
         defined background (WINDOW bg_window) to the screen.  the convenience
         function for the copy is viper_screen_reset()
     */
-    if(update_mask & REDRAW_WORKSPACE) viper_screen_reset();
+    if(update_mask & REDRAW_WORKSPACE) viper_screen_reset(screen_id);
 
-    if(update_mask & REDRAW_WINDOWS_UNMANAGED)
-        state_mask |= (STATE_UNMANAGED | STATE_VISIBLE);
-
-    if(update_mask & REDRAW_WINDOWS_MANAGED)
-        state_mask |= (STATE_MANAGED | STATE_VISIBLE);
 
     // blit all the windows matching the state_mask to WINDOW screen_window
-    if(state_mask != 0)
+    // managed windows get blitted first
+    if(state_mask & REDRAW_WINDOWS)
     {
-        viper_window_for_each(viper_callback_blit_window,
-            (void*)&state_mask,VECTOR_BOTTOM_TO_TOP);
+        state_mask |= STATE_VISIBLE;
+
+        // first redraw managed windows
+        viper_window_for_each(screen_id, TRUE, VECTOR_BOTTOM_TO_TOP,
+            viper_callback_blit_window, (void*)&state_mask);
+
+        // redraw unmanaged windows
+        viper_window_for_each(screen_id, FALSE, VECTOR_TOP_TO_BOTTOM,
+            viper_callback_blit_window, (void*)&state_mask);
     }
+
 
     // draw the mouse on top
     if((update_mask & REDRAW_MOUSE) && (viper->console_mouse != NULL))
-        overwrite(viper->console_mouse,SCREEN_WINDOW);
+        overwrite(viper->console_mouse, viper->screen[screen_id]);
 
     // copy WINDOW screen_window to the _real_ window
-    touchwin(SCREEN_WINDOW);
-    wnoutrefresh(SCREEN_WINDOW);
+    touchwin(viper->screen[screen_id]);
+    wnoutrefresh(viper->screen[screen_id]);
     doupdate();
 
     return;

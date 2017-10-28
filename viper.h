@@ -20,6 +20,8 @@
 
 #define LIBVIPER_VERSION            "1.7.0"
 
+#define MAX_SCREENS                 4
+
 #define VECTOR_TOP_TO_BOTTOM        1
 #define VECTOR_BOTTOM_TO_TOP        -1
 
@@ -49,10 +51,7 @@
 
 #define STATE_VISIBLE               (1UL << 1)
 #define STATE_FOCUS                 (1UL << 2)
-#define STATE_MANAGED               (1UL << 3)
-#define STATE_UNMANAGED             (1UL << 4)
 #define STATE_SHADOWED              (1UL << 5)
-#define STATE_EMINENT               (1UL << 6)
 #define STATE_NORESIZE              (1UL << 7)
 #define STATE_UNSET                 (1UL << 31)
 
@@ -62,7 +61,6 @@
 #define MSGBOX_ICON_QUESTION        (1UL << 4)
 #define MSGBOX_TYPE_OK              (1UL << 10)
 #define MSGBOX_TYPE_YESNO           (1UL << 11)
-#define MSGBOX_FLAG_EMINENT         (1UL << 20)
 
 #define FORM_CURSOR_BLOCK           0
 #define FORM_CURSOR_ULINE           (1 << 1)
@@ -87,14 +85,11 @@
 #define FILEDLG_COMPLETE            (FILEDLG_FULL | FILEDLG_SHOW_HIDDEN)
 
 #define REDRAW_MOUSE                (1 << 1)
-#define REDRAW_WINDOWS_MANAGED      (1 << 2)
-#define REDRAW_WINDOWS_UNMANAGED    (1 << 3)
-#define REDRAW_DECK                       \
-            (REDRAW_WINDOWS_MANAGED | REDRAW_WINDOWS_UNMANAGED)
+#define REDRAW_WINDOWS              (1 << 2)
 #define REDRAW_WORKSPACE            (1 << 4)
 #define REDRAW_BACKGROUND           (1 << 5)
 #define REDRAW_ALL                       \
-            (REDRAW_MOUSE | REDRAW_DECK | REDRAW_WORKSPACE)
+            (REDRAW_MOUSE | REDRAW_WINDOWS | REDRAW_WORKSPACE)
 
 /* keystroke definitions */
 #ifndef KEY_TAB
@@ -107,17 +102,19 @@
 #define VIPER_FASTCOLOR             (1 << 1)
 #define VIPER_GPM_SIGIO             (1 << 2)
 
-/* callback definitions */
-typedef int     (*VIPER_FUNC)(WINDOW *window, void *arg);
-typedef int     (*VIPER_KEY_FUNC)(int32_t keystroke, void *anything);
-typedef int     (*VIPER_WKEY_FUNC)(int32_t keystroke, WINDOW *window);
-typedef int32_t (*VIPER_KMIO_HOOK)(int32_t keystroke);
-
 typedef struct _viper_s             VIPER;
-typedef struct _viper_wnd_s         VIPER_WND;
+typedef struct _viper_ctx_s         vctx_t;
+typedef struct _viper_wnd_s         VIPER_WND;          // legacy ref
+typedef struct _viper_wnd_s         vwnd_t;
 typedef struct _viper_event_s       VIPER_EVENT;
 typedef struct _viper_event_s       viper_event_t;
 
+/* callback definitions */
+typedef int         (*ViperFunc)(vwnd_t *vwnd, void *arg);
+typedef int         (*ViperKeyFunc)(int32_t keystroke, void *anything);
+typedef int         (*ViperWkeyFunc)(int32_t keystroke, vwnd_t *vwnd);
+typedef int32_t     (*ViperKmioHook)(int32_t keystroke);
+typedef void        (*ViperBkgdFunc)(int screen_id);
 
 /* basic window routines    */
 WINDOW*             window_create(WINDOW *parent, int x, int y,
@@ -168,36 +165,47 @@ int             is_cursor_at(WINDOW *window, uint16_t mask);
 /* initialization facilities  */
 VIPER*          viper_init(uint32_t flags);
 void            viper_end(void);
-void            viper_set_border_agent(VIPER_FUNC agent, int id);
+void            viper_set_border_agent(ViperFunc agent, int id);
 
 /* viper screen facilities */
-WINDOW*         viper_screen_get_wallpaper();
-void            viper_screen_set_wallpaper(WINDOW *wallpaper,
-                    VIPER_FUNC agent, void *arg);
-void            viper_screen_redraw(uint32_t update_mask);
+WINDOW*         viper_get_screen_window(int screen_id);
+int             viper_get_active_screen(void);
+#define         CURRENT_SCREEN          viper_get_screen_window(-1)
+#define         CURRENT_SCREEN_ID       viper_get_active_screen()
+
+WINDOW*         viper_screen_get_wallpaper(int screen_id);
+void            viper_screen_set_wallpaper(int screen_id, WINDOW *wallpaper,
+                    ViperBkgdFunc agent);
+
+void            viper_screen_redraw(int screen_id, uint32_t update_mask);
 
 /* viper color facilities  */
 short           viper_color_pair(short fg, short bg);
 #define         VIPER_COLORS(fg,bg)    (COLOR_PAIR(viper_color_pair(fg, bg)))
 
 /* window construction and destruction */
-WINDOW*         viper_window_create(char *title, float x, float y,
-                    float width, float height, bool managed);
-void            viper_window_set_class(WINDOW *window, void *classid);
-void            viper_window_set_title(WINDOW *window, const char *title);
-const char*     viper_window_get_title(WINDOW *window);
-int             viper_window_set_limits(WINDOW *window,
+vwnd_t*         viper_window_create(int screen_id, bool managed, char *title,
+                    float x, float y, float width, float height);
+#define         VWINDOW(wnd)              (*(WINDOW**)wnd)
+
+
+WINDOW*         viper_window_get_frame(vwnd_t *wnd);
+#define         WINDOW_FRAME(wnd)       (viper_window_get_frame(wnd))
+
+void            viper_window_set_class(vwnd_t *wnd, void *classid);
+void            viper_window_set_title(vwnd_t *wnd, const char *title);
+const char*     viper_window_get_title(vwnd_t *wnd);
+int             viper_window_set_limits(vwnd_t *wnd,
                     int min_width, int min_height,
                     int max_width, int max_height);
-void            viper_window_modify_border(WINDOW *window,
+void            viper_window_modify_border(vwnd_t *wnd,
                     int attrs, short colors);
-#define         viper_window_close(window) \
-                    (viper_event_run(window, "window-close"))
-int             viper_window_destroy(WINDOW *window);
+void            viper_window_close(vwnd_t *vwnd);
 
 /* special construction:  a message dialog box  */
-WINDOW*         viper_msgbox_create(char *title, float x, float y,
-                    int width, int height, char *msg, uint32_t flags);
+vwnd_t*         viper_msgbox_create(int screen_id, char *title,
+                    float x, float y, int width, int height,
+                    char *msg, uint32_t flags);
 
 /* special construction:  a file/directory load/save dialog box   */
 /*
@@ -207,59 +215,58 @@ WINDOW*         viper_filedlg_create(WINDOW *parent, char *title,
 */
 
 /* window placement */
-WINDOW*         viper_window_get_top(uint32_t state_mask);
-bool            viper_window_set_top(WINDOW *window);
-int             viper_mvwin_rel(WINDOW *window, int vector_x, int vector_y);
-int             viper_mvwin_abs(WINDOW *window, int x, int y);
-int             viper_wresize(WINDOW *window,
-                    int width, int height, uint8_t flags);
-#define         viper_wresize_abs(window, width, height) \
-                    (viper_wresize(window, width, height, 0))
-int             viper_wresize_rel(WINDOW *window, int vector_x, int vector_y);
-#define         TOPMOST_WINDOW (viper_window_get_top(STATE_VISIBLE))
+vwnd_t*         viper_window_get_top(int screen_id, bool managed);
+bool            viper_window_set_top(vwnd_t *wnd);
+int             viper_mvwin_rel(vwnd_t *wnd, int vector_x, int vector_y);
+int             viper_mvwin_abs(vwnd_t *wnd, int x, int y);
+int             viper_wresize(vwnd_t *wnd, int width, int height);
+#define         viper_wresize_abs(wnd, width, height) \
+                    viper_wresize(wnd, width, height)
+int             viper_wresize_rel(vwnd_t *wind, int vector_x, int vector_y);
+
+#define         TOPMOST_MANAGED     (viper_window_get_top(-1, TRUE))
+#define         TOPMOST_UNMANGED    (viper_window_get_top(-1, FALSE))
 
 /* window search facilities */
-WINDOW*         viper_window_find_by_class(void *classid);
-WINDOW*         viper_window_find_by_title(char *title);
+vwnd_t*         viper_window_find_by_class(int screen_id, bool managed, void *classid);
+vwnd_t*         viper_window_find_by_title(int screen_id, bool managed, char *title);
 
 /* window display and state modification */
-uint32_t        viper_window_get_state(WINDOW *window);
-void            viper_window_set_shadow(WINDOW *window, bool value);
-void            viper_window_set_eminency(WINDOW *window, bool value);
-void            viper_window_set_visible(WINDOW *window, bool value);
-void            viper_window_set_resizable(WINDOW *window, bool value);
-bool            viper_window_set_focus(WINDOW *window);
-#define         viper_window_show(window) \
-                    viper_window_set_visible(window, TRUE);
-#define         viper_window_hide(window) \
-                    viper_window_set_visible(window, FALSE);
-void            viper_window_set_border_agent(WINDOW *window,
-                    VIPER_FUNC agent, int id);
-void            viper_window_touch(WINDOW *window);
-void            viper_window_redraw(WINDOW *window);
+uint32_t        viper_window_get_state(vwnd_t *wnd);
+void            viper_window_set_shadow(vwnd_t *wnd, bool value);
+void            viper_window_set_visible(vwnd_t *wnd, bool value);
+void            viper_window_set_resizable(vwnd_t *wnd, bool value);
+bool            viper_window_set_focus(vwnd_t *wnd);
+#define         viper_window_show(wnd) \
+                    viper_window_set_visible(wnd, TRUE);
+#define         viper_window_hide(wnd) \
+                    viper_window_set_visible(wnd, FALSE);
+void            viper_window_set_border_agent(vwnd_t *wnd,
+                    ViperFunc agent, int id);
+void            viper_window_touch(vwnd_t *wnd);
+void            viper_window_redraw(vwnd_t *wnd);
 
 /* kmio faclilities (keyboard & mouse i/o)   */
 int32_t         viper_kmio_fetch(MEVENT *mouse_event);
 void            viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event);
-void            viper_kmio_dispatch_set_hook(int sequence, VIPER_KMIO_HOOK hook);
-void            viper_window_set_key_func(WINDOW *window, VIPER_WKEY_FUNC func);
+void            viper_kmio_dispatch_set_hook(int sequence, ViperKmioHook hook);
+void            viper_window_set_key_func(vwnd_t *wnd, ViperWkeyFunc func);
 
 /* event handling */
-int             viper_event_set(WINDOW *window, char *event,
-                    VIPER_FUNC func, void *arg);
-int             viper_event_del(WINDOW *window, char *event);
-int             viper_event_exec(WINDOW *window, char *event, void *anything);
-#define         viper_event_run(window, event) \
-                    (viper_event_exec(window, event, NULL))
-#define         VIPER_EVENT_BROADCAST           ((WINDOW*)"ALL_VIPER_WINDOWS")
-#define         VIPER_EVENT_WINDOW_DESIST       (viper_window_destroy(window))
-#define         VIPER_EVENT_WINDOW_PERSIST      0
-void            viper_window_for_each(VIPER_FUNC func, void *arg, int vector);
+int             viper_event_set(vwnd_t *wnd, char *event,
+                    ViperFunc func, void *arg);
+int             viper_event_del(vwnd_t *wnd, char *event);
+int             viper_event_exec(vwnd_t *wnd, char *event, void *anything);
+#define         viper_event_run(wnd, event) \
+                    (viper_event_exec(wnd, event, NULL))
+#define         VIPER_EVENT_BROADCAST           ((vwnd_t*)"ALL_VIPER_WINDOWS")
+void            viper_window_for_each(int screen_id, bool managed, int vector,
+                    ViperFunc func, void *arg);
 
 /* viper window deck functions */
-void            viper_deck_cycle(int vector);
-WINDOW*         viper_deck_hit_test(int x, int y);
-char**          viper_deck_get_wndlist(void);
+void            viper_deck_cycle(int screen_id, bool managed, int vector);
+vwnd_t*         viper_deck_hit_test(int screen_id, bool managed, int x, int y);
+char**          viper_deck_get_wndlist(int screen_id, bool managed);
 
 /* menu helpers */
 MENU*           viper_menu_create(char **items);
@@ -281,14 +288,7 @@ int             viper_form_driver(FORM *form, int request, uint32_t flags,
 #define         CURRENT_FORM_ITEM(form)    (field_index(current_field(form)))
 
 /* miscellaneous functions */
-void            viper_window_set_userptr(WINDOW *window, void *anything);
-void*           viper_window_get_userptr(WINDOW *window);
-#define         WINDOW_FRAME(window)          (viper_get_window_frame(window))
-
-
-/* INTERNAL USE ONLY:  core */
-VIPER_WND*      viper_get_viper_wnd(WINDOW *window);
-VIPER_EVENT*    viper_get_viper_event(WINDOW *window, char *event);
-WINDOW*         viper_get_window_frame(WINDOW *window);
+void            viper_window_set_userptr(vwnd_t *wnd, void *anything);
+void*           viper_window_get_userptr(vwnd_t *wnd);
 
 #endif

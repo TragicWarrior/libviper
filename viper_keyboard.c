@@ -25,32 +25,19 @@
 #include "viper_kmio.h"
 
 void
-viper_window_set_key_func(WINDOW *window, VIPER_WKEY_FUNC func)
+viper_window_set_key_func(vwnd_t *vwnd, ViperWkeyFunc func)
 {
-    extern VIPER   *viper;
-    VIPER_WND       *viper_wnd;
+    if(vwnd == NULL) return;
 
-    if(window == NULL) return;
-    if(list_empty(&viper->wnd_list)) return;
-
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd != NULL) viper_wnd->key_func=func;
+    if(vwnd != NULL) vwnd->key_func = func;
 
     return;
 }
 
-VIPER_WKEY_FUNC
-viper_window_get_key_func(WINDOW *window)
+ViperWkeyFunc
+viper_window_get_key_func(vwnd_t *vwnd)
 {
-    extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
-    VIPER_WKEY_FUNC     func = NULL;
+    if(vwnd == NULL) return NULL;
 
-    if(window == NULL) return NULL;
-    if(list_empty(&viper->wnd_list)) return NULL;
-
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd != NULL) func = viper_wnd->key_func;
-
-    return func;
+    return vwnd->key_func;
 }

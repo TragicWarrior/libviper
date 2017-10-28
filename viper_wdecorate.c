@@ -23,33 +23,20 @@
 #include "list.h"
 
 void
-viper_window_modify_border(WINDOW *window, int attrs, short colors)
+viper_window_modify_border(vwnd_t *vwnd, int attrs, short colors)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-
-    if(list_empty(&viper->wnd_list)) return;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    if(viper_wnd != NULL)
-        window_modify_border(viper_wnd->window, attrs, colors);
+    if(vwnd != NULL)
+        window_modify_border(WINDOW_FRAME(vwnd), attrs, colors);
 
     return;
 }
 
 void
-viper_window_set_border_agent(WINDOW *window, VIPER_FUNC agent, int id)
+viper_window_set_border_agent(vwnd_t *vwnd, ViperFunc agent, int id)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-
-    if(list_empty(&viper->wnd_list)) return;
-
     if(id < 1) return;
-    viper_wnd = viper_get_viper_wnd(window);
 
-    if(viper_wnd != NULL) viper_wnd->border_agent[id] = agent;
+    if(vwnd != NULL) vwnd->border_agent[id] = agent;
 
     return;
 }
