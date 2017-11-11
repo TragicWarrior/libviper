@@ -12,7 +12,6 @@
 #include "viper.h"
 #include "list.h"
 
-
 struct _viper_ctx_s
 {
     int     screen_id;

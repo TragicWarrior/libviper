@@ -18,7 +18,7 @@
 #include <form.h>
 #endif
 
-#define LIBVIPER_VERSION            "1.7.0"
+#define LIBVIPER_VERSION            "2.0.0"
 
 #define MAX_SCREENS                 4
 
@@ -108,6 +108,11 @@ typedef struct _viper_wnd_s         VIPER_WND;          // legacy ref
 typedef struct _viper_wnd_s         vwnd_t;
 typedef struct _viper_event_s       VIPER_EVENT;
 typedef struct _viper_event_s       viper_event_t;
+
+// ko klasses
+typedef struct  _vk_object_s        vk_object_t;
+typedef struct  _vk_widget_s        vk_widget_t;
+typedef struct  _vk_container_s     vk_container_t;
 
 /* callback definitions */
 typedef int         (*ViperFunc)(vwnd_t *vwnd, void *arg);
@@ -290,5 +295,32 @@ int             viper_form_driver(FORM *form, int request, uint32_t flags,
 /* miscellaneous functions */
 void            viper_window_set_userptr(vwnd_t *wnd, void *anything);
 void*           viper_window_get_userptr(vwnd_t *wnd);
+
+#define VK_OBJECT(x)            ((vk_object_t *)x)
+#define VK_WIDGET(x)            ((vk_widget_t *)x)
+#define VK_CONTAINER(x)         ((vk_container_t *)x)
+
+const char*     vk_object_get_klass_name(vk_object_t *object);
+int             vk_object_push_keystroke(vk_object_t *object,
+                    int32_t keystroke);
+int             vk_object_destroy(vk_object_t *object);
+
+vk_widget_t*    vk_widget_create(int width, int height);
+int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
+WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
+void            vk_widget_set_colors(vk_widget_t *widget, short color_pair);
+short           vk_widget_get_fg(vk_widget_t *widget);
+short           vk_widget_get_bg(vk_widget_t *widget);
+void            vk_widget_clear(vk_widget_t *widget);
+void            vk_widget_fill(vk_widget_t *widget, chtype ch);
+void            vk_widget_draw(vk_widget_t *widget);
+void            vk_widget_destroy(vk_widget_t *widget);
+
+vk_container_t* vk_container_create(int width, int height);
+void            vk_container_add(vk_container_t *container,
+                    vk_widget_t *widget);
+void            vk_cointainer_remove(vk_container_t *container,
+                    vk_widget_t *widget);
+void            vk_container_destroy(vk_container_t *container);
 
 #endif

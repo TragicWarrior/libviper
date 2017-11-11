@@ -18,7 +18,7 @@
  *----------------------------------------------------------------------*/
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_wdestroy.h"
 #include "viper_events.h"
 #include "list.h"

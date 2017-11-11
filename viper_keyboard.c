@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_states.h"
 #include "viper_kmio.h"
 

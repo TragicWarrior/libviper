@@ -21,7 +21,7 @@
 #include <stdbool.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_callbacks.h"
 #include "viper_events.h"
 #include "viper_wdestroy.h"

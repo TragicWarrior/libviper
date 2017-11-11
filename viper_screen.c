@@ -22,7 +22,7 @@
 #include <inttypes.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_callbacks.h"
 #include "viper_deck.h"
 #include "viper_screen.h"

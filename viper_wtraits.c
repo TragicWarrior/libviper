@@ -1,5 +1,5 @@
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 
 void
 viper_window_set_title(vwnd_t *vwnd, const char *title)

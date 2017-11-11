@@ -21,7 +21,7 @@
 #include <stdbool.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "list.h"
 
 vwnd_t*

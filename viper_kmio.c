@@ -6,7 +6,7 @@
 #include <inttypes.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_kmio.h"
 
 #if !defined(_NO_GPM) && defined(__linux)
