@@ -14,7 +14,7 @@ vk_object_t*    vk_object_construct(const void *klass, ...);
 
 #define         vk_object_assert(klass, type) \
                     _assert_klass((char *)VK_OBJECT(klass)->name, \
-                    (char *)#type, VK_OBJECT(klass)->size, \
+                    (char *) #type, VK_OBJECT(klass)->size, \
                     sizeof(type))
 
 #define         vk_object_demote(object, type) \

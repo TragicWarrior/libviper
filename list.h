@@ -208,7 +208,7 @@ static inline void list_rotate_left(struct list_head *head)
 }
 
 /**
- * list_rotate_left - rotate the list to the left
+ * list_rotate_right - rotate the list to the right
  * @head: the head of the list
  */
 static inline void list_rotate_right(struct list_head *head)
@@ -309,6 +309,7 @@ static inline void list_splice_init(struct list_head *list,
  */
 #define list_prev_entry(pos, member) \
     list_entry((pos)->member.prev, typeof(*(pos)), member)
+
 
 /**
  * list_for_each	-	iterate over a list

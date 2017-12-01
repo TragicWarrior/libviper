@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include <curses.h>
+
+#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 
@@ -15,10 +18,14 @@ static int
 _vk_widget_move(vk_widget_t *widget, int x, int y);
 
 static int
-_vk_widget_blit(vk_widget_t *widget);
+_vk_widget_draw(vk_widget_t *widget);
 
 static int
 _vk_widget_resize(vk_widget_t *widget, int width, int height);
+
+static int
+_vk_widget_erase(vk_widget_t *widget);
+
 
 static vk_object_t VK_WIDGET_KLASS =
 {
@@ -76,14 +83,16 @@ vk_widget_set_colors(vk_widget_t *widget, short color_pair)
     return;
 }
 
-void
-vk_widget_clear(vk_widget_t *widget)
+int
+vk_widget_erase(vk_widget_t *widget)
 {
-    if(widget == NULL) return;
+    int retval;
 
-    werase(widget->canvas);
+    if(widget == NULL) return -1;
 
-    return;
+    retval = widget->_erase(widget);
+
+    return retval;
 }
 
 void
@@ -104,6 +113,17 @@ vk_widget_fill(vk_widget_t *widget, chtype ch)
     return;
 }
 
+int
+vk_widget_move(vk_widget_t *widget, int x, int y)
+{
+    int retval;
+
+    if(widget == NULL) return -1;
+
+    retval = widget->_move(widget, x, y);
+
+    return retval;
+}
 
 void
 vk_widget_destroy(vk_widget_t *widget)
@@ -141,9 +161,10 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     widget = VK_WIDGET(object);
     widget->ctor = _vk_widget_ctor;
     widget->dtor = _vk_widget_dtor;
-    widget->move = _vk_widget_move;
-    widget->blit = _vk_widget_blit;
-    widget->resize = _vk_widget_resize,
+    widget->_move = _vk_widget_move;
+    widget->_draw = _vk_widget_draw;
+    widget->_resize = _vk_widget_resize;
+    widget->_erase = _vk_widget_erase;
 
     // interate through var args after constructing base klass
     width = va_arg(*argp, int);
@@ -165,6 +186,10 @@ _vk_widget_move(vk_widget_t *widget, int x, int y)
     int     retval = 0;
 
     if(widget == NULL) return -1;
+    if(x == WPOS_UNCHANGED && y == WPOS_UNCHANGED) return 0;
+
+    if(x == WPOS_UNCHANGED) x = widget->x;
+    if(y == WPOS_UNCHANGED) y = widget->y;
 
     retval = mvwin(widget->canvas, y, x);
 
@@ -209,7 +234,7 @@ _vk_widget_resize(vk_widget_t *widget, int width, int height)
 }
 
 static int
-_vk_widget_blit(vk_widget_t *widget)
+_vk_widget_draw(vk_widget_t *widget)
 {
     int     top;
     int     bottom;
@@ -230,6 +255,16 @@ _vk_widget_blit(vk_widget_t *widget)
     return 0;
 }
 
+static int
+_vk_widget_erase(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+    if(widget->canvas == NULL) return -1;
+
+    werase(widget->canvas);
+
+    return 0;
+}
 
 static int
 _vk_widget_dtor(vk_object_t *object)
