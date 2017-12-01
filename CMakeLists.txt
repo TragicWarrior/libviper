@@ -34,10 +34,8 @@ add_library(viper-static STATIC
     viper_color.c
     viper_deck.c
     viper_events.c
-    viper_forms.c
     viper_keyboard.c
     viper_kmio.c
-    viper_menus.c
     viper_msgbox.c
     viper_screen.c
     viper_states.c
@@ -68,10 +66,8 @@ add_library(viper.o OBJECT
     viper_color.c
     viper_deck.c
     viper_events.c
-    viper_forms.c
     viper_keyboard.c
     viper_kmio.c
-    viper_menus.c
     viper_msgbox.c
     viper_screen.c
     viper_states.c

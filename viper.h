@@ -10,12 +10,8 @@
 
 #ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
-#include <ncursesw/menu.h>
-#include <ncursesw/form.h>
 #else
 #include <curses.h>
-#include <menu.h>
-#include <form.h>
 #endif
 
 #define LIBVIPER_VERSION            "2.0.0"
@@ -63,28 +59,6 @@
 #define MSGBOX_ICON_QUESTION        (1UL << 4)
 #define MSGBOX_TYPE_OK              (1UL << 10)
 #define MSGBOX_TYPE_YESNO           (1UL << 11)
-
-#define FORM_CURSOR_BLOCK           0
-#define FORM_CURSOR_ULINE           (1 << 1)
-#define FORM_CURSOR_NONE            (1 << 2)
-#define FORM_COLORIZE               (1 << 4)
-
-#define FILEDLG_OPEN                0
-#define FILEDLG_SAVE                (1UL << 1)
-#define FILEDLG_SORT_DIRS           (1UL << 2)
-#define FILEDLG_SHOW_FILES          (1UL << 3)
-#define FILEDLG_SHOW_DIRS           (1UL << 4)
-#define FILEDLG_SHOW_HIDDEN         (1UL << 5)
-#define FILEDLG_SHOW_SIZE           (1UL << 6)
-#define FILEDLG_SHOW_CTIME          (1UL << 7)
-#define FILEDLG_SHOW_PRIV           (1UL << 8)
-#define FILEDLG_MULTISELECT         (1UL << 16)
-#define FILEDLG_BASIC                 \
-            (FILEDLG_SHOW_FILES | FILEDLG_SHOW_DIRS | FILEDLG_SORT_DIRS)
-#define FILEDLG_STANDARD            (FILEDLG_BASIC | FILEDLG_SHOW_SIZE)
-#define FILEDLG_EXTENDED            (FILEDLG_STANDARD | FILEDLG_SHOW_CTIME)
-#define FILEDLG_FULL                (FILEDLG_EXTENDED | FILEDLG_SHOW_PRIV)
-#define FILEDLG_COMPLETE            (FILEDLG_FULL | FILEDLG_SHOW_HIDDEN)
 
 #define VK_LISTBOX_ALLOW_WRAP       (1 << 1)
 
@@ -219,13 +193,6 @@ vwnd_t*         viper_msgbox_create(int screen_id, char *title,
                     float x, float y, int width, int height,
                     char *msg, uint32_t flags);
 
-/* special construction:  a file/directory load/save dialog box   */
-/*
-WINDOW*         viper_filedlg_create(WINDOW *parent, char *title,
-                    float x, float y, float width, float height,
-                    char *dir, uint32_t flags);
-*/
-
 /* window placement */
 vwnd_t*         viper_window_get_top(int screen_id, bool managed);
 bool            viper_window_set_top(vwnd_t *wnd);
@@ -281,25 +248,6 @@ void            viper_window_for_each(int screen_id, bool managed, int vector,
 void            viper_deck_cycle(int screen_id, bool managed, int vector);
 vwnd_t*         viper_deck_hit_test(int screen_id, bool managed, int x, int y);
 char**          viper_deck_get_wndlist(int screen_id, bool managed);
-
-/* menu helpers */
-MENU*           viper_menu_create(char **items);
-void            viper_menu_items_add(MENU *menu, char **items);
-void            viper_menu_items_change(MENU *menu, char **items);
-WINDOW*         viper_menu_bind(MENU *menu, WINDOW *parent, float x, float y,
-                    float width, float height);
-void            viper_menu_destroy(MENU *menu, bool free_windows);
-#define         CURRENT_MENU_ITEM(menu)    (item_index(current_item(menu)))
-
-/* form helpers */
-void            viper_form_colorize(FORM *form, chtype field_active,
-                    chtype field_normal, chtype text_active, chtype text_normal);
-#define         viper_form_normalize(form, fcolors, tcolors)   \
-                    (viper_form_colorize(form, fcolors, fcolors, tcolors, tcolors))
-void            viper_form_destroy(FORM *form, bool free_windows);
-int             viper_form_driver(FORM *form, int request, uint32_t flags,
-                    chtype active, chtype normal, short cursor_color);
-#define         CURRENT_FORM_ITEM(form)    (field_index(current_field(form)))
 
 /* miscellaneous functions */
 void            viper_window_set_userptr(vwnd_t *wnd, void *anything);
