@@ -20,68 +20,67 @@
 #include <inttypes.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_wdecorate.h"
 
 int
-viper_wresize(WINDOW *window, int width, int height, uint8_t flags)
+viper_wresize(vwnd_t *vwnd, int width, int height)
 {
-    extern WINDOW   *SCREEN_WINDOW;
-    VIPER_WND       *viper_wnd;
     WINDOW          *copy_pad;
     int             beg_x, beg_y;
     int             max_x, max_y;
 
     /* saftey checks. */
-    if(window == NULL) return ERR;
+    if(vwnd == NULL) return ERR;
     if(width == 0 && height == 0) return ERR;
     if(width == 0) width = WSIZE_UNCHANGED;
     if(height == 0) height = WSIZE_UNCHANGED;
 
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return ERR;
-    if((viper_wnd->window_state & STATE_NORESIZE) && !(flags & 1)) return ERR;
+    if(vwnd->window_state & STATE_NORESIZE) return ERR;
+
+    // don't allow resizing if the window is on an inactive screen
+    if(vwnd->ctx->screen_id != CURRENT_SCREEN_ID) return ERR;
 
     /* create a copy of the window contents before resizing. */
-    getmaxyx(viper_wnd->window, max_y, max_x);
-    getbegyx(viper_wnd->window, beg_y, beg_x);
+    getmaxyx(vwnd->window_frame, max_y, max_x);
+    getbegyx(vwnd->window_frame, beg_y, beg_x);
     copy_pad = newwin(max_y - 1,max_x - 1, beg_y, beg_x);
-    overwrite(viper_wnd->window, copy_pad);
+    overwrite(vwnd->window_frame, copy_pad);
 
     /* handle special values.  */
-    getmaxyx(SCREEN_WINDOW, max_y, max_x);
-    if(width == WSIZE_DEFAULT) width = viper_wnd->min_width;
-    if(height == WSIZE_DEFAULT) height = viper_wnd->min_height;
+    getmaxyx(CURRENT_SCREEN, max_y, max_x);
+    if(width == WSIZE_DEFAULT) width = vwnd->min_width;
+    if(height == WSIZE_DEFAULT) height = vwnd->min_height;
     if(width == WSIZE_FULLSCREEN)
     {
-        viper_mvwin_abs(viper_wnd->window, WPOS_UNCHANGED, 0);
+        viper_mvwin_abs(vwnd, WPOS_UNCHANGED, 0);
         width = max_x;
     }
     if(height == WSIZE_FULLSCREEN)
     {
-        viper_mvwin_abs(viper_wnd->window, 0, WPOS_UNCHANGED);
+        viper_mvwin_abs(vwnd, 0, WPOS_UNCHANGED);
         width = max_y;
     }
 
-    wresize(viper_wnd->window, height, width);
-    wresize(viper_wnd->user_window, height - 2,width - 2);
-    getmaxyx(viper_wnd->window, max_y, max_x);
+    wresize(vwnd->window_frame, height, width);
+    wresize(vwnd->user_window, height - 2,width - 2);
+    getmaxyx(vwnd->window_frame, max_y, max_x);
 
-    werase(viper_wnd->window);
-    werase(viper_wnd->user_window);
-    overwrite(copy_pad, viper_wnd->window);
+    werase(vwnd->window_frame);
+    werase(vwnd->user_window);
+    overwrite(copy_pad, vwnd->window_frame);
     delwin(copy_pad);
 
-    if(viper_wnd->window_state & STATE_MANAGED)
+    if(vwnd->ctx->managed == TRUE)
     {
-        if(viper_wnd->window_state & STATE_FOCUS)
-            viper_event_run(viper_wnd->window, "window-focus");
+        if(vwnd->window_state & STATE_FOCUS)
+            viper_event_run(vwnd, "window-focus");
         else
-            viper_event_run(viper_wnd->window, "window-unfocus");
+            viper_event_run(vwnd, "window-unfocus");
     }
-    viper_event_run(viper_wnd->window, "window-resized");
+    viper_event_run(vwnd, "window-resized");
 
-    viper_window_redraw(window);
+    viper_window_redraw(vwnd);
 
     return 0;
 }
@@ -92,22 +91,23 @@ viper_wresize(WINDOW *window, int width, int height, uint8_t flags)
 */
 
 int
-viper_wresize_rel(WINDOW *window, int vector_x, int vector_y)
+viper_wresize_rel(vwnd_t *vwnd, int vector_x, int vector_y)
 {
-    VIPER_WND       *viper_wnd;
     int             width, height;
     int             max_x, max_y;
 
-    if(window == NULL) return ERR;
+    if(vwnd == NULL) return ERR;
     if(vector_x == 0 && vector_y == 0) return 0;
 
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return ERR;
-    if(viper_wnd->window_state & STATE_NORESIZE) return ERR;
+    if(vwnd->window_state & STATE_NORESIZE) return ERR;
 
-    getmaxyx(viper_wnd->window, max_y, max_x);
+    // don't allow resizing if the window is on an inactive screen
+    if(vwnd->ctx->screen_id != CURRENT_SCREEN_ID) return ERR;
+
+    getmaxyx(vwnd->window_frame, max_y, max_x);
     width = max_x + vector_x;
     height = max_y + vector_y;
 
-    return viper_wresize_abs(window, width, height);
+    return viper_wresize_abs(vwnd, width, height);
 }
+

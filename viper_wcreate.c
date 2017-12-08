@@ -21,39 +21,54 @@
 #include <math.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_events.h"
 #include "viper_wdecorate.h"
 #include "list.h"
 
-WINDOW*
-viper_window_create(char *title, float x, float y,
-    float width, float height, bool managed)
+vwnd_t*
+viper_window_create(int screen_id, bool managed, char *title,
+    float x, float y, float width, float height)
 {
     extern VIPER    *viper;
-    extern WINDOW   *SCREEN_WINDOW;
-    VIPER_WND       *viper_wnd;
+    vwnd_t          *vwnd;
+    vctx_t          *vctx;
     int             screen_width, screen_height;
     int             tmp;
 
-    /* initialize window */
-    viper_wnd = (VIPER_WND*)calloc(1, sizeof(VIPER_WND));
-    viper_wnd->title = title;
-    viper_wnd->window_state |= STATE_VISIBLE;
-    list_add(&viper_wnd->list, &viper->wnd_list); 
+    // alloc objects
+    vwnd = (vwnd_t*)calloc(1, sizeof(vwnd_t));
+    vctx = (vctx_t*)calloc(1, sizeof(vctx_t));
+
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    // configure and set the context;
+    vctx->screen_id = screen_id;
+    vctx->managed = managed;
+    vwnd->ctx = vctx;
+
+    vwnd->title = title;
+    vwnd->window_state |= STATE_VISIBLE;
+
+    if(managed == TRUE)
+        list_add(&vwnd->list, &viper->managed_list[screen_id]);
+    else
+        list_add(&vwnd->list, &viper->unmanaged_list[screen_id]);
 
     /* fetch the dimentions of the active screen. */
-    getmaxyx(SCREEN_WINDOW, screen_height, screen_width);
+    getmaxyx(viper->screen[screen_id], screen_height, screen_width);
 
     /* handle special cases for width.  */
     if(width == WSIZE_FULLSCREEN)
     {
         width = screen_width;
-        viper_wnd->min_width = WSIZE_FULLSCREEN;
+        vwnd->min_width = WSIZE_FULLSCREEN;
     }
+
+    // width is a relative fraction
     if(width > 0 && width < 1)
     {
-        window_get_size_scaled(SCREEN_WINDOW, &tmp, NULL, width, 0);
+        window_get_size_scaled(CURRENT_SCREEN, &tmp, NULL, width, 0);
         width = tmp;
     }
 
@@ -61,11 +76,13 @@ viper_window_create(char *title, float x, float y,
     if(height == WSIZE_FULLSCREEN)
     {
         height = screen_height;
-        viper_wnd->min_height = WSIZE_FULLSCREEN;
+        vwnd->min_height = WSIZE_FULLSCREEN;
     }
+
+    // height is a relative fraction
     if(height > 0 && height < 1)
     {
-        window_get_size_scaled(SCREEN_WINDOW, NULL, &tmp, 0, height);
+        window_get_size_scaled(CURRENT_SCREEN, NULL, &tmp, 0, height);
         height = tmp;
     }
 
@@ -77,67 +94,59 @@ viper_window_create(char *title, float x, float y,
     {
         if((width + 1) > screen_width) width -= 2;
         if((height + 1) > screen_height) height -= 2;
-        viper_wnd->window = window_create(NULL, x, y,width + 2,height + 2);
-        viper_wnd->window_state |= STATE_MANAGED;
-        viper_wnd->window_state |= STATE_SHADOWED;
+        vwnd->window_frame = window_create(NULL, x, y, width + 2, height + 2);
+        vwnd->window_state |= STATE_SHADOWED;
     }
     else
     {
-        viper_wnd->window = window_create(NULL, x, y, width, height);
-        viper_wnd->window_state |= STATE_UNMANAGED;
+        vwnd->user_window = window_create(NULL, x, y, width, height);
     }
 
     /* block window resizing by default.   */
-    viper_wnd->window_state |= STATE_NORESIZE;
+    vwnd->window_state |= STATE_NORESIZE;
 
     /* set minimum limits if not already specified. */
-    if(viper_wnd->min_width == 0) viper_wnd->min_width = width;
-    if(viper_wnd->min_height == 0) viper_wnd->min_height = height;
+    if(vwnd->min_width == 0) vwnd->min_width = width;
+    if(vwnd->min_height == 0) vwnd->min_height = height;
 
     if(managed == TRUE)
     {
-        viper_wnd->window_state |= STATE_MANAGED;
-        wbkgdset(viper_wnd->window, VIPER_COLORS(COLOR_BLACK,COLOR_WHITE));
-        viper_wnd->user_window = window_create(viper_wnd->window, 1, 1,
-            width, height);
-        wbkgdset(viper_wnd->user_window, VIPER_COLORS(COLOR_BLACK,COLOR_WHITE));
-        werase(viper_wnd->user_window);
+        wbkgdset(vwnd->window_frame, VIPER_COLORS(COLOR_BLACK,COLOR_WHITE));
+        vwnd->user_window = window_create(vwnd->window_frame, 1, 1, width, height);
+        wbkgdset(vwnd->user_window, VIPER_COLORS(COLOR_BLACK,COLOR_WHITE));
+        werase(vwnd->user_window);
 
-        viper_wnd->border_agent[0] = viper->border_agent[0];
-        viper_wnd->border_agent[1] = viper->border_agent[1];
+        vwnd->border_agent[0] = viper->border_agent[0];
+        vwnd->border_agent[1] = viper->border_agent[1];
     }
-    else viper_wnd->user_window = viper_wnd->window;
+    else
+        vwnd->window_frame = vwnd->user_window;
 
-    INIT_LIST_HEAD(&viper_wnd->event_list);
+    INIT_LIST_HEAD(&vwnd->event_list);
 
-    viper_event_set(viper_wnd->window, "window-close",
-        viper_event_default_WINDOW_CLOSE, NULL);
-    viper_event_set(viper_wnd->window, "term-resized",
+    viper_event_set(vwnd, "term-resized",
         viper_event_default_TERM_RESIZE, NULL);
 
-    return viper_wnd->user_window;
+    return vwnd;
 }
 
 int
-viper_window_set_limits(WINDOW *window, int min_width, int min_height,
+viper_window_set_limits(vwnd_t *vwnd, int min_width, int min_height,
     int max_width, int max_height)
 {
-    VIPER_WND       *viper_wnd;
-
-    if(window == NULL) return ERR;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    if(viper_wnd == NULL) return ERR;
+    if(vwnd == NULL) return ERR;
 
     if(min_width != 0 && min_width != WSIZE_UNCHANGED)
-        viper_wnd->min_width = min_width;
+        vwnd->min_width = min_width;
+
     if(min_height != 0 && min_height != WSIZE_UNCHANGED)
-        viper_wnd->min_height=min_height;
+        vwnd->min_height = min_height;
+
     if(max_width != 0 && max_width != WSIZE_UNCHANGED)
-        viper_wnd->max_width = max_width;
+        vwnd->max_width = max_width;
+
     if(max_height != 0 && max_height != WSIZE_UNCHANGED)
-        viper_wnd->max_height = max_height;
+        vwnd->max_height = max_height;
 
     return 0;
 }

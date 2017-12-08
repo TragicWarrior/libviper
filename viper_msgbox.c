@@ -22,14 +22,15 @@
 
 #include "viper.h"
 #include "viper_msgbox.h"
+#include "viper_wdestroy.h"
 #include "viper_events.h"
 #include "strings.h"
 
-WINDOW*
-viper_msgbox_create(char *title, float x, float y,
+vwnd_t*
+viper_msgbox_create(int screen_id, char *title, float x, float y,
     int width, int height, char *msg, uint32_t flags)
 {
-    WINDOW      *window;
+    vwnd_t      *vwnd;
     char        *icons[]={" II "," WW "," EE "," ?? "};
     chtype      icon_colors[] = {
                     VIPER_COLORS(COLOR_WHITE,COLOR_BLACK),
@@ -72,26 +73,30 @@ viper_msgbox_create(char *title, float x, float y,
         }
     }
 
-    window = viper_window_create(title, x, y, width + 2, height + 2, TRUE);
-    getmaxyx(window, height, width);
-    wresize(window, height - 2, width - 2);
-    mvderwin(window, 2, 2);
+    vwnd = viper_window_create(screen_id, TRUE, title,
+        x, y, width + 2, height + 2);
 
-    wmove(window, 0, 0);
+    getmaxyx(WINDOW_FRAME(vwnd), height, width);
+    wresize(WINDOW_FRAME(vwnd), height - 2, width - 2);
+    mvderwin(VWINDOW(vwnd), 2, 2);
+
+    wmove(WINDOW_FRAME(vwnd), 0, 0);
     if(idx != -1)
     {
-        wattron(window, icon_colors[idx] | A_REVERSE);
-        wprintw(window, "%s", icons[idx], msg);
-        wattroff(window, icon_colors[idx] | A_REVERSE);
-        wprintw(window," ");
+        wattron(WINDOW_FRAME(vwnd), icon_colors[idx] | A_REVERSE);
+        wprintw(WINDOW_FRAME(vwnd), "%s", icons[idx], msg);
+        wattroff(WINDOW_FRAME(vwnd), icon_colors[idx] | A_REVERSE);
+        wprintw(WINDOW_FRAME(vwnd), " ");
     }
 
     /* checking the _WRAPPED flag may not be portable. */
     pos = msg_dissect;
     while(*pos != NULL)
     {
-        if(strlen(*pos) == (unsigned)(width - 2)) wprintw(window, "%s", *pos);
-        else wprintw(window, "%s\n", *pos);
+        if(strlen(*pos) == (unsigned)(width - 2))
+            wprintw(WINDOW_FRAME(vwnd), "%s", *pos);
+        else
+            wprintw(WINDOW_FRAME(vwnd), "%s\n", *pos);
         pos++;
     }
     strfreev(msg_dissect);
@@ -99,32 +104,25 @@ viper_msgbox_create(char *title, float x, float y,
     if(prompt != NULL)
     {
         tmp = (width - 1 - strlen(prompt)) / 2;
-        mvwprintw(window, height - 3, tmp, prompt);
-    }
-
-    if(flags & MSGBOX_FLAG_EMINENT)
-    {
-        viper_window_set_eminency(window, TRUE);
-        viper_event_set(window, "window-close",
-            viper_event_default_MSGBOX_CLOSE,NULL);
+        mvwprintw(WINDOW_FRAME(vwnd), height - 3, tmp, prompt);
     }
 
     if(flags & MSGBOX_TYPE_OK)
-        viper_window_set_key_func(window, viper_kbd_default_MSGBOX_OK);
+        viper_window_set_key_func(vwnd, viper_kbd_default_MSGBOX_OK);
 
     // squelch compiler warning
     (void)longest_line;
 
-    return window;
+    return vwnd;
 }
 
 /*    convenience function for msgbox flag MSGBOX_FLAG_OK    */
 int
-viper_kbd_default_MSGBOX_OK(int32_t keystroke, WINDOW *window)
+viper_kbd_default_MSGBOX_OK(int32_t keystroke, vwnd_t *vwnd)
 {
     if(keystroke != KEY_CRLF) return 1;
 
-    viper_window_destroy(window);
+    viper_window_destroy(vwnd);
 
     return 1;
 }

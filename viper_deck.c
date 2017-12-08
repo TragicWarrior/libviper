@@ -20,7 +20,7 @@
 #include <string.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_callbacks.h"
 #include "viper_deck.h"
 #include "viper_screen.h"
@@ -28,149 +28,193 @@
 
 #include "list.h"
 
-WINDOW*
-viper_deck_hit_test(int x, int y)
+vwnd_t*
+viper_deck_hit_test(int screen_id, bool managed, int x, int y)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd = NULL;
+    vwnd_t              *vwnd = NULL;
     struct list_head    *pos = NULL;
+    struct list_head    *wnd_list;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
+    if(screen_id == -1)
+        screen_id = CURRENT_SCREEN_ID;
 
-    list_for_each(pos, &viper->wnd_list)
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return NULL;
+
+    list_for_each(pos, wnd_list)
     {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
-        if(wenclose(viper_wnd->window, y, x) == TRUE) break;
+        vwnd = list_entry(pos, VIPER_WND, list);
 
-        viper_wnd = NULL;
+        // window frame and user window will be the same
+        // for unmanaged windows so this always works
+        if(wenclose(WINDOW_FRAME(vwnd), y, x) == TRUE) break;
+
+        vwnd = NULL;
     }
 
-    if(viper_wnd == NULL) return NULL;
+    if(vwnd == NULL) return NULL;
 
-    return viper_wnd->user_window;
+    return vwnd;
 }
 
-WINDOW*
-viper_window_get_top(uint32_t state_mask)
+vwnd_t*
+viper_window_get_top(int screen_id, bool managed)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
+    vwnd_t              *vwnd;
+    struct list_head    *wnd_list;
     struct list_head    *pos;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
-    if(state_mask == 0)
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return NULL;
+
+    list_for_each(pos, wnd_list)
     {
-        viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
+        vwnd = list_entry(pos, vwnd_t, list);
 
-        return viper_wnd->user_window;
+        if(vwnd->window_state & STATE_VISIBLE) break;
+
+        vwnd = NULL;
     }
 
-    list_for_each(pos, &viper->wnd_list)
-    {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
+    if(vwnd == NULL) return NULL;
 
-        if(viper_wnd->window_state & state_mask) break;
-
-        viper_wnd = NULL;
-    }
-
-    if(viper_wnd == NULL) return NULL;
-
-    return viper_wnd->user_window;
+    return vwnd;
 }
 
 
 bool
-viper_window_set_top(WINDOW *window)
+viper_window_set_top(vwnd_t *vwnd)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
+    extern VIPER        *viper;
+    struct list_head    *wnd_list;
+    int                 screen_id;
 
-    if(list_empty(&viper->wnd_list)) return FALSE;
+    if(vwnd == NULL) return FALSE;
 
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return FALSE;
+    // make sure we're on the active screen
+    // possibly change behavior later to allow cycling on
+    // inactive screen
+    screen_id = CURRENT_SCREEN_ID;
+    if(vwnd->ctx->screen_id != screen_id) return FALSE;
+
+    if(vwnd->ctx->managed == TRUE)
+    {
+        wnd_list = &viper->managed_list[screen_id];
+    }
+    else
+    {
+        wnd_list = &viper->unmanaged_list[screen_id];
+    }
+
+    if(list_empty(wnd_list)) return FALSE;
 
     // only allow those windows which can catch focus to be placed on top
-    if(is_viper_window_allowed_focus(window) == FALSE) return FALSE;
+    if(is_viper_window_visible(vwnd) == FALSE) return FALSE;
 
-    if(viper_window_set_focus(window) == FALSE) return FALSE;
+    if(viper_window_set_focus(vwnd) == FALSE) return FALSE;
 
     // move window to the front of the deck
-    list_move(&viper_wnd->list, &viper->wnd_list);
+    list_move(&vwnd->list, wnd_list);
 
     return TRUE;
 }
 
 void
-viper_deck_cycle(int vector)
+viper_deck_cycle(int screen_id, bool managed, int vector)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
-    VIPER_WND       *first_wnd = NULL;
+    extern VIPER        *viper;
+    vwnd_t              *vwnd;
+    vwnd_t              *first_wnd = NULL;
+    struct list_head    *wnd_list;
 
-    if(list_empty(&viper->wnd_list)) return;
+    // don't allow cycling of offscreen decks
+    if(screen_id != CURRENT_SCREEN_ID) return;
 
-    /* honor window eminency flag */
-    viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
-    if(viper_wnd->window_state & STATE_EMINENT) return;
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return;
+    if(list_is_singular(wnd_list)) return;
 
     do
     {
-        if(vector > 0)
+        if(vector >= VECTOR_TOP_TO_BOTTOM)
         {
-            list_rotate_left(&viper->wnd_list);
+            list_rotate_left(wnd_list);
         }
 
-        if(vector < 0)
+        if(vector <= VECTOR_BOTTOM_TO_TOP)
         {
-            list_rotate_right(&viper->wnd_list);
+            list_rotate_right(wnd_list);
         }
 
         // get what's on top now
-        viper_wnd = list_first_entry(&viper->wnd_list, VIPER_WND, list);
+        vwnd = list_first_entry(wnd_list, vwnd_t, list);
 
         if(first_wnd == NULL)
         {
-            first_wnd = viper_wnd;
+            first_wnd = vwnd;
             continue;
         }
 
-        // we've gone in a complete circle
-        if(first_wnd == viper_wnd) break;
+        if(vwnd != NULL)
+        {
+            if(is_viper_window_visible(vwnd) == TRUE) break;
+        }
     }
-    while(is_viper_window_allowed_focus(viper_wnd->window) == FALSE);
+    while(vwnd != first_wnd);
 
-    if(viper_window_set_top(viper_wnd->window) == TRUE)
+    if(viper_window_set_top(vwnd) == TRUE)
     {
-        viper_window_redraw(viper_wnd->window);
-        viper_screen_redraw(REDRAW_ALL);
+        viper_window_redraw(vwnd);
+        viper_screen_redraw(screen_id, REDRAW_ALL);
     }
 
     return;
 }
 
 char**
-viper_deck_get_wndlist(void)
+viper_deck_get_wndlist(int screen_id, bool managed)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
+    vwnd_t              *vwnd;
     char                **titles;
     struct list_head    *pos;
+    struct list_head    *wnd_list;
     int                 i = 0;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return NULL;
 
     titles = (char**)calloc(1, sizeof(char*) * 256);
 
-    list_for_each(pos, &viper->wnd_list)
+    list_for_each(pos, wnd_list)
     {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
+        vwnd = list_entry(pos, vwnd_t, list);
 
-        if(viper_wnd->title != NULL)
+        if(vwnd->title != NULL)
         {
-            titles[i] = strdup(viper_wnd->title);
+            titles[i] = strdup(vwnd->title);
             i++;
         }
     }
@@ -179,15 +223,15 @@ viper_deck_get_wndlist(void)
 }
 
 inline bool
-viper_deck_check_occlusion(VIPER_WND *top_wnd, VIPER_WND *bottom_wnd)
+viper_deck_check_occlusion(vwnd_t *top_wnd, vwnd_t *bottom_wnd)
 {
     int     bx, by, bw, bh;
     int     tx, ty, tw, th;
 
-    getbegyx(bottom_wnd->window, by, bx);
-    getmaxyx(bottom_wnd->window, bh, bw);
-    getbegyx(top_wnd->window, ty, tx);
-    getmaxyx(top_wnd->window, th, tw);
+    getbegyx(bottom_wnd->window_frame, by, bx);
+    getmaxyx(bottom_wnd->window_frame, bh, bw);
+    getbegyx(top_wnd->window_frame, ty, tx);
+    getmaxyx(top_wnd->window_frame, th, tw);
 
     /* factor in shadow effects */
     if(top_wnd->window_state & STATE_SHADOWED)

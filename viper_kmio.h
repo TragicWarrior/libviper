@@ -13,6 +13,8 @@
 #include <gpm.h>
 #endif
 
+#include "viper.h"
+
 enum
 {
     EVENTMODE_IDLE = 0,
@@ -35,6 +37,6 @@ int    viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd);
 
 #endif
 
-VIPER_WKEY_FUNC viper_window_get_key_func(WINDOW *window);
+ViperWkeyFunc   viper_window_get_key_func(vwnd_t *vwnd);
 
 #endif

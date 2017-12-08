@@ -1,0 +1,20 @@
+
+HIERARCHY OF VDK KLASSES
+
+ vdk_object
+   |
+   +- vdk_screen (todo)
+   |
+   +- vdk_widget   
+        |
+        +- vdk_container
+        |    | 
+        |    +- vdk_frame
+        |    
+        +- vdk_button
+        |
+        +- vdk_label
+        |
+        +- vdk_spinner
+        |
+        +- vdk_listbox

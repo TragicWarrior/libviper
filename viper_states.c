@@ -21,166 +21,115 @@
 #include <inttypes.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_callbacks.h"
 #include "viper_deck.h"
 #include "viper_states.h"
 #include "list.h"
 
 uint32_t
-viper_window_get_state(WINDOW *window)
+viper_window_get_state(vwnd_t *vwnd)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
+    if(vwnd == NULL) return 0;
 
-    if(window == NULL) return 0;
-
-    if(list_empty(&viper->wnd_list)) return 0;
-    viper_wnd = viper_get_viper_wnd(window);
-
-    return viper_wnd->window_state;
+    return vwnd->window_state;
 }
 
 void
-viper_window_set_eminency(WINDOW *window, bool value)
+viper_window_set_shadow(vwnd_t *vwnd, bool value)
 {
-    extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
-    struct list_head    *pos;
+    if(vwnd == NULL) return;
 
-    if(window == NULL) return;
-    if(list_empty(&viper->wnd_list)) return;
-
-    if(value == FALSE)
-    {
-        viper_wnd = viper_get_viper_wnd(window);
-        if(viper_wnd == NULL) return;
-
-        viper_wnd->window_state &= ~STATE_EMINENT;
-        return;
-    }
-
-    // never allow a hidden window to be set eminent
-    if(is_viper_window_visible(window) == FALSE) return;
-
-    list_for_each(pos, &viper->wnd_list)
-    {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
-
-        // clear all eminency flags
-        viper_wnd->window_state &= ~STATE_EMINENT;
-    }
-
-    viper_wnd = viper_get_viper_wnd(window);
-    viper_wnd->window_state |= STATE_EMINENT;
-
-    list_move(&viper->wnd_list, &viper_wnd->list);
+    if(value == TRUE)
+        vwnd->window_state |= STATE_SHADOWED;
+    else
+        vwnd->window_state &= ~STATE_SHADOWED;
 
     return;
 }
 
 
 void
-viper_window_set_shadow(WINDOW *window, bool value)
+viper_window_set_visible(vwnd_t *vwnd, bool value)
 {
-    VIPER_WND       *viper_wnd;
-
-    if(window == NULL) return;
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return;
+    if(vwnd == NULL) return;
 
     if(value == TRUE)
-        viper_wnd->window_state |= STATE_SHADOWED;
+        vwnd->window_state |= STATE_VISIBLE;
     else
-        viper_wnd->window_state &= ~STATE_SHADOWED;
-
-    return;
-}
-
-
-void
-viper_window_set_visible(WINDOW *window, bool value)
-{
-    VIPER_WND   *viper_wnd;
-
-    if(window == NULL) return;
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return;
-
-    if(value == TRUE)
-        viper_wnd->window_state |= STATE_VISIBLE;
-    else
-        viper_wnd->window_state &= ~STATE_VISIBLE;
+        vwnd->window_state &= ~STATE_VISIBLE;
 
     return;
 }
 
 void
-viper_window_set_resizable(WINDOW *window, bool value)
+viper_window_set_resizable(vwnd_t *vwnd, bool value)
 {
-    VIPER_WND       *viper_wnd;
-
-    if(window == NULL) return;
-    viper_wnd = viper_get_viper_wnd(window);
-    if(viper_wnd == NULL) return;
+    if(vwnd == NULL) return;
 
     if(value == TRUE)
-        viper_wnd->window_state &= ~STATE_NORESIZE;
+        vwnd->window_state &= ~STATE_NORESIZE;
     else
-        viper_wnd->window_state |= ~STATE_NORESIZE;
+        vwnd->window_state |= ~STATE_NORESIZE;
 
     return;
 }
 
 
 bool
-viper_window_set_focus(WINDOW *window)
+viper_window_set_focus(vwnd_t *vwnd)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
+    vwnd_t              *sibling_wnd;
+    struct list_head    *wnd_list;
     struct list_head    *pos;
+    int                 screen_id;
 
-    if(window == NULL) return FALSE;
+    if(vwnd == NULL) return FALSE;
 
-    if(is_viper_window_allowed_focus(window) == FALSE) return FALSE;
+    screen_id = vwnd->ctx->screen_id;
+
+    if(vwnd->ctx->managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
 
     // remove focus from all other windows
-    list_for_each(pos, &viper->wnd_list)
+    list_for_each(pos, wnd_list)
     {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
+        sibling_wnd = list_entry(pos, vwnd_t, list);
 
-        if(viper_wnd->window_state & STATE_FOCUS)
-            viper_event_run(window, "window-deactivate");
-        viper_wnd->window_state &= ~STATE_FOCUS;
-        viper_event_run(window, "window-unfocus");
+        if(sibling_wnd->window_state & STATE_FOCUS)
+            viper_event_run(sibling_wnd, "window-deactivate");
+
+        sibling_wnd->window_state &= ~STATE_FOCUS;
+        viper_event_run(sibling_wnd, "window-unfocus");
     }
 
-    viper_wnd = viper_get_viper_wnd(window);
-
-    viper_wnd->window_state |= STATE_FOCUS;
-    viper_event_run(window, "window-focus");
-    viper_event_run(window, "window-activate");
+    vwnd->window_state |= STATE_FOCUS;
+    viper_event_run(vwnd, "window-focus");
+    viper_event_run(vwnd, "window-activate");
 
     return TRUE;
 }
 
 void
-viper_window_redraw(WINDOW *window)
+viper_window_redraw(vwnd_t *vwnd)
 {
-    extern WINDOW   *SCREEN_WINDOW;
-    extern VIPER    *viper;
-    VIPER_WND       *redraw_wnd;
-    VIPER_WND       *next_wnd;
+    extern VIPER        *viper;
+    vwnd_t              *next_wnd;
+    struct list_head    *wnd_list;
+    int                 screen_id;
 
-    if(window == NULL) return;
+    if(vwnd == NULL) return;
 
-    /*
-        make sure the window is not a subwin, if so, traverse to top and
-        change reference.  not sure about the portablility.  relies on a
-        consistent implementation of struct win_st
-    */
-    while(window->_parent != NULL) window = window->_parent;
-    redraw_wnd = viper_get_viper_wnd(window);
+    screen_id = vwnd->ctx->screen_id;
+    if(screen_id != CURRENT_SCREEN_ID) return;
+
+    if(vwnd->ctx->managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
 
     /*
         redrawing a window is somewhat complex.  if you just redraw the
@@ -193,22 +142,22 @@ viper_window_redraw(WINDOW *window)
         the parent instance of this function completes do we copy the virtual
         screen out to the terminal.
     */
-    if(viper->redraw_catalyst == NULL) viper->redraw_catalyst = window;
-    viper_callback_blit_window(redraw_wnd->window ,NULL);
+    if(viper->redraw_catalyst == NULL) viper->redraw_catalyst = vwnd;
+    viper_callback_blit_window(vwnd, NULL);
 
     /*
         start traversing with the window to be redraw.  this will change as
         the function recurses.
     */
-    if(!(list_is_first(&redraw_wnd->list, &viper->wnd_list)))
+    if(!(list_is_first(&vwnd->list, wnd_list)))
     {
-        next_wnd = list_prev_entry(redraw_wnd, list);
+        next_wnd = list_prev_entry(vwnd, list);
 
-        list_for_each_entry_from_reverse(next_wnd, &viper->wnd_list, list)
+        list_for_each_entry_from_reverse(next_wnd, wnd_list, list)
         {
             // check to see if we're at the top
-            if(viper_deck_check_occlusion(next_wnd, redraw_wnd) == TRUE)
-                viper_window_redraw(next_wnd->window);
+            if(viper_deck_check_occlusion(next_wnd, vwnd) == TRUE)
+                viper_window_redraw(next_wnd);
         }
     }
 
@@ -216,12 +165,12 @@ viper_window_redraw(WINDOW *window)
         only copy the virtual screen to the terminal *IF* this is the orignal
         instance of this recursive function.
     */
-    if(window == viper->redraw_catalyst)
+    if(vwnd == viper->redraw_catalyst)
     {
         if(viper->console_mouse != NULL)
-        overwrite(viper->console_mouse, SCREEN_WINDOW);
+        overwrite(viper->console_mouse, CURRENT_SCREEN);
 
-        wnoutrefresh(SCREEN_WINDOW);
+        wnoutrefresh(CURRENT_SCREEN);
         doupdate();
         viper->redraw_catalyst = NULL;
     }
@@ -230,54 +179,12 @@ viper_window_redraw(WINDOW *window)
 }
 
 bool
-is_viper_window_visible(WINDOW *window)
+is_viper_window_visible(vwnd_t *vwnd)
 {
-    VIPER_WND           *viper_wnd;
+    if(vwnd == NULL) return FALSE;
 
-    if(window == NULL) return FALSE;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    if(viper_wnd->window_state & STATE_VISIBLE) return TRUE;
+    if(vwnd->window_state & STATE_VISIBLE) return TRUE;
 
     return FALSE;
 }
 
-bool
-is_viper_window_allowed_focus(WINDOW *window)
-{
-    extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
-    VIPER_WND           *other_wnd;
-    struct list_head    *pos;
-
-    if(window == NULL) return FALSE;
-    if(list_empty(&viper->wnd_list)) return FALSE;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    /*
-        notice that an unmanaged window can be moved to the top of the deck
-        if it has the emmient bit set.  this trump case allows for special
-        cases like a screensaver
-    */
-    if(viper_wnd->window_state & STATE_EMINENT) return TRUE;
-
-    if((viper_wnd->window_state & STATE_MANAGED) &&
-        (viper_wnd->window_state & STATE_VISIBLE)) return TRUE;
-
-    // make sure there aren't any eminent windows in the deck
-    list_for_each(pos, &viper->wnd_list)
-    {
-        other_wnd = list_entry(pos, VIPER_WND, list);
-
-        if(other_wnd->window_state & STATE_EMINENT)
-        {
-            if(other_wnd != viper_wnd) return FALSE;
-        }
-
-        other_wnd = NULL;
-    }
-
-    return FALSE;
-}

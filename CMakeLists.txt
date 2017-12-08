@@ -29,19 +29,18 @@ endif()
 
 add_library(viper-static STATIC
     strings.c
+    viper_private.c
     viper_callbacks.c
     viper_color.c
     viper_deck.c
     viper_events.c
-    viper_forms.c
     viper_keyboard.c
     viper_kmio.c
-    viper_menus.c
     viper_msgbox.c
-    viper_private.c
     viper_screen.c
     viper_states.c
     viper_userptr.c
+    viper_wclose.c
     viper_wcreate.c
     viper_wdecorate.c
     viper_wdestroy.c
@@ -55,23 +54,26 @@ add_library(viper-static STATIC
     w_metrics.c
     w_move.c
     w_shadow.c
+    vk_object.c
+    vk_widget.c
+    vk_container.c
+    vk_listbox.c
     )
 
 add_library(viper.o OBJECT
     strings.c
+    viper_private.c
     viper_callbacks.c
     viper_color.c
     viper_deck.c
     viper_events.c
-    viper_forms.c
     viper_keyboard.c
     viper_kmio.c
-    viper_menus.c
     viper_msgbox.c
-    viper_private.c
     viper_screen.c
     viper_states.c
     viper_userptr.c
+    viper_wclose.c
     viper_wcreate.c
     viper_wdecorate.c
     viper_wdestroy.c
@@ -85,6 +87,10 @@ add_library(viper.o OBJECT
     w_metrics.c
     w_move.c
     w_shadow.c
+    vk_object.c
+    vk_widget.c
+    vk_container.c
+    vk_listbox.c
     )
 
 add_library(viper-shared SHARED

@@ -17,24 +17,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <curses.h>
+
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "viper_callbacks.h"
 #include "viper_states.h"
 
 int
-viper_callback_touchwin(WINDOW *window, void *arg)
+viper_callback_touchwin(vwnd_t *vwnd, void *arg)
 {
-	VIPER_WND	*viper_wnd;
+	if(vwnd == NULL) return ERR;
 
-	if(window == NULL) return ERR;
-	viper_wnd = viper_get_viper_wnd(window);
-	if(viper_wnd == NULL) return ERR;
-
-	if(viper_wnd->window_state & STATE_VISIBLE)
+	if(vwnd->window_state & STATE_VISIBLE)
 	{
-		touchwin(viper_wnd->user_window);
-		touchwin(viper_wnd->window);
+		touchwin(vwnd->user_window);
+		touchwin(vwnd->window_frame);
 	}
 
     (void)arg;
@@ -43,45 +41,42 @@ viper_callback_touchwin(WINDOW *window, void *arg)
 }
 
 inline int
-viper_callback_blit_window(WINDOW *window, void *arg)
+viper_callback_blit_window(vwnd_t *vwnd, void *arg)
 {
-    extern WINDOW   *SCREEN_WINDOW;
-	VIPER_WND	    *viper_wnd;
 	WINDOW		    *shadow_window;
-    uint32_t        state_mask = 0;
     int             idx = 0;
+    int             retval = 0;
 
-	if(window == NULL) return ERR;
-	viper_wnd = viper_get_viper_wnd(window);
-	if(viper_wnd == NULL) return ERR;
+	if(vwnd == NULL) return ERR;
 
-	if(!(viper_wnd->window_state & STATE_VISIBLE)) return 0;
-	if(arg != NULL) state_mask = *(uint32_t*)arg;
-	else state_mask = ~0;
+	if(!(vwnd->window_state & STATE_VISIBLE)) return 0;
 
-	if(viper_wnd->window_state & state_mask)
+	if(vwnd->window_state & STATE_VISIBLE)
 	{
         /* run the border agent to decorate the window. */
-        if(viper_wnd->window_state & STATE_MANAGED)
+        if(vwnd->ctx->managed == TRUE)
         {
-            if(viper_wnd->window_state & STATE_FOCUS) idx=1;
-            if(viper_wnd->border_agent[idx] != NULL)
+            if(vwnd->window_state & STATE_FOCUS) idx = 1;
+            if(vwnd->border_agent[idx] != NULL)
             {
-                viper_wnd->border_agent[idx](viper_wnd->window,
-                    (void*)viper_wnd);
+                vwnd->border_agent[idx](vwnd, (void*)vwnd);
             }
         }
 
-		if(viper_wnd->window_state & STATE_SHADOWED)
+		if(vwnd->window_state & STATE_SHADOWED)
 		{
-			shadow_window = window_create_shadow(viper_wnd->window,
-                SCREEN_WINDOW);
-			overwrite(shadow_window, SCREEN_WINDOW);
+			shadow_window = window_create_shadow(WINDOW_FRAME(vwnd),
+                CURRENT_SCREEN);
+			overwrite(shadow_window, CURRENT_SCREEN);
 			delwin(shadow_window);
 		}
 
-		overwrite(viper_wnd->window, SCREEN_WINDOW);
+		retval = overwrite(WINDOW_FRAME(vwnd), CURRENT_SCREEN);
 	}
+
+    if(retval == ERR) return -1;
+
+    (void)arg;
 
 	return 0;
 }
@@ -97,76 +92,65 @@ viper_callback_del_event(void *data, void *anything)
 	return;
 }
 
-int
-viper_default_wallpaper_agent(WINDOW *window, void *arg)
+void
+viper_default_wallpaper_agent(int screen_id)
 {
-    extern WINDOW   *SCREEN_WINDOW;
-    WINDOW          *screen_window;
-    int			    width, height;
+    extern VIPER    *viper;
+    int             width, height;
+
+    if(screen_id > MAX_SCREENS) return;
+
+    // make sure the wallpaper window is the same size
+    // as the target screen
+    getmaxyx(viper->screen[screen_id], height, width);
+    wresize(viper->wallpaper[screen_id], height, width);
+
 #ifdef _VIPER_WIDE
+
 	static cchar_t	bg_char;
 	wchar_t			wch[] = {0x0020, 0x0000};
-#endif
 
-	if(arg != NULL) screen_window = (WINDOW*)arg;
-	else screen_window = SCREEN_WINDOW;
+	setcchar(&bg_char, wch, 0, 0, NULL);
 
-    getmaxyx(screen_window, height, width);
-	wresize(screen_window, height, width);
-
-#ifdef _VIPER_WIDE
-	setcchar(&bg_char,wch, 0, 0, NULL);
-	window_fill(window, &bg_char, viper_color_pair(COLOR_WHITE,COLOR_BLUE),
-      A_NORMAL);
+	window_fill(viper->wallpaper[screen_id], &bg_char,
+        viper_color_pair(COLOR_WHITE, COLOR_BLUE), A_NORMAL);
 #else
-	window_fill(window,' ', viper_color_pair(COLOR_WHITE,COLOR_BLUE), A_NORMAL);
+	window_fill(viper->wallpaper[screen_id], ' ',
+        viper_color_pair(COLOR_WHITE, COLOR_BLUE), A_NORMAL);
 #endif
 
-	return 0;
+	return;
 }
 
 int
-viper_default_border_agent_focus(WINDOW *window, void *anything)
+viper_default_border_agent_focus(vwnd_t *vwnd, void *arg)
 {
-    VIPER_WND   *viper_wnd;
+    if(vwnd == NULL) return -1;
+    if(vwnd->ctx->managed == FALSE) return -1;
 
-    viper_wnd = (VIPER_WND*)anything;
+    window_decorate(WINDOW_FRAME(vwnd), (char*)vwnd->title, TRUE);
 
-    window_decorate(window, (char*)viper_wnd->title, TRUE);
-    window_modify_border(viper_wnd->window, A_NORMAL,
+    window_modify_border(WINDOW_FRAME(vwnd), A_NORMAL,
       viper_color_pair(COLOR_MAGENTA, COLOR_WHITE));
 
+    (void)arg;
+
     return 0;
 }
 
 int
-viper_default_border_agent_unfocus(WINDOW *window, void *anything)
+viper_default_border_agent_unfocus(vwnd_t *vwnd, void *arg)
 {
-    VIPER_WND   *viper_wnd;
+    if(vwnd == NULL) return -1;
+    if(vwnd->ctx->managed == FALSE) return -1;
 
-    viper_wnd = (VIPER_WND*)anything;
+    window_decorate(WINDOW_FRAME(vwnd), (char*)vwnd->title, TRUE);
 
-    window_decorate(window,(char*)viper_wnd->title,TRUE);
-    window_modify_border(viper_wnd->window,A_BOLD,
+    window_modify_border(WINDOW_FRAME(vwnd), A_BOLD,
         viper_color_pair(COLOR_BLACK,COLOR_WHITE));
+
+    (void)arg;
 
     return 0;
 }
 
-/*
-gint
-viper_enum_window_titles(WINDOW *window, gpointer anything)
-{
-	VIPER_WND  *viper_wnd;
-	gchar      **titles;
-
-	titles = (gchar**)anything;
-	viper_wnd = viper_get_viper_wnd(window);
-
-	while(titles[0] != NULL) titles++;
-
-	*titles = g_strdup(viper_wnd->title);
-
-	return 0;
-}
-*/

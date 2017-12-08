@@ -23,10 +23,11 @@
 #include <string.h>
 
 #include "viper.h"
+#include "private.h"
 #include "viper_color.h"
 #include "viper_callbacks.h"
-#include "viper_private.h"
 #include "viper_kmio.h"
+#include "viper_wdestroy.h"
 
 WINDOW      *SCREEN_WINDOW = NULL;
 VIPER       *viper = NULL;
@@ -42,6 +43,7 @@ viper_init(uint32_t init_flags)
     mmask_t                     mouse_mask = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
     extern uint32_t             viper_global_flags;
     struct termios              term_desc;
+    int                         i;
 
     if(viper == NULL)
     {
@@ -51,31 +53,41 @@ viper_init(uint32_t init_flags)
 
         viper_global_flags |= init_flags;
         viper = (VIPER*)calloc(1, sizeof(VIPER));
+
+        viper->screen[0] = SCREEN_WINDOW;
+        viper->cur_scr_id = 0;
+
         viper_color_init();
         env = getenv("TERM");
         if(strstr(env, "xterm") != NULL) viper->xterm=TRUE;
         viper->user = getuid();
         getmaxyx(SCREEN_WINDOW, height, width);
-        viper->wallpaper = newwin(height, width, 0, 0);
-        viper->wallpaper_agent = viper_default_wallpaper_agent;
-        viper_default_wallpaper_agent(viper->wallpaper, SCREEN_WINDOW);
         viper->border_agent[0] = viper_default_border_agent_unfocus;
         viper->border_agent[1] = viper_default_border_agent_focus;
         mousemask(mouse_mask, NULL);
 
-        INIT_LIST_HEAD(&viper->wnd_list);
+        for(i = 0; i < MAX_SCREENS; i++)
+        {
+            INIT_LIST_HEAD(&viper->managed_list[i]);
+            INIT_LIST_HEAD(&viper->unmanaged_list[i]);
+
+            viper->wallpaper[i] = newwin(height, width, 0, 0);
+            viper->wallpaper_agent[i] = viper_default_wallpaper_agent;
+        }
+
+        INIT_LIST_HEAD(&viper->zombie_list);
 
         /*
             these are "normal" settings that would be commonly
             configured for use with the library.  the user can always
             change them back.
         */
-        keypad(SCREEN_WINDOW,TRUE);
-        nodelay(SCREEN_WINDOW,TRUE);
-        scrollok(SCREEN_WINDOW,FALSE);
+        keypad(SCREEN_WINDOW, TRUE);
+        nodelay(SCREEN_WINDOW, TRUE);
+        scrollok(SCREEN_WINDOW, FALSE);
         noecho();
         raw();
-        intrflush(NULL,TRUE);
+        intrflush(NULL, TRUE);
         curs_set(0);
 
         /*
@@ -121,7 +133,7 @@ viper_end(void)
 
 
 void
-viper_set_border_agent(VIPER_FUNC agent, int id)
+viper_set_border_agent(ViperFunc agent, int id)
 {
     extern VIPER    *viper;
 
@@ -133,74 +145,72 @@ viper_set_border_agent(VIPER_FUNC agent, int id)
 }
 
 WINDOW*
-viper_get_window_frame(WINDOW *window)
+viper_window_get_frame(vwnd_t *vwnd)
 {
-    extern VIPER    *viper;
-    VIPER_WND       *viper_wnd;
+    if(vwnd == NULL) return NULL;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
-
-    viper_wnd = viper_get_viper_wnd(window);
-
-    if(viper_wnd == NULL) window = NULL;
-    else window = viper_wnd->window;
-
-    return window;
+    return vwnd->window_frame;
 }
 
-inline VIPER_WND*
-viper_get_viper_wnd(WINDOW *window)
+void
+viper_window_for_each(int screen_id, bool managed, int vector,
+    ViperFunc func, void *arg)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
+    vwnd_t              *vwnd;
     struct list_head    *pos;
-
-    if(window == NULL) return NULL;
-
-    if(list_empty(&viper->wnd_list)) return NULL;
-
-    list_for_each(pos, &viper->wnd_list)
-    {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
-
-        if(viper_wnd->window == (void*)window) break;
-        if(viper_wnd->user_window == (void*)window) break;
-
-        viper_wnd = NULL;
-    }
-
-    return viper_wnd;
-}
-
-
-inline void
-viper_window_for_each(VIPER_FUNC func, void *arg, int vector)
-{
-    extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
-    struct list_head    *pos;
+    struct list_head    *wnd_list;
 
     if(func == NULL) return;
-    if(list_empty(&viper->wnd_list)) return;
+
+    if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
+
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return;
 
     if(vector == VECTOR_BOTTOM_TO_TOP)
     {
-        list_for_each_prev(pos, &viper->wnd_list)
+        list_for_each_prev(pos, wnd_list)
         {
-            viper_wnd = list_entry(pos, VIPER_WND, list);
-            func(viper_wnd->user_window, arg);
+            vwnd = list_entry(pos, VIPER_WND, list);
+            func(vwnd, arg);
         }
 
     }
     else
     {
-        list_for_each(pos, &viper->wnd_list)
+        list_for_each(pos, wnd_list)
         {
-            viper_wnd = list_entry(pos, VIPER_WND, list);
-            func(viper_wnd->user_window, arg);
+            vwnd = list_entry(pos, VIPER_WND, list);
+            func(vwnd, arg);
         }
     }
 
     return;
 }
 
+int
+viper_prune_zombie_list(void)
+{
+    extern viper_t      *viper;
+    struct list_head    *pos;
+    struct list_head    *tmp;
+    vwnd_t              *vwnd;
+
+    if(list_empty(&viper->zombie_list)) return 0;
+
+    list_for_each_safe(pos, tmp, &viper->zombie_list)
+    {
+        vwnd = list_entry(pos, vwnd_t, list);
+
+        viper_window_destroy(vwnd);
+
+        list_del(pos);
+    }
+
+    return 0;
+}

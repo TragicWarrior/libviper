@@ -18,51 +18,64 @@
  *----------------------------------------------------------------------*/
 
 #include <string.h>
+#include <stdbool.h>
 
 #include "viper.h"
-#include "viper_private.h"
+#include "private.h"
 #include "list.h"
 
-WINDOW*
-viper_window_find_by_class(void *classid)
+vwnd_t*
+viper_window_find_by_class(int screen_id, bool managed, void *classid)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
+    vwnd_t              *vwnd = NULL;
+    struct list_head    *wnd_list;
     struct list_head    *pos;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
+    if(screen_id < 0) screen_id = CURRENT_SCREEN_ID;
 
-    list_for_each(pos, &viper->wnd_list)
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return NULL;
+
+    list_for_each(pos, wnd_list)
     {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
-        if(viper_wnd->classid == classid) break;
+        vwnd = list_entry(pos, vwnd_t, list);
+        if(vwnd->classid == classid) break;
 
-        viper_wnd = NULL;
+        vwnd = NULL;
     }
 
-    if(viper_wnd == NULL) return NULL;
-
-    return viper_wnd->user_window;
+    return vwnd;
 }
 
-WINDOW*
-viper_window_find_by_title(char *title)
+vwnd_t*
+viper_window_find_by_title(int screen_id, bool managed, char *title)
 {
     extern VIPER        *viper;
-    VIPER_WND           *viper_wnd;
+    vwnd_t              *vwnd = NULL;
+    struct list_head    *wnd_list;
     struct list_head    *pos;
 
-    if(list_empty(&viper->wnd_list)) return NULL;
+    if(screen_id < 0) screen_id = CURRENT_SCREEN_ID;
 
-    list_for_each(pos, &viper->wnd_list)
+    if(managed == TRUE)
+        wnd_list = &viper->managed_list[screen_id];
+    else
+        wnd_list = &viper->unmanaged_list[screen_id];
+
+    if(list_empty(wnd_list)) return NULL;
+
+    list_for_each(pos, wnd_list)
     {
-        viper_wnd = list_entry(pos, VIPER_WND, list);
-        if(strcmp(viper_wnd->title,title) == 0) break;
+        vwnd = list_entry(pos, vwnd_t, list);
+        if(strcmp(vwnd->title, title) == 0) break;
 
-        viper_wnd = NULL;
+        vwnd = NULL;
     }
 
-    if(viper_wnd == NULL) return NULL;
-
-    return viper_wnd->user_window;
+    return vwnd;
 }

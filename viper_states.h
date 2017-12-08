@@ -9,7 +9,8 @@
 #include <curses.h>
 #endif
 
-bool    is_viper_window_visible(WINDOW *window);
-bool    is_viper_window_allowed_focus(WINDOW *window);
+#include "viper.h"
+
+bool    is_viper_window_visible(vwnd_t *vwnd);
 
 #endif
