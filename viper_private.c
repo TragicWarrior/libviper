@@ -27,6 +27,7 @@
 #include "viper_color.h"
 #include "viper_callbacks.h"
 #include "viper_kmio.h"
+#include "viper_wdestroy.h"
 
 WINDOW      *SCREEN_WINDOW = NULL;
 VIPER       *viper = NULL;
@@ -73,6 +74,8 @@ viper_init(uint32_t init_flags)
             viper->wallpaper[i] = newwin(height, width, 0, 0);
             viper->wallpaper_agent[i] = viper_default_wallpaper_agent;
         }
+
+        INIT_LIST_HEAD(&viper->zombie_list);
 
         /*
             these are "normal" settings that would be commonly
@@ -142,7 +145,7 @@ viper_set_border_agent(ViperFunc agent, int id)
 }
 
 WINDOW*
-viper_get_window_frame(vwnd_t *vwnd)
+viper_window_get_frame(vwnd_t *vwnd)
 {
     if(vwnd == NULL) return NULL;
 
@@ -190,3 +193,24 @@ viper_window_for_each(int screen_id, bool managed, int vector,
     return;
 }
 
+int
+viper_prune_zombie_list(void)
+{
+    extern viper_t      *viper;
+    struct list_head    *pos;
+    struct list_head    *tmp;
+    vwnd_t              *vwnd;
+
+    if(list_empty(&viper->zombie_list)) return 0;
+
+    list_for_each_safe(pos, tmp, &viper->zombie_list)
+    {
+        vwnd = list_entry(pos, vwnd_t, list);
+
+        viper_window_destroy(vwnd);
+
+        list_del(pos);
+    }
+
+    return 0;
+}

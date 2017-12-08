@@ -12,12 +12,11 @@
     this is our static template which will be passed into the object
     allocator and also to the constructor.
 */
-static vk_object_t VK_OBJECT_KLASS =
+declare_klass(VK_OBJECT_KLASS)
 {
     .name = KLASS_NAME(vk_object_t),
     .size = KLASS_SIZE(vk_object_t),
 };
-
 
 vk_object_t*
 vk_object_construct(const void *klass, ...)
@@ -30,7 +29,7 @@ vk_object_construct(const void *klass, ...)
     object = calloc(1, VK_OBJECT(klass)->size);
 
     // copy template to newly alloced object
-    memcpy(object, klass, VK_OBJECT(klass)->size);
+    memcpy(object, klass, sizeof(vk_object_t));
 
     if(object->ctor != NULL)
     {
@@ -43,6 +42,21 @@ vk_object_construct(const void *klass, ...)
     }
 
     return object;
+}
+
+int
+vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
+{
+    int retval;
+
+    if(object == NULL) return -1;
+
+    if(object->kmio != NULL)
+    {
+        retval = object->kmio(object, keystroke);
+    }
+
+    return retval;
 }
 
 int

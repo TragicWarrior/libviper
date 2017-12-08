@@ -64,9 +64,11 @@ viper_window_create(int screen_id, bool managed, char *title,
         width = screen_width;
         vwnd->min_width = WSIZE_FULLSCREEN;
     }
+
+    // width is a relative fraction
     if(width > 0 && width < 1)
     {
-        window_get_size_scaled(viper->screen[screen_id], &tmp, NULL, width, 0);
+        window_get_size_scaled(CURRENT_SCREEN, &tmp, NULL, width, 0);
         width = tmp;
     }
 
@@ -76,6 +78,8 @@ viper_window_create(int screen_id, bool managed, char *title,
         height = screen_height;
         vwnd->min_height = WSIZE_FULLSCREEN;
     }
+
+    // height is a relative fraction
     if(height > 0 && height < 1)
     {
         window_get_size_scaled(CURRENT_SCREEN, NULL, &tmp, 0, height);
@@ -90,7 +94,7 @@ viper_window_create(int screen_id, bool managed, char *title,
     {
         if((width + 1) > screen_width) width -= 2;
         if((height + 1) > screen_height) height -= 2;
-        vwnd->window_frame = window_create(NULL, x, y,width + 2,height + 2);
+        vwnd->window_frame = window_create(NULL, x, y, width + 2, height + 2);
         vwnd->window_state |= STATE_SHADOWED;
     }
     else
@@ -116,12 +120,10 @@ viper_window_create(int screen_id, bool managed, char *title,
         vwnd->border_agent[1] = viper->border_agent[1];
     }
     else
-        vwnd->user_window = vwnd->window_frame;
+        vwnd->window_frame = vwnd->user_window;
 
     INIT_LIST_HEAD(&vwnd->event_list);
 
-    viper_event_set(vwnd, "window-close",
-        viper_event_default_WINDOW_CLOSE, NULL);
     viper_event_set(vwnd, "term-resized",
         viper_event_default_TERM_RESIZE, NULL);
 

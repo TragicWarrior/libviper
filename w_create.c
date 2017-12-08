@@ -23,25 +23,28 @@
 WINDOW*
 window_create(WINDOW *parent, int x, int y, int width, int height)
 {
-    extern WINDOW   *SCREEN_WINDOW;
     WINDOW          *window = NULL;
     static int      stagger_x = 3;
     static int      stagger_y = 3;
     int             max_x, max_y;
+
+    getmaxyx(stdscr, max_y, max_x);
 
     if(x == WPOS_STAGGERED || y == WPOS_STAGGERED)
     {
         stagger_x += 2;
         stagger_y += 2;
 
-        getmaxyx(SCREEN_WINDOW, max_y, max_x);
         if(stagger_x + width > max_x) stagger_x = 1;
         if(stagger_y + height > max_y) stagger_y = 1;
         y = stagger_y;
         x = stagger_x;
     }
 
-    if(parent == NULL) window = newwin(height, width, y, x);
+    if(parent == NULL)
+    {
+        window = newwin(height, width, y, x);
+    }
     else window = derwin(parent, height, width, y, x);
 
     return window;

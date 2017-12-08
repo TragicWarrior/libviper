@@ -17,6 +17,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <curses.h>
+
 #include "viper.h"
 #include "private.h"
 #include "viper_callbacks.h"
@@ -42,16 +44,14 @@ inline int
 viper_callback_blit_window(vwnd_t *vwnd, void *arg)
 {
 	WINDOW		    *shadow_window;
-    uint32_t        state_mask = 0;
     int             idx = 0;
+    int             retval = 0;
 
 	if(vwnd == NULL) return ERR;
 
 	if(!(vwnd->window_state & STATE_VISIBLE)) return 0;
-	if(arg != NULL) state_mask = *(uint32_t*)arg;
-	else state_mask = ~0;
 
-	if(vwnd->window_state & state_mask)
+	if(vwnd->window_state & STATE_VISIBLE)
 	{
         /* run the border agent to decorate the window. */
         if(vwnd->ctx->managed == TRUE)
@@ -71,8 +71,12 @@ viper_callback_blit_window(vwnd_t *vwnd, void *arg)
 			delwin(shadow_window);
 		}
 
-		overwrite(WINDOW_FRAME(vwnd), CURRENT_SCREEN);
+		retval = overwrite(WINDOW_FRAME(vwnd), CURRENT_SCREEN);
 	}
+
+    if(retval == ERR) return -1;
+
+    (void)arg;
 
 	return 0;
 }

@@ -81,7 +81,8 @@
 #define VIPER_FASTCOLOR             (1 << 1)
 #define VIPER_GPM_SIGIO             (1 << 2)
 
-typedef struct _viper_s             VIPER;
+typedef struct _viper_s             VIPER;              // legacy ref
+typedef struct _viper_s             viper_t;
 typedef struct _viper_ctx_s         vctx_t;
 typedef struct _viper_wnd_s         VIPER_WND;          // legacy ref
 typedef struct _viper_wnd_s         vwnd_t;
@@ -100,6 +101,7 @@ typedef int         (*ViperKeyFunc)(int32_t keystroke, void *anything);
 typedef int         (*ViperWkeyFunc)(int32_t keystroke, vwnd_t *vwnd);
 typedef int32_t     (*ViperKmioHook)(int32_t keystroke);
 typedef void        (*ViperBkgdFunc)(int screen_id);
+
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
 
 /* basic window routines    */
@@ -266,12 +268,12 @@ int             vk_object_destroy(vk_object_t *object);
 vk_widget_t*    vk_widget_create(int width, int height);
 int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
 WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
-void            vk_widget_set_colors(vk_widget_t *widget, short color_pair);
+void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
 short           vk_widget_get_fg(vk_widget_t *widget);
 short           vk_widget_get_bg(vk_widget_t *widget);
 int             vk_widget_erase(vk_widget_t *widget);
 void            vk_widget_fill(vk_widget_t *widget, chtype ch);
-void            vk_widget_draw(vk_widget_t *widget);
+int             vk_widget_draw(vk_widget_t *widget);
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
 void            vk_widget_destroy(vk_widget_t *widget);
 
@@ -288,15 +290,17 @@ int             vk_listbox_set_wrap(vk_listbox_t *listbox, bool allowed);
 int             vk_listbox_set_title(vk_listbox_t *listbox, char *title);
 int             vk_listbox_get_title(vk_listbox_t *listbox,
                     char *buf, int buf_sz);
+int             vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg);
 int             vk_listbox_add_item(vk_listbox_t *listbox,
-                    char *item, VkWidgetFunc func);
+                    char *item, VkWidgetFunc func, void *anything);
 int             vk_listbox_set_item(vk_listbox_t *listbox, int idx,
-                    char *item, VkWidgetFunc func);
+                    char *item, VkWidgetFunc func, void *anything);
 int             vk_listbox_remove_item(vk_listbox_t *listbox, int idx);
 int             vk_listbox_get_item(vk_listbox_t *listbox, int idx,
                     char *buf, int buf_sz);
 int             vk_listbox_get_item_count(vk_listbox_t *listbox);
 int             vk_listbox_get_selected(vk_listbox_t *listbox);
+int             vk_listbox_update(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
 void            vk_listbox_destroy(vk_listbox_t *listbox);
 

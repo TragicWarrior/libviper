@@ -58,6 +58,7 @@ struct _viper_s
 
     struct list_head        managed_list[MAX_SCREENS];
     struct list_head        unmanaged_list[MAX_SCREENS];
+    struct list_head        zombie_list;
 
     WINDOW                  *console_mouse;
 
@@ -75,5 +76,6 @@ struct _viper_s
     uid_t                   user;
 };
 
+int viper_prune_zombie_list(void);
 
 #endif

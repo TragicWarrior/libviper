@@ -32,22 +32,18 @@ viper_get_viper_event(vwnd_t *vwnd, char *event)
 {
     VIPER_EVENT     	*viper_event = NULL;
 	struct list_head	*pos;
-    int                 len;
 
     if(vwnd == NULL || event == NULL) return NULL;
 
 	// do a check before iterating
 	if(list_empty(&vwnd->event_list)) return NULL;
 
-    len = strlen(event);
-
 	list_for_each(pos, &vwnd->event_list)
 	{
 	    viper_event = list_entry(pos, VIPER_EVENT, list);
-		if(memcmp(viper_event->event, event, len) == 0) break;
+        if(strcmp(viper_event->event, event) == 0) break;
 
-		// invalidate for the next iteration
-		viper_event = NULL;
+        viper_event = NULL;
 	}
 
     return viper_event;
@@ -209,16 +205,7 @@ viper_event_default_TERM_RESIZE(vwnd_t *vwnd, void *arg)
     return 0;
 }
 
-int
-viper_event_default_WINDOW_CLOSE(vwnd_t *vwnd, void *arg)
-{
-    viper_window_destroy(vwnd);
-
-    (void)arg;
-
-    return 0;
-}
-
+/*
 int
 viper_event_default_MSGBOX_CLOSE(vwnd_t *vwnd, void *arg)
 {
@@ -229,3 +216,4 @@ viper_event_default_MSGBOX_CLOSE(vwnd_t *vwnd, void *arg)
 
     return 0;
 }
+*/

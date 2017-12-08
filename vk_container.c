@@ -31,7 +31,10 @@ _vk_container_rotate(vk_container_t *container, int vector);
 static int
 _vk_container_vacate(vk_container_t *container);
 
-static vk_object_t VK_CONTAINER_KLASS =
+
+require_klass(VK_WIDGET_KLASS);
+
+declare_klass(VK_CONTAINER_KLASS)
 {
     .size = KLASS_SIZE(vk_container_t),
     .name = KLASS_NAME(vk_container_t),
@@ -39,6 +42,7 @@ static vk_object_t VK_CONTAINER_KLASS =
     .dtor = _vk_container_dtor,
     .kmio = _vk_container_kmio,
 };
+
 
 // create a new widget from scratch
 vk_container_t*
@@ -124,7 +128,7 @@ _vk_container_ctor(vk_object_t *object, va_list *argp, ...)
     }
 
     // call the base klass constructor
-    VK_WIDGET(object)->ctor(object, argp);
+    VK_WIDGET_KLASS->ctor(object, argp);
 
     // install our derived klass methods
     container = VK_CONTAINER(object);

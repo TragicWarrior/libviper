@@ -40,6 +40,7 @@ add_library(viper-static STATIC
     viper_screen.c
     viper_states.c
     viper_userptr.c
+    viper_wclose.c
     viper_wcreate.c
     viper_wdecorate.c
     viper_wdestroy.c
@@ -72,6 +73,7 @@ add_library(viper.o OBJECT
     viper_screen.c
     viper_states.c
     viper_userptr.c
+    viper_wclose.c
     viper_wcreate.c
     viper_wdecorate.c
     viper_wdestroy.c

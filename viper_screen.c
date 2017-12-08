@@ -129,16 +129,19 @@ viper_screen_redraw(int screen_id, uint32_t update_mask)
 
     // blit all the windows matching the state_mask to WINDOW screen_window
     // managed windows get blitted first
-    if(state_mask & REDRAW_WINDOWS)
+    if(update_mask & REDRAW_WINDOWS)
     {
         state_mask |= STATE_VISIBLE;
+
+        // destroy dead windows (windows that have been closed)
+        viper_prune_zombie_list();
 
         // first redraw managed windows
         viper_window_for_each(screen_id, TRUE, VECTOR_BOTTOM_TO_TOP,
             viper_callback_blit_window, (void*)&state_mask);
 
         // redraw unmanaged windows
-        viper_window_for_each(screen_id, FALSE, VECTOR_TOP_TO_BOTTOM,
+        viper_window_for_each(screen_id, FALSE, VECTOR_BOTTOM_TO_TOP,
             viper_callback_blit_window, (void*)&state_mask);
     }
 

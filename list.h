@@ -201,6 +201,8 @@ static inline void list_rotate_left(struct list_head *head)
 {
     struct list_head *first;
 
+    if(head->next == head->prev) return;
+
     if (!list_empty(head)) {
         first = head->next;
         list_move_tail(first, head);
@@ -214,6 +216,8 @@ static inline void list_rotate_left(struct list_head *head)
 static inline void list_rotate_right(struct list_head *head)
 {
     struct list_head *last;
+
+    if(head->next == head->prev) return;
 
     if (!list_empty(head)) {
         last = head->prev;

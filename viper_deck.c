@@ -148,15 +148,16 @@ viper_deck_cycle(int screen_id, bool managed, int vector)
         wnd_list = &viper->unmanaged_list[screen_id];
 
     if(list_empty(wnd_list)) return;
+    if(list_is_singular(wnd_list)) return;
 
     do
     {
-        if(vector > 0)
+        if(vector >= VECTOR_TOP_TO_BOTTOM)
         {
             list_rotate_left(wnd_list);
         }
 
-        if(vector < 0)
+        if(vector <= VECTOR_BOTTOM_TO_TOP)
         {
             list_rotate_right(wnd_list);
         }
@@ -170,10 +171,12 @@ viper_deck_cycle(int screen_id, bool managed, int vector)
             continue;
         }
 
-        // we've gone in a complete circle
-        if(first_wnd == vwnd) break;
+        if(vwnd != NULL)
+        {
+            if(is_viper_window_visible(vwnd) == TRUE) break;
+        }
     }
-    while(is_viper_window_visible(vwnd) == FALSE);
+    while(vwnd != first_wnd);
 
     if(viper_window_set_top(vwnd) == TRUE)
     {

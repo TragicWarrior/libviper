@@ -32,6 +32,8 @@ viper_window_find_by_class(int screen_id, bool managed, void *classid)
     struct list_head    *wnd_list;
     struct list_head    *pos;
 
+    if(screen_id < 0) screen_id = CURRENT_SCREEN_ID;
+
     if(managed == TRUE)
         wnd_list = &viper->managed_list[screen_id];
     else
@@ -57,6 +59,8 @@ viper_window_find_by_title(int screen_id, bool managed, char *title)
     vwnd_t              *vwnd = NULL;
     struct list_head    *wnd_list;
     struct list_head    *pos;
+
+    if(screen_id < 0) screen_id = CURRENT_SCREEN_ID;
 
     if(managed == TRUE)
         wnd_list = &viper->managed_list[screen_id];

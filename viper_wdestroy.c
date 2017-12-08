@@ -23,13 +23,12 @@
 #include "viper_events.h"
 #include "list.h"
 
+
+// this fuction is only to be called internally
 int
 viper_window_destroy(vwnd_t *vwnd)
 {
-    extern VIPER    *viper;
-    viper_event_t   *viper_event;
-    int             screen_id;
-    bool            managed;
+    viper_event_t       *viper_event;
 
     if(vwnd != NULL)
     {
@@ -47,23 +46,8 @@ viper_window_destroy(vwnd_t *vwnd)
         }
         else delwin(vwnd->window_frame);
 
-        // store these because we'll need them after the vwnd_t is freed
-        screen_id = vwnd->ctx->screen_id;
-        managed = vwnd->ctx->managed;
-
-        if(vwnd->ctx->managed == TRUE)
-            list_del(&viper->managed_list[screen_id]);
-        else
-            list_del(&viper->unmanaged_list[screen_id]);
-
+        free(vwnd->ctx);
         free(vwnd);
-
-        /*
-            cycle the deck will cause us to iterate to the first window
-            that is allowed focus... or none at all.
-        */
-        viper_deck_cycle(screen_id, managed, VECTOR_BOTTOM_TO_TOP);
-        viper_screen_redraw(screen_id, REDRAW_ALL);
     }
 
     return 0;

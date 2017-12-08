@@ -1,3 +1,11 @@
+Version 2.0.0
+
+* [Bryan Christ] Major rewrite with new VK object classes.
+  Removed dependencies on FORM and MENU libraries which are
+  Ncurses specific.  Revised API uses vwnd_t instead of WINDOW*
+  for standard interface handle.  Added framework for multi-screen
+  support.
+
 Version 1.7.1
 
 *  [Bryan Christ] Cause GCC to make to strip symbols to produce

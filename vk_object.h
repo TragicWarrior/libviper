@@ -7,8 +7,14 @@
 #define KLASS_SIZE(klass_size)  sizeof(klass_size)
 #define KLASS_NAME(klass_name)  #klass_name
 
-#define         vk_object_create(klass, size, ...) \
-                    vk_object_construct(&klass, __VA_ARGS__)
+#define         declare_klass(klass) \
+                    vk_object_t *klass = &(vk_object_t)
+
+#define         require_klass(klass) \
+                    extern vk_object_t *klass
+
+#define         vk_object_create(klass, ...) \
+                    vk_object_construct(klass, __VA_ARGS__)
 
 vk_object_t*    vk_object_construct(const void *klass, ...);
 

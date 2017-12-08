@@ -27,7 +27,9 @@ static int
 _vk_widget_erase(vk_widget_t *widget);
 
 
-static vk_object_t VK_WIDGET_KLASS =
+require_klass(VK_OBJECT_KLASS);
+
+declare_klass(VK_WIDGET_KLASS)
 {
     .size = KLASS_SIZE(vk_widget_t),
     .name = KLASS_NAME(vk_widget_t),
@@ -70,15 +72,28 @@ vk_widget_get_surface(vk_widget_t *widget)
     return widget->surface;
 }
 
+int
+vk_widget_draw(vk_widget_t *widget)
+{
+    int retval;
+
+    if(widget == NULL) return -1;
+
+    retval = widget->_draw(widget);
+
+    return retval;
+}
+
 void
-vk_widget_set_colors(vk_widget_t *widget, short color_pair)
+vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
 {
     if(widget == NULL) return;
-    if(color_pair < 0) return;
 
-    wbkgdset(widget->canvas, COLOR_PAIR(color_pair));
-    wcolor_set(widget->canvas, color_pair, NULL);
-    pair_content(color_pair, &widget->fg, &widget->bg);
+    // wcolor_set(widget->canvas, COLOR_PAIR(22), NULL);
+    // pair_content(color_pair, &widget->fg, &widget->bg);
+
+    widget->fg = fg;
+    widget->bg = bg;
 
     return;
 }
@@ -159,8 +174,13 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
 
     // install our derived klass methods
     widget = VK_WIDGET(object);
+
+    widget->fg = COLOR_BLACK;
+    widget->bg = COLOR_WHITE;
+
     widget->ctor = _vk_widget_ctor;
     widget->dtor = _vk_widget_dtor;
+
     widget->_move = _vk_widget_move;
     widget->_draw = _vk_widget_draw;
     widget->_resize = _vk_widget_resize;
@@ -236,21 +256,41 @@ _vk_widget_resize(vk_widget_t *widget, int width, int height)
 static int
 _vk_widget_draw(vk_widget_t *widget)
 {
-    int     top;
-    int     bottom;
-    int     left;
-    int     right;
+    int     retval;
+    int     dmincol;
+    int     dminrow;
+    int     dmaxcol;
+    int     dmaxrow;
+    int     max_x;
+    int     max_y;
 
     if(widget == NULL) return -1;
 
-    left = widget->x;
-    right = widget->x + widget->width;
-    top = widget->y;
-    bottom = widget->y + widget->height;
+    getmaxyx(widget->surface, max_y, max_x);
+
+    dmincol = widget->x;
+    dminrow = widget->y;
+
+    // set copy horizontal boundary
+    if(widget->x + widget->width > max_x)
+        dmaxcol = max_x;
+    else
+        dmaxcol = widget->x + widget->width;
+
+    // set copy vertical boundary
+    if(widget->y + widget->height > max_y)
+        dmaxrow = max_y;
+    else
+        dmaxrow = widget->y + widget->height;
 
     // destructive copy of canvas to surface
-    copywin(widget->canvas, widget->surface,
-        0, 0, left, top, right, bottom, FALSE);
+    retval = copywin(widget->canvas, widget->surface,
+        0, 0,
+        dminrow, dmincol,
+        dmaxrow - 1, dmaxcol -1,
+        FALSE);
+
+    if(retval == ERR) return -1;
 
     return 0;
 }

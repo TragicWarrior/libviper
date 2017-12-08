@@ -33,6 +33,7 @@ struct _vk_widget_s
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
+
     int                 (*_draw)            (vk_widget_t *);
     int                 (*_move)            (vk_widget_t *, int, int);
     int                 (*_resize)          (vk_widget_t *, int, int);
