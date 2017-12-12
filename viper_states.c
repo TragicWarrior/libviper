@@ -75,6 +75,13 @@ viper_window_set_resizable(vwnd_t *vwnd, bool value)
     return;
 }
 
+int
+viper_window_get_screen_id(vwnd_t *vwnd)
+{
+    if(vwnd == NULL) return -1;
+
+    return vwnd->ctx->screen_id;
+}
 
 bool
 viper_window_set_focus(vwnd_t *vwnd)

@@ -14,7 +14,7 @@
 #include <curses.h>
 #endif
 
-#define LIBVIPER_VERSION            "2.0.1"
+#define LIBVIPER_VERSION            "2.0.2"
 
 #define MAX_SCREENS                 4
 
@@ -219,6 +219,7 @@ uint32_t        viper_window_get_state(vwnd_t *wnd);
 void            viper_window_set_shadow(vwnd_t *wnd, bool value);
 void            viper_window_set_visible(vwnd_t *wnd, bool value);
 void            viper_window_set_resizable(vwnd_t *wnd, bool value);
+int             viper_window_get_screen_id(vwnd_t *wnd);
 bool            viper_window_set_focus(vwnd_t *wnd);
 #define         viper_window_show(wnd) \
                     viper_window_set_visible(wnd, TRUE);
