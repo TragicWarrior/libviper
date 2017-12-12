@@ -272,6 +272,7 @@ void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
 short           vk_widget_get_fg(vk_widget_t *widget);
 short           vk_widget_get_bg(vk_widget_t *widget);
 int             vk_widget_erase(vk_widget_t *widget);
+int             vk_widget_resize(vk_widget_t *widget, int width, int height);
 void            vk_widget_fill(vk_widget_t *widget, chtype ch);
 int             vk_widget_draw(vk_widget_t *widget);
 int             vk_widget_move(vk_widget_t *widget, int x, int y);

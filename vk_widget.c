@@ -89,13 +89,26 @@ vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
 {
     if(widget == NULL) return;
 
-    // wcolor_set(widget->canvas, COLOR_PAIR(22), NULL);
-    // pair_content(color_pair, &widget->fg, &widget->bg);
-
     widget->fg = fg;
     widget->bg = bg;
 
     return;
+}
+
+int
+vk_widget_resize(vk_widget_t *widget, int width, int height)
+{
+    int retval;
+
+    if(widget == NULL) return -1;
+    if(width == WSIZE_UNCHANGED) width = widget->width;
+    if(height == WSIZE_UNCHANGED) height = widget->height;
+
+    if(width < 0 || height < 0) return -1;
+
+    retval = widget->_resize(widget, width, height);
+
+    return retval;
 }
 
 int

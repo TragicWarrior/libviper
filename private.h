@@ -64,8 +64,8 @@ struct _viper_s
 
     WINDOW                  *wallpaper[MAX_SCREENS];
     ViperBkgdFunc           wallpaper_agent[MAX_SCREENS];
-
     void                    *wallpaper_arg;
+
     ViperFunc               border_agent[2];
 
     ViperKmioHook           kmio_dispatch_hook[2];

@@ -1,3 +1,8 @@
+Version 2.0.1
+
+* [Bryan Christ] Added external API for vk_widget_resize() which was
+  accidentally overlooked.
+
 Version 2.0.0
 
 * [Bryan Christ] Major rewrite with new VK object classes.
