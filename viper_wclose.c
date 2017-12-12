@@ -19,9 +19,15 @@ viper_window_close(vwnd_t *vwnd)
 
     // move the window to the zombie list where destruction takes place
     list_move(&vwnd->list, &viper->zombie_list);
-    
+
     if(managed == TRUE)
-        viper_window_set_focus(TOPMOST_MANAGED);
+    {
+        vwnd = viper_window_get_top(screen_id, TRUE);
+        if(vwnd != NULL)
+        {
+            viper_window_set_focus(vwnd);
+        }
+    }
 
     /*
         now redraw the screen after the window is moved to zombie list.

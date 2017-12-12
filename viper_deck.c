@@ -68,7 +68,7 @@ viper_window_get_top(int screen_id, bool managed)
     extern VIPER        *viper;
     vwnd_t              *vwnd;
     struct list_head    *wnd_list;
-    struct list_head    *pos;
+    struct list_head    *pos = NULL;
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
