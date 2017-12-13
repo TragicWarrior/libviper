@@ -138,6 +138,9 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
             if(event_wnd != NULL)
             {
                 viper_window_set_top(event_wnd);
+                viper_window_redraw(event_wnd);
+                viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
+
                 memcpy(old_mouse, new_mouse, sizeof(MEVENT));
                 getbegyx(WINDOW_FRAME(event_wnd), beg_y, beg_x);
                 getmaxyx(WINDOW_FRAME(event_wnd), max_y, max_x);
@@ -160,8 +163,9 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
                 {
                     viper_wresize_rel(event_wnd, new_mouse->x - old_mouse->x,
                         new_mouse->y - old_mouse->y);
-                    viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
                 }
+
+                viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
             }
 
             event_wnd = NULL;
@@ -173,8 +177,9 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
             event_wnd = viper_deck_hit_test(-1, TRUE, new_mouse->x, new_mouse->y);
             if(event_wnd != NULL)
             {
+
                 viper_window_set_top(event_wnd);
-                viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
+                viper_window_redraw(event_wnd);
 
                 getbegyx(WINDOW_FRAME(event_wnd), beg_y, beg_x);
                 getmaxyx(WINDOW_FRAME(event_wnd), max_y, max_x);
@@ -340,6 +345,7 @@ viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 
     if(poll(&mio_poll, 1, 1) < 1) return -1;
     if(Gpm_GetEvent(&g_event) < 1) return -1;
+
 
     memset(mouse_event,0,sizeof(MEVENT));
     mouse_event->bstate=g_event.modifiers;

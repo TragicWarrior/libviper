@@ -89,7 +89,7 @@ viper_window_set_focus(vwnd_t *vwnd)
     extern VIPER        *viper;
     vwnd_t              *sibling_wnd;
     struct list_head    *wnd_list;
-    struct list_head    *pos;
+    struct list_head    *pos = NULL;
     int                 screen_id;
 
     if(vwnd == NULL) return FALSE;
@@ -107,15 +107,14 @@ viper_window_set_focus(vwnd_t *vwnd)
         sibling_wnd = list_entry(pos, vwnd_t, list);
 
         if(sibling_wnd->window_state & STATE_FOCUS)
-            viper_event_run(sibling_wnd, "window-deactivate");
-
-        sibling_wnd->window_state &= ~STATE_FOCUS;
-        viper_event_run(sibling_wnd, "window-unfocus");
+        {
+            sibling_wnd->window_state &= ~STATE_FOCUS;
+            viper_event_run(sibling_wnd, "window-unfocus");
+        }
     }
 
     vwnd->window_state |= STATE_FOCUS;
     viper_event_run(vwnd, "window-focus");
-    viper_event_run(vwnd, "window-activate");
 
     return TRUE;
 }

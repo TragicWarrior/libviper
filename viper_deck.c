@@ -123,10 +123,10 @@ viper_window_set_top(vwnd_t *vwnd)
     // only allow those windows which can catch focus to be placed on top
     if(is_viper_window_visible(vwnd) == FALSE) return FALSE;
 
-    if(viper_window_set_focus(vwnd) == FALSE) return FALSE;
-
     // move window to the front of the deck
     list_move(&vwnd->list, wnd_list);
+
+    if(viper_window_set_focus(vwnd) == FALSE) return FALSE;
 
     return TRUE;
 }
