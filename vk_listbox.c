@@ -342,7 +342,7 @@ _vk_listbox_add_item(vk_listbox_t *listbox, char *item,
     list_item->func = func;
     list_item->anything = anything;
 
-    list_add(&list_item->list, &listbox->item_list);
+    list_add_tail(&list_item->list, &listbox->item_list);
     listbox->item_count++;
 
     return 0;
