@@ -1,18 +1,23 @@
+Version 2.1.1
+
+* [Bryan Christ] Added API to get optimum metrics of listbox
+  width and height.
+
 Version 2.1.0
 
-* [Bryan Christ] added vk_menu_t klass
+* [Bryan Christ] Added vk_menu_t klass.
 
 Version 2.0.4
 
-* [Bryan Christ] improve window focus behavior on X terms
+* [Bryan Christ] Improved window focus behavior on X terms.
 
 Version 2.0.3
 
-* [Bryan Christ] fix NULL pointer segfault in viper_window_get_top API
+* [Bryan Christ] Fix NULL pointer segfault in viper_window_get_top API.
 
 Version 2.0.2
 
-* [Bryan Christ] Created API to get screen_id from a vwnd_t
+* [Bryan Christ] Created API to get screen_id from a vwnd_t.
 
 Version 2.0.1
 
