@@ -80,7 +80,7 @@ vk_menu_set_frame(vk_menu_t *menu, int style)
 
     retval = menu->_set_frame(menu, style);
 
-    return 0;
+    return retval;
 }
 
 int

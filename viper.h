@@ -311,6 +311,8 @@ int             vk_listbox_get_item(vk_listbox_t *listbox, int idx,
                     char *buf, int buf_sz);
 int             vk_listbox_get_item_count(vk_listbox_t *listbox);
 int             vk_listbox_get_selected(vk_listbox_t *listbox);
+int             vk_listbox_get_metrics(vk_listbox_t *listbox,
+                    int *width, int *height);
 int             vk_listbox_update(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
 void            vk_listbox_destroy(vk_listbox_t *listbox);

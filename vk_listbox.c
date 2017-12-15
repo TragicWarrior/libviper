@@ -172,6 +172,44 @@ vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
 }
 
 int
+vk_listbox_get_metrics(vk_listbox_t *listbox, int *width, int *height)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 max_len = 0;
+    int                 len;
+
+    if(listbox == NULL) return -1;
+    if(width == NULL && height == NULL) return -1;
+
+    if(height != NULL) *height = listbox->item_count;
+
+    if(width != NULL)
+    {
+        if(listbox->item_count == 0)
+        {
+            *width = 0;
+            return 0;
+        }
+
+        list_for_each(pos, &listbox->item_list)
+        {
+            item = list_entry(pos, vk_item_t, list);
+
+            if(item->name != NULL)
+            {
+                len = strlen(item->name);
+                if(len > max_len) max_len = len;
+            }
+        }
+    }
+
+    *width = max_len;
+
+    return 0;
+}
+
+int
 vk_listbox_reset(vk_listbox_t *listbox)
 {
     int retval;
