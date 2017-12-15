@@ -6,7 +6,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_listbox.h"
-
+#include "vk_item.h"
 
 // base klass methods
 static int
@@ -20,11 +20,11 @@ _vk_listbox_kmio(vk_object_t *object, int32_t keystroke);
 
 // super klass methods
 static int
-_vk_listbox_add_item(vk_listbox_t *listbox, char *item,
+_vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything);
 
 static int
-_vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *item,
+_vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *name,
     VkWidgetFunc func, void *anything);
 
 static int
@@ -79,13 +79,10 @@ vk_listbox_set_wrap(vk_listbox_t *listbox, bool allowed)
 {
     if(listbox == NULL) return -1;
 
-    // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
-
     if(allowed == TRUE)
-        listbox->flags |= VK_LISTBOX_ALLOW_WRAP;
+        listbox->flags |= VK_FLAG_ALLOW_WRAP;
     else
-        listbox->flags &= ~VK_LISTBOX_ALLOW_WRAP;
+        listbox->flags &= ~VK_FLAG_ALLOW_WRAP;
 
     return 0;
 }
@@ -95,9 +92,6 @@ vk_listbox_set_title(vk_listbox_t *listbox, char *title)
 {
     if(listbox == NULL) return -1;
     if(title == NULL) return -1;
-
-    // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
     if(listbox->title != NULL)
     {
@@ -117,9 +111,6 @@ vk_listbox_get_title(vk_listbox_t *listbox, char *buf, int buf_sz)
     if(buf == NULL) return -1;
     if(buf_sz < 1) return -1;
 
-    // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
-
     if(listbox->title != NULL)
     {
         buf = strndup(listbox->title, buf_sz - 1);
@@ -133,9 +124,6 @@ vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg)
 {
     if(listbox == NULL) return -1;
 
-    // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
-
     listbox->highlight_fg = fg;
     listbox->highlight_bg = bg;
 
@@ -143,19 +131,16 @@ vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg)
 }
 
 int
-vk_listbox_add_item(vk_listbox_t *listbox, char *item,
+vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything)
 {
     int idx = 0;
 
     if(listbox == NULL) return -1;
-    if(item == NULL) return -1;
-    if(item[0] == '\0') return -1;
+    if(name == NULL) return -1;
+    if(name[0] == '\0') return -1;
 
-    // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
-
-    idx = listbox->_add_item(listbox, item, func, anything);
+    idx = listbox->_add_item(listbox, name, func, anything);
 
     return idx;
 }
@@ -180,9 +165,6 @@ vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
 
     if(listbox == NULL) return -1;
     if(idx < 0) return -1;
-
-    // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
     retval = listbox->_remove_item(listbox, idx);
 
@@ -209,6 +191,7 @@ vk_listbox_destroy(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return;
 
+    // make sure the object is actually a listbox
     if(!vk_object_assert(listbox, vk_listbox_t)) return;
 
     listbox->dtor(VK_OBJECT(listbox));
@@ -306,7 +289,7 @@ _vk_listbox_kmio(vk_object_t *object, int32_t keystroke)
 
     if(listbox->curr_item < 0)
     {
-        if(listbox->flags & VK_LISTBOX_ALLOW_WRAP)
+        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
             listbox->curr_item = listbox->item_count - 1;
         else
             listbox->curr_item = 0;
@@ -314,7 +297,7 @@ _vk_listbox_kmio(vk_object_t *object, int32_t keystroke)
 
     if(listbox->curr_item > (listbox->item_count - 1))
     {
-        if(listbox->flags & VK_LISTBOX_ALLOW_WRAP)
+        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
             listbox->curr_item = 0;
         else
             listbox->curr_item--;
@@ -328,38 +311,38 @@ _vk_listbox_kmio(vk_object_t *object, int32_t keystroke)
 }
 
 static int
-_vk_listbox_add_item(vk_listbox_t *listbox, char *item,
+_vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything)
 {
-    vk_list_item_t  *list_item;
+    vk_item_t   *item;
 
     if(listbox == NULL) return -1;
-    if(item == NULL) return -1;
-    if(item[0] == '\0') return -1;
+    if(name == NULL) return -1;
+    if(name[0] == '\0') return -1;
 
-    list_item = (vk_list_item_t *)calloc(1, sizeof(vk_list_item_t));
-    list_item->item = strdup(item);
-    list_item->func = func;
-    list_item->anything = anything;
+    item = (vk_item_t *)calloc(1, sizeof(vk_item_t));
+    item->name = strdup(name);
+    item->func = func;
+    item->anything = anything;
 
-    list_add_tail(&list_item->list, &listbox->item_list);
+    list_add_tail(&item->list, &listbox->item_list);
     listbox->item_count++;
 
     return 0;
 }
 
 static int
-_vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *item,
+_vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *name,
     VkWidgetFunc func, void *anything)
 {
-    vk_list_item_t      *list_item = NULL;
+    vk_item_t           *item = NULL;
     struct list_head    *pos;
     int                 i = 0;
 
     if(listbox == NULL) return -1;
     if(idx < 0) return -1;
-    if(item == NULL) return -1;
-    if(item[0] == '\0') return -1;
+    if(name == NULL) return -1;
+    if(name[0] == '\0') return -1;
 
     list_for_each(pos, &listbox->item_list)
     {
@@ -370,12 +353,12 @@ _vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *item,
     // list was shorter than caller expected
     if(i < idx) return -1;
 
-    list_item = list_entry(pos, vk_list_item_t, list);
+    item = list_entry(pos, vk_item_t, list);
 
-    if(list_item->item != NULL) free(list_item->item);
-    list_item->item = strdup(item);
-    list_item->func = func;
-    list_item->anything = anything;
+    if(item->name != NULL) free(item->name);
+    item->name = strdup(name);
+    item->func = func;
+    item->anything = anything;
 
     return 0;
 }
@@ -383,7 +366,7 @@ _vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *item,
 static int
 _vk_listbox_get_item(vk_listbox_t *listbox, int idx, char *buf, int buf_sz)
 {
-    vk_list_item_t      *list_item = NULL;
+    vk_item_t           *item = NULL;
     struct list_head    *pos;
     int                 i = 0;
 
@@ -401,9 +384,10 @@ _vk_listbox_get_item(vk_listbox_t *listbox, int idx, char *buf, int buf_sz)
     // list was shorter than caller expected
     if(i < idx) return -1;
 
-    list_item = list_entry(pos, vk_list_item_t, list);
+    item = list_entry(pos, vk_item_t, list);
 
-    buf = strndup(list_item->item, buf_sz - 1);
+    memset(buf, 0, buf_sz);
+    memcpy(buf, item->name, buf_sz - 1);
 
     return 0;
 }
@@ -440,7 +424,7 @@ _vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
 static int
 _vk_listbox_exec_item(vk_listbox_t *listbox)
 {
-    vk_list_item_t      *list_item;
+    vk_item_t           *item;
     struct list_head    *pos;
     int                 retval;
     int                 i = 0;
@@ -449,16 +433,16 @@ _vk_listbox_exec_item(vk_listbox_t *listbox)
 
     list_for_each(pos, &listbox->item_list)
     {
-        list_item = list_entry(pos, vk_list_item_t, list);
+        item = list_entry(pos, vk_item_t, list);
 
         if(i == listbox->curr_item) break;
 
         i++;
     }
 
-    if(list_item->func == NULL) return -1;
+    if(item->func == NULL) return -1;
 
-    retval = list_item->func(VK_WIDGET(listbox), list_item->anything);
+    retval = item->func(VK_WIDGET(listbox), item->anything);
 
     return retval;
 }
@@ -467,7 +451,7 @@ static int
 _vk_listbox_update(vk_listbox_t *listbox)
 {
     vk_widget_t         *widget;
-    vk_list_item_t      *list_item;
+    vk_item_t           *item;
     struct list_head    *pos;
     int                 paint_height;
     int                 paint_colors;
@@ -527,7 +511,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
     list_for_each(pos, &listbox->item_list)
     {
-        list_item = list_entry(pos, vk_list_item_t, list);
+        item = list_entry(pos, vk_item_t, list);
 
         if(idx < listbox->scroll_top)
         {
@@ -539,7 +523,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
         mvwprintw(widget->canvas, y, x, "%-*s",
             widget->width,
-            list_item->item);
+            item->name);
 
         if(idx == listbox->curr_item)
         {
@@ -565,7 +549,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
 static int
 _vk_listbox_reset(vk_listbox_t *listbox)
 {
-    vk_list_item_t      *list_item;
+    vk_item_t           *item;
     struct list_head    *pos;
     struct list_head    *tmp;
 
@@ -573,12 +557,12 @@ _vk_listbox_reset(vk_listbox_t *listbox)
 
     list_for_each_safe(pos, tmp, &listbox->item_list)
     {
-        list_item = list_entry(pos, vk_list_item_t, list);
+        item = list_entry(pos, vk_item_t, list);
 
-        if(list_item->item != NULL) free(list_item->item);
+        if(item->name != NULL) free(item->name);
         list_del(pos);
 
-        free(list_item);
+        free(item);
     }
 
     listbox->item_count = 0;

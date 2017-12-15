@@ -60,8 +60,15 @@
 #define MSGBOX_TYPE_OK              (1UL << 10)
 #define MSGBOX_TYPE_YESNO           (1UL << 11)
 
-#define VK_LISTBOX_ALLOW_WRAP       (1 << 1)
+#define VK_FLAG_ALLOW_WRAP          (1 << 1)
 
+#define VK_FRAME_NONE               0               // disables a frame
+#define VK_FRAME_SINGLE             1
+#define VK_FRAME_DOUBLE             2               // not implemented
+
+#define VK_SEPARATOR_BLANK          1
+#define VK_SEPARATOR_SINGLE         2
+#define VK_SEPARATOR_DOUBLE         3               // not implemented
 
 #define REDRAW_MOUSE                (1 << 1)
 #define REDRAW_WINDOWS              (1 << 2)
@@ -94,6 +101,7 @@ typedef struct  _vk_object_s        vk_object_t;
 typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
+typedef struct  _vk_menu_s          vk_menu_t;
 
 /* callback definitions */
 typedef int         (*ViperFunc)(vwnd_t *vwnd, void *arg);
@@ -260,6 +268,7 @@ void*           viper_window_get_userptr(vwnd_t *wnd);
 #define VK_WIDGET(x)            ((vk_widget_t *)x)
 #define VK_CONTAINER(x)         ((vk_container_t *)x)
 #define VK_LISTBOX(x)           ((vk_listbox_t *)x)
+#define VK_MENU(x)              ((vk_menu_t *)x)
 
 const char*     vk_object_get_klass_name(vk_object_t *object);
 int             vk_object_push_keystroke(vk_object_t *object,
@@ -306,5 +315,11 @@ int             vk_listbox_update(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
 void            vk_listbox_destroy(vk_listbox_t *listbox);
 
+vk_menu_t*      vk_menu_create(int width, int height);
+int             vk_menu_set_frame(vk_menu_t *menu, int style);
+int             vk_menu_add_separator(vk_menu_t *menu, int style);
+int             vk_menu_update(vk_menu_t *menu);
+int             vk_menu_reset(vk_menu_t *menu);
+void            vk_menu_destroy(vk_menu_t *menu);
 
 #endif

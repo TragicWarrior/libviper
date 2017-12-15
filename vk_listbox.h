@@ -9,6 +9,7 @@
 #include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
+#include "vk_item.h"
 
 struct _vk_listbox_s
 {
@@ -44,17 +45,6 @@ struct _vk_listbox_s
     int                 (*_update)          (vk_listbox_t *);
     int                 (*_reset)           (vk_listbox_t *);
 };
-
-struct _vk_list_item_s
-{
-    struct list_head    list;
-
-    char                *item;          // item as shown in listbox
-    VkWidgetFunc        func;           // run when item is activated
-    void                *anything;      // passed in as argument for func()
-};
-
-typedef struct _vk_list_item_s   vk_list_item_t;
 
 #endif
 

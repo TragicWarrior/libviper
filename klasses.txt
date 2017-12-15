@@ -18,3 +18,5 @@ HIERARCHY OF VK KLASSES
    |    +- vk_spinner
    |    |
    |    +- vk_listbox
+   |         |
+   |         + vk_menu

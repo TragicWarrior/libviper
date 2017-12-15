@@ -58,6 +58,7 @@ add_library(viper-static STATIC
     vk_widget.c
     vk_container.c
     vk_listbox.c
+    vk_menu.c
     )
 
 add_library(viper.o OBJECT
@@ -91,6 +92,7 @@ add_library(viper.o OBJECT
     vk_widget.c
     vk_container.c
     vk_listbox.c
+    vk_menu.c
     )
 
 add_library(viper-shared SHARED
