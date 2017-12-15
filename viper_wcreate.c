@@ -127,6 +127,8 @@ viper_window_create(int screen_id, bool managed, char *title,
     viper_event_set(vwnd, "term-resized",
         viper_event_default_TERM_RESIZE, NULL);
 
+    viper_window_set_top(vwnd);
+
     return vwnd;
 }
 

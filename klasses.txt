@@ -1,20 +1,20 @@
 
-HIERARCHY OF VDK KLASSES
+HIERARCHY OF VK KLASSES
 
- vdk_object
+ vk_object
    |
-   +- vdk_screen (todo)
+   +- vk_screen (todo)
    |
-   +- vdk_widget   
-        |
-        +- vdk_container
-        |    | 
-        |    +- vdk_frame
-        |    
-        +- vdk_button
-        |
-        +- vdk_label
-        |
-        +- vdk_spinner
-        |
-        +- vdk_listbox
+   +- vk_widget   
+   |    |
+   |    +- vk_container
+   |    |    | 
+   |    |    +- vk_frame (todo)
+   |    |    
+   |    +- vk_button
+   |    |
+   |    +- vk_label
+   |    |
+   |    +- vk_spinner
+   |    |
+   |    +- vk_listbox
