@@ -14,7 +14,7 @@
 #include <curses.h>
 #endif
 
-#define LIBVIPER_VERSION            "2.0.4"
+#define LIBVIPER_VERSION            "2.1.0"
 
 #define MAX_SCREENS                 4
 

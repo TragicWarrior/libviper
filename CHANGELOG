@@ -1,3 +1,7 @@
+Version 2.1.0
+
+* [Bryan Christ] added vk_menu_t klass
+
 Version 2.0.4
 
 * [Bryan Christ] improve window focus behavior on X terms
