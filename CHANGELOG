@@ -1,3 +1,7 @@
+Version 2.1.3
+
+* [Bryan Christ] Allow unmanaged windows to be resized by default.
+
 Version 2.1.2
 
 * [Bryan Christ] Added an API to get metrics of a widget.  Fixed a
