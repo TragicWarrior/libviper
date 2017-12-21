@@ -51,7 +51,6 @@
 #define STATE_FOCUS                 (1UL << 2)
 #define STATE_SHADOWED              (1UL << 5)
 #define STATE_NORESIZE              (1UL << 7)
-#define STATE_UNSET                 (1UL << 31)
 
 #define MSGBOX_ICON_INFO            (1UL << 1)
 #define MSGBOX_ICON_WARN            (1UL << 2)

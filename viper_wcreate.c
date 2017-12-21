@@ -103,7 +103,7 @@ viper_window_create(int screen_id, bool managed, char *title,
     }
 
     /* block window resizing by default.   */
-    vwnd->window_state |= STATE_NORESIZE;
+    // vwnd->window_state |= STATE_NORESIZE;
 
     /* set minimum limits if not already specified. */
     if(vwnd->min_width == 0) vwnd->min_width = width;
