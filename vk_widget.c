@@ -96,6 +96,18 @@ vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
 }
 
 int
+vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
+{
+    if(widget == NULL) return -1;
+    if(width == NULL && height == NULL) return -1;
+
+    if(width !=NULL) *width = widget->width;
+    if(height != NULL) *height = widget->height;
+
+    return 0;
+}
+
+int
 vk_widget_resize(vk_widget_t *widget, int width, int height)
 {
     int retval;
