@@ -1,3 +1,8 @@
+Version 2.1.2
+
+* [Bryan Christ] Added an API to get metrics of a widget.  Fixed a
+  calculation error in menus with frames.
+
 Version 2.1.1
 
 * [Bryan Christ] Added API to get optimum metrics of listbox
