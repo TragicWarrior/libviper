@@ -47,6 +47,8 @@ viper_callback_blit_window(vwnd_t *vwnd, void *arg)
     int             idx = 0;
     int             retval = 0;
 
+    (void)arg;
+
 	if(vwnd == NULL) return ERR;
 
 	if(!(vwnd->window_state & STATE_VISIBLE)) return 0;
@@ -75,8 +77,6 @@ viper_callback_blit_window(vwnd_t *vwnd, void *arg)
 	}
 
     if(retval == ERR) return -1;
-
-    (void)arg;
 
 	return 0;
 }
