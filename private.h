@@ -70,8 +70,6 @@ struct _viper_s
 
     ViperKmioHook           kmio_dispatch_hook[2];
 
-    vwnd_t                  *redraw_catalyst;
-
     int8_t                  xterm;
     uid_t                   user;
 };
