@@ -27,6 +27,14 @@
 #include "viper_states.h"
 #include "list.h"
 
+struct _redraw_marker_s
+{
+    vwnd_t  *catalyst;
+    bool    managed;
+};
+
+typedef struct _redraw_marker_s     redraw_marker_t;
+
 uint32_t
 viper_window_get_state(vwnd_t *vwnd)
 {
@@ -122,17 +130,26 @@ viper_window_set_focus(vwnd_t *vwnd)
 void
 viper_window_redraw(vwnd_t *vwnd)
 {
-    extern VIPER        *viper;
-    vwnd_t              *next_wnd;
-    struct list_head    *wnd_list;
-    int                 screen_id;
+    static redraw_marker_t  *marker = NULL;
+    extern VIPER            *viper;
+    vwnd_t                  *next_wnd;
+    struct list_head        *wnd_list;
+    int                     screen_id;
 
     if(vwnd == NULL) return;
 
     screen_id = vwnd->ctx->screen_id;
     if(screen_id != CURRENT_SCREEN_ID) return;
 
-    if(vwnd->ctx->managed == TRUE)
+    // init the recursive tracking marker
+    if(marker == NULL)
+    {
+        marker = (redraw_marker_t *)calloc(1, sizeof(redraw_marker_t));
+        marker->catalyst = vwnd;
+        marker->managed = vwnd->ctx->managed;
+    }
+
+    if(marker->managed == TRUE)
         wnd_list = &viper->managed_list[screen_id];
     else
         wnd_list = &viper->unmanaged_list[screen_id];
@@ -148,7 +165,7 @@ viper_window_redraw(vwnd_t *vwnd)
         the parent instance of this function completes do we copy the virtual
         screen out to the terminal.
     */
-    if(viper->redraw_catalyst == NULL) viper->redraw_catalyst = vwnd;
+    // if(viper->redraw_catalyst == NULL) viper->redraw_catalyst = vwnd;
     viper_callback_blit_window(vwnd, NULL);
 
     /*
@@ -171,14 +188,25 @@ viper_window_redraw(vwnd_t *vwnd)
         only copy the virtual screen to the terminal *IF* this is the orignal
         instance of this recursive function.
     */
-    if(vwnd == viper->redraw_catalyst)
+    if(vwnd == marker->catalyst)
     {
+        /*
+            if the window was a managed window then we need to blit all the
+            unamanged windows just in case.  it would be much more efficient to
+            only blit the affected windows but that would take some addtional
+            recursive logic.
+        */
+        if(marker->managed == TRUE)
+        {
+            viper_window_for_each(screen_id, FALSE, VECTOR_BOTTOM_TO_TOP,
+                viper_callback_blit_window, NULL);
+        }
+
+        free(marker);
+        marker = NULL;
+
         if(viper->console_mouse != NULL)
         overwrite(viper->console_mouse, CURRENT_SCREEN);
-
-        wnoutrefresh(CURRENT_SCREEN);
-        doupdate();
-        viper->redraw_catalyst = NULL;
     }
 
     return;
