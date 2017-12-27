@@ -304,6 +304,7 @@ _vk_menu_update(vk_menu_t *menu)
         }
 
         paint_width -= 2;
+        paint_height--;
         x++;
     }
 

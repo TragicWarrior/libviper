@@ -14,7 +14,7 @@
 #include <curses.h>
 #endif
 
-#define LIBVIPER_VERSION            "2.1.1"
+#define LIBVIPER_VERSION            "2.1.3"
 
 #define MAX_SCREENS                 4
 
@@ -51,7 +51,6 @@
 #define STATE_FOCUS                 (1UL << 2)
 #define STATE_SHADOWED              (1UL << 5)
 #define STATE_NORESIZE              (1UL << 7)
-#define STATE_UNSET                 (1UL << 31)
 
 #define MSGBOX_ICON_INFO            (1UL << 1)
 #define MSGBOX_ICON_WARN            (1UL << 2)
@@ -281,6 +280,8 @@ WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
 void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
 short           vk_widget_get_fg(vk_widget_t *widget);
 short           vk_widget_get_bg(vk_widget_t *widget);
+int             vk_widget_get_metrics(vk_widget_t *widget,
+                    int *width, int *height);
 int             vk_widget_erase(vk_widget_t *widget);
 int             vk_widget_resize(vk_widget_t *widget, int width, int height);
 void            vk_widget_fill(vk_widget_t *widget, chtype ch);

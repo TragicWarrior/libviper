@@ -49,8 +49,6 @@ viper_wresize(vwnd_t *vwnd, int width, int height)
 
     /* handle special values.  */
     getmaxyx(CURRENT_SCREEN, max_y, max_x);
-    if(width == WSIZE_DEFAULT) width = vwnd->min_width;
-    if(height == WSIZE_DEFAULT) height = vwnd->min_height;
     if(width == WSIZE_FULLSCREEN)
     {
         viper_mvwin_abs(vwnd, WPOS_UNCHANGED, 0);
@@ -59,15 +57,23 @@ viper_wresize(vwnd_t *vwnd, int width, int height)
     if(height == WSIZE_FULLSCREEN)
     {
         viper_mvwin_abs(vwnd, 0, WPOS_UNCHANGED);
-        width = max_y;
+        height = max_y;
     }
 
+    if(width == WSIZE_DEFAULT) width = vwnd->min_width;
+    if(height == WSIZE_DEFAULT) height = vwnd->min_height;
+
     wresize(vwnd->window_frame, height, width);
-    wresize(vwnd->user_window, height - 2,width - 2);
+    werase(vwnd->window_frame);
+
+    if(vwnd->ctx->managed == TRUE)
+    {
+        wresize(vwnd->user_window, height - 2, width - 2);
+        werase(vwnd->user_window);
+    }
+
     getmaxyx(vwnd->window_frame, max_y, max_x);
 
-    werase(vwnd->window_frame);
-    werase(vwnd->user_window);
     overwrite(copy_pad, vwnd->window_frame);
     delwin(copy_pad);
 
