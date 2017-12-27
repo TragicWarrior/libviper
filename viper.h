@@ -34,8 +34,9 @@
 #define WPOS_DEFAULT                (WPOS_STAGGERED)
 #define WPOS_CENTERED               -3
 
-#define KMIO_HOOK_ENTER             0
-#define KMIO_HOOK_LEAVE             1
+#define KMIO_HANDLED                0
+#define KMIO_ERROR                  -1
+#define KMIO_NONE                   -1
 
 #define CURS_RIGHT                  0x1U        /*  0001    */
 #define CURS_LEFT                   0x2U        /*  0010    */
@@ -240,7 +241,6 @@ void            viper_window_redraw(vwnd_t *wnd);
 /* kmio faclilities (keyboard & mouse i/o)   */
 int32_t         viper_kmio_fetch(MEVENT *mouse_event);
 void            viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event);
-void            viper_kmio_dispatch_set_hook(int sequence, ViperKmioHook hook);
 void            viper_window_set_key_func(vwnd_t *wnd, ViperWkeyFunc func);
 
 /* event handling */
