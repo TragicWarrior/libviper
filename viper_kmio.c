@@ -78,13 +78,11 @@ viper_kmio_fetch(MEVENT *mouse_event)
 void
 viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 {
-    extern VIPER            *viper;
     static vwnd_t           *event_wnd = NULL;
     vwnd_t                  *keystroke_wnd = NULL;
     static MEVENT           previous_mouse_event;
     static ViperWkeyFunc    func;
     static int              event_mode = 0;
-    ViperKmioHook           kmio_dispatch_hook;
     int                     beg_x,beg_y;
     int                     max_x,max_y;
     MEVENT                  *new_mouse = NULL;     /* strictly for      */
@@ -93,14 +91,26 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 	extern int        		gpm_fd;
 #endif
 
-    // run the dispatch pre-processing hook
-    if(viper->kmio_dispatch_hook[KMIO_HOOK_ENTER] != NULL)
+    // invalid / no keystroke
+    if(keystroke == KMIO_NONE) return;
+
+    // the unmanaged window deck always has priority
+    if(keystroke != KEY_RESIZE && keystroke != KEY_MOUSE)
     {
-        kmio_dispatch_hook = viper->kmio_dispatch_hook[KMIO_HOOK_ENTER];
-        keystroke = kmio_dispatch_hook(keystroke);
+        keystroke_wnd = TOPMOST_UNMANAGED;
+        func = viper_window_get_key_func(keystroke_wnd);
+
+        if(func != NULL)
+            keystroke = func(keystroke, (void*)keystroke_wnd);
+
+        keystroke_wnd = NULL;
     }
 
-    if(keystroke == -1) return;
+    // keystroke was handled
+    if(keystroke == KMIO_NONE || keystroke == KMIO_HANDLED)
+    {
+        return;
+    }
 
     if(keystroke == KEY_RESIZE)
     {
@@ -214,29 +224,19 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
         }
     }
 
-    // run the post-processing dispatch hook
-    if(viper->kmio_dispatch_hook[KMIO_HOOK_LEAVE] != NULL)
+    // pass keystroke on to toplevel *managed* window
+    if(keystroke != KEY_RESIZE)
     {
-        kmio_dispatch_hook = viper->kmio_dispatch_hook[KMIO_HOOK_LEAVE];
-        keystroke = kmio_dispatch_hook(keystroke);
-    }
+        if(keystroke != KMIO_HANDLED && keystroke != KMIO_NONE)
 
-    // pass keystroke on to toplevel window
-    if(keystroke != KEY_RESIZE && keystroke != -1)
-    {
-        // the unmanaged window deck always has priority
-        keystroke_wnd = TOPMOST_UNMANAGED;
+        keystroke_wnd = TOPMOST_MANAGED;
         func = viper_window_get_key_func(keystroke_wnd);
 
-        if(func == NULL)
-        {
-            keystroke_wnd = TOPMOST_MANAGED;
-            func = viper_window_get_key_func(keystroke_wnd);
-        }
-
-        if(func != NULL) func(keystroke, (void*)keystroke_wnd);
+        if(func != NULL)
+            keystroke = func(keystroke, (void*)keystroke_wnd);
     }
 
+    // draw mouse
 #if !defined(_NO_GPM) && defined(__linux)
 	if(gpm_fd > 0)
 	{
@@ -245,20 +245,6 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 	}
 #endif
 }
-
-void
-viper_kmio_dispatch_set_hook(int sequence, ViperKmioHook hook)
-{
-    extern VIPER    *viper;
-
-    if(hook == NULL) return;
-    if(sequence < 0) return;
-
-    viper->kmio_dispatch_hook[sequence] = hook;
-
-    return;
-}
-
 
 static void
 viper_kmio_show_mouse(MEVENT *mouse_event)
