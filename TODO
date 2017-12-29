@@ -1,0 +1,20 @@
+Here's a evergreen list of TODO items in no particular order:
+
+* Implement support for multiple screens.
+* More klasses!
+  - Clock
+  - Spinner / Throbber
+  - Label
+  - Text Box
+  - Input Field
+  - File Picker
+  - Button
+  - Slider
+  - Progress Bar
+  - Check Box
+  - Frames
+* Convert standard event signals from strings to integers for perforance.
+* Rewrite KMIO code using protothreads for better code maintenace.
+* Shuffle APIs into more logical files.  Decks, Screens, Windows, States
+  aren't really arranged in a clear cut manner.
+
