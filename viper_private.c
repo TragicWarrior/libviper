@@ -21,6 +21,7 @@
 #include <termios.h>
 #include <stdio.h>
 #include <string.h>
+#include <locale.h>
 
 #include "viper.h"
 #include "private.h"
@@ -47,6 +48,8 @@ viper_init(uint32_t init_flags)
 
     if(viper == NULL)
     {
+        setlocale(LC_ALL, "UTF-8");
+
         // newterm(NULL, stdout, stdin);
 
         SCREEN_WINDOW = initscr();
