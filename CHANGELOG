@@ -1,3 +1,7 @@
+Version 2.1.6
+
+* [Bryan Christ] Init UTF-8 locale in viper_init(). 
+
 Version 2.1.5
 
 * [Bryan Christ] Removed obsolete kmio hooks because unmanaged windows
