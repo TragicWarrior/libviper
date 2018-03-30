@@ -32,6 +32,7 @@ vwnd_t*
 viper_deck_hit_test(int screen_id, bool managed, int x, int y)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd = NULL;
     struct list_head    *pos = NULL;
     struct list_head    *wnd_list;
@@ -39,10 +40,12 @@ viper_deck_hit_test(int screen_id, bool managed, int x, int y)
     if(screen_id == -1)
         screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return NULL;
 
@@ -66,16 +69,19 @@ vwnd_t*
 viper_window_get_top(int screen_id, bool managed)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd;
     struct list_head    *wnd_list;
     struct list_head    *pos = NULL;
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return NULL;
 
@@ -98,6 +104,7 @@ bool
 viper_window_set_top(vwnd_t *vwnd)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     struct list_head    *wnd_list;
     int                 screen_id;
 
@@ -109,13 +116,15 @@ viper_window_set_top(vwnd_t *vwnd)
     screen_id = CURRENT_SCREEN_ID;
     if(vwnd->ctx->screen_id != screen_id) return FALSE;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(vwnd->ctx->managed == TRUE)
     {
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     }
     else
     {
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
     }
 
     if(list_empty(wnd_list)) return FALSE;
@@ -135,6 +144,7 @@ void
 viper_deck_cycle(int screen_id, bool managed, int vector)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd;
     vwnd_t              *first_wnd = NULL;
     struct list_head    *wnd_list;
@@ -142,10 +152,12 @@ viper_deck_cycle(int screen_id, bool managed, int vector)
     // don't allow cycling of offscreen decks
     if(screen_id != CURRENT_SCREEN_ID) return;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return;
     if(list_is_singular(wnd_list)) return;
@@ -191,6 +203,7 @@ char**
 viper_deck_get_wndlist(int screen_id, bool managed)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd;
     char                **titles;
     struct list_head    *pos;
@@ -199,10 +212,12 @@ viper_deck_get_wndlist(int screen_id, bool managed)
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return NULL;
 

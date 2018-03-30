@@ -28,16 +28,19 @@ vwnd_t*
 viper_window_find_by_class(int screen_id, bool managed, void *classid)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd = NULL;
     struct list_head    *wnd_list;
     struct list_head    *pos;
 
     if(screen_id < 0) screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return NULL;
 
@@ -56,16 +59,19 @@ vwnd_t*
 viper_window_find_by_title(int screen_id, bool managed, char *title)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd = NULL;
     struct list_head    *wnd_list;
     struct list_head    *pos;
 
     if(screen_id < 0) screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return NULL;
 

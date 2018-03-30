@@ -95,6 +95,7 @@ bool
 viper_window_set_focus(vwnd_t *vwnd)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *sibling_wnd;
     struct list_head    *wnd_list;
     struct list_head    *pos = NULL;
@@ -104,10 +105,12 @@ viper_window_set_focus(vwnd_t *vwnd)
 
     screen_id = vwnd->ctx->screen_id;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(vwnd->ctx->managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     // remove focus from all other windows
     list_for_each(pos, wnd_list)
@@ -132,6 +135,7 @@ viper_window_redraw(vwnd_t *vwnd)
 {
     static redraw_marker_t  *marker = NULL;
     extern VIPER            *viper;
+    viper_screen_t          *viper_screen;
     vwnd_t                  *next_wnd;
     struct list_head        *wnd_list;
     int                     screen_id;
@@ -140,6 +144,8 @@ viper_window_redraw(vwnd_t *vwnd)
 
     screen_id = vwnd->ctx->screen_id;
     if(screen_id != CURRENT_SCREEN_ID) return;
+
+    viper_screen = &viper->viper_screen[screen_id];
 
     // init the recursive tracking marker
     if(marker == NULL)
@@ -150,9 +156,9 @@ viper_window_redraw(vwnd_t *vwnd)
     }
 
     if(marker->managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     /*
         redrawing a window is somewhat complex.  if you just redraw the

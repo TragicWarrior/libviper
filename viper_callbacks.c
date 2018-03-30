@@ -96,14 +96,19 @@ void
 viper_default_wallpaper_agent(int screen_id)
 {
     extern VIPER    *viper;
+    viper_screen_t  *viper_screen;
     int             width, height;
 
     if(screen_id > MAX_SCREENS) return;
 
     // make sure the wallpaper window is the same size
     // as the target screen
-    getmaxyx(viper->screen[screen_id], height, width);
-    wresize(viper->wallpaper[screen_id], height, width);
+    viper_screen = &viper->viper_screen[screen_id];
+
+    // getmaxyx(viper->screen[screen_id], height, width);
+    // wresize(viper->wallpaper[screen_id], height, width);
+    getmaxyx(viper_screen->screen, height, width);
+    wresize(viper_screen->wallpaper, height, width);
 
 #ifdef _VIPER_WIDE
 
@@ -112,10 +117,10 @@ viper_default_wallpaper_agent(int screen_id)
 
 	setcchar(&bg_char, wch, 0, 0, NULL);
 
-	window_fill(viper->wallpaper[screen_id], &bg_char,
+	window_fill(viper_screen->wallpaper, &bg_char,
         viper_color_pair(COLOR_WHITE, COLOR_BLUE), A_NORMAL);
 #else
-	window_fill(viper->wallpaper[screen_id], ' ',
+	window_fill(viper_screen->wallpaper, ' ',
         viper_color_pair(COLOR_WHITE, COLOR_BLUE), A_NORMAL);
 #endif
 

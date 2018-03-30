@@ -50,8 +50,11 @@
 
 #define STATE_VISIBLE               (1UL << 1)
 #define STATE_FOCUS                 (1UL << 2)
+#define STATE_FROZEN                (1UL << 3)
 #define STATE_SHADOWED              (1UL << 5)
 #define STATE_NORESIZE              (1UL << 7)
+
+
 
 #define MSGBOX_ICON_INFO            (1UL << 1)
 #define MSGBOX_ICON_WARN            (1UL << 2)
@@ -91,6 +94,7 @@
 typedef struct _viper_s             VIPER;              // legacy ref
 typedef struct _viper_s             viper_t;
 typedef struct _viper_ctx_s         vctx_t;
+typedef struct _viper_screen_s      viper_screen_t;
 typedef struct _viper_wnd_s         VIPER_WND;          // legacy ref
 typedef struct _viper_wnd_s         vwnd_t;
 typedef struct _viper_event_s       VIPER_EVENT;
@@ -174,6 +178,8 @@ void            viper_screen_set_wallpaper(int screen_id, WINDOW *wallpaper,
                     ViperBkgdFunc agent);
 
 void            viper_screen_redraw(int screen_id, uint32_t update_mask);
+void            viper_screen_freeze(int screen_id);
+void            viper_screen_thaw(int screen_id);
 
 /* viper color facilities  */
 short           viper_color_pair(short fg, short bg);

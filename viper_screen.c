@@ -31,22 +31,28 @@
 WINDOW*
 viper_screen_get_wallpaper(int screen_id)
 {
-    extern VIPER   *viper;
+    extern VIPER    *viper;
+    viper_screen_t  *viper_screen;
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
-    return viper->wallpaper[screen_id];
+    viper_screen = &viper->viper_screen[screen_id];
+
+    return viper_screen->wallpaper;
 }
 
 void
 viper_screen_set_wallpaper(int screen_id, WINDOW *wallpaper, ViperBkgdFunc agent)
 {
     extern VIPER   *viper;
+    viper_screen_t  *viper_screen;
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
-    viper->wallpaper[screen_id] = wallpaper;
-    viper->wallpaper_agent[screen_id] = agent;
+    viper_screen = &viper->viper_screen[screen_id];
+
+    viper_screen->wallpaper = wallpaper;
+    viper_screen->wallpaper_agent = agent;
 
     return;
 }
@@ -55,14 +61,14 @@ WINDOW*
 viper_get_screen_window(int screen_id)
 {
     extern VIPER    *viper;
-    WINDOW          *screen;
+    viper_screen_t  *viper_screen;
 
     if(screen_id == -1)
         screen_id = viper->cur_scr_id;
 
-    screen = viper->screen[screen_id];
+    viper_screen = &viper->viper_screen[screen_id];
 
-    return screen;
+    return viper_screen->screen;
 }
 
 int
@@ -77,16 +83,19 @@ void
 viper_screen_reset(int screen_id)
 {
     extern VIPER    *viper;
+    viper_screen_t  *viper_screen;
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
     // don't erase and inactive screen
     if(screen_id != CURRENT_SCREEN_ID) return;
 
-    if(viper->wallpaper[screen_id] != NULL)
-        overwrite(viper->wallpaper[screen_id], viper->screen[screen_id]);
+    viper_screen = &viper->viper_screen[screen_id];
+
+    if(viper_screen->wallpaper != NULL)
+        overwrite(viper_screen->wallpaper, viper_screen->screen);
     else
-        werase(viper->screen[screen_id]);
+        werase(viper_screen->screen);
 
     return;
 }
@@ -95,6 +104,7 @@ void
 viper_screen_redraw(int screen_id, uint32_t update_mask)
 {
     extern VIPER    *viper;
+    viper_screen_t  *viper_screen;
     uint32_t        state_mask = 0;
     ViperBkgdFunc   wallpaper_agent = NULL;
 
@@ -104,6 +114,8 @@ viper_screen_redraw(int screen_id, uint32_t update_mask)
     // don't update any inactive screens
     if(screen_id != CURRENT_SCREEN_ID) return;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     /*
         redrawing the background window is a fairly simple operation.  the
         user defined function "bg_func" is called which draws the picture on
@@ -111,9 +123,9 @@ viper_screen_redraw(int screen_id, uint32_t update_mask)
     */
     if(update_mask & REDRAW_BACKGROUND)
     {
-        if(viper->wallpaper[screen_id] != NULL)
+        if(viper_screen->wallpaper != NULL)
         {
-            wallpaper_agent = viper->wallpaper_agent[screen_id];
+            wallpaper_agent = viper_screen->wallpaper_agent;
 
             if(wallpaper_agent != NULL) wallpaper_agent(screen_id);
         }
@@ -148,11 +160,11 @@ viper_screen_redraw(int screen_id, uint32_t update_mask)
 
     // draw the mouse on top
     if((update_mask & REDRAW_MOUSE) && (viper->console_mouse != NULL))
-        overwrite(viper->console_mouse, viper->screen[screen_id]);
+        overwrite(viper->console_mouse, viper_screen->screen);
 
     // copy WINDOW screen_window to the _real_ window
-    touchwin(viper->screen[screen_id]);
-    wnoutrefresh(viper->screen[screen_id]);
+    touchwin(viper_screen->screen);
+    wnoutrefresh(viper_screen->screen);
     doupdate();
 
     return;

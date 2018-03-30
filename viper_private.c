@@ -39,6 +39,7 @@ viper_init(uint32_t init_flags)
 {
     extern VIPER                *viper;
     extern WINDOW               *SCREEN_WINDOW;
+    viper_screen_t              *viper_screen = NULL;
     int                         width, height;
     char                        *env;
     mmask_t                     mouse_mask = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
@@ -57,7 +58,7 @@ viper_init(uint32_t init_flags)
         viper_global_flags |= init_flags;
         viper = (VIPER*)calloc(1, sizeof(VIPER));
 
-        viper->screen[0] = SCREEN_WINDOW;
+        viper->viper_screen[0].screen = SCREEN_WINDOW;
         viper->cur_scr_id = 0;
 
         viper_color_init();
@@ -71,11 +72,13 @@ viper_init(uint32_t init_flags)
 
         for(i = 0; i < MAX_SCREENS; i++)
         {
-            INIT_LIST_HEAD(&viper->managed_list[i]);
-            INIT_LIST_HEAD(&viper->unmanaged_list[i]);
+            viper_screen = &viper->viper_screen[i];
 
-            viper->wallpaper[i] = newwin(height, width, 0, 0);
-            viper->wallpaper_agent[i] = viper_default_wallpaper_agent;
+            INIT_LIST_HEAD(&viper_screen->managed_list);
+            INIT_LIST_HEAD(&viper_screen->unmanaged_list);
+
+            viper_screen->wallpaper = newwin(height, width, 0, 0);
+            viper_screen->wallpaper_agent = viper_default_wallpaper_agent;
         }
 
         INIT_LIST_HEAD(&viper->zombie_list);
@@ -160,6 +163,7 @@ viper_window_for_each(int screen_id, bool managed, int vector,
     ViperFunc func, void *arg)
 {
     extern VIPER        *viper;
+    viper_screen_t      *viper_screen;
     vwnd_t              *vwnd;
     struct list_head    *pos;
     struct list_head    *wnd_list;
@@ -168,10 +172,14 @@ viper_window_for_each(int screen_id, bool managed, int vector,
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     if(managed == TRUE)
-        wnd_list = &viper->managed_list[screen_id];
+        // wnd_list = &viper->managed_list[screen_id];
+        wnd_list = &viper_screen->managed_list;
     else
-        wnd_list = &viper->unmanaged_list[screen_id];
+        // wnd_list = &viper->unmanaged_list[screen_id];
+        wnd_list = &viper_screen->unmanaged_list;
 
     if(list_empty(wnd_list)) return;
 
