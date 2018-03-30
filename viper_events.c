@@ -100,9 +100,9 @@ viper_event_exec(vwnd_t *vwnd, char *event, void *anything)
         for(i = 0; i < (MAX_SCREENS *2); i++)
         {
             if(i < MAX_SCREENS)
-                wnd_list = &viper->managed_list[i];
+                wnd_list = &viper->viper_screen[i].managed_list;
             else
-                wnd_list = &viper->unmanaged_list[i % 2];
+                wnd_list = &viper->viper_screen[i % 2].unmanaged_list;
 
             /*
                 when doing a broadcast, the bottom most window in the

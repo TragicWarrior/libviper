@@ -18,6 +18,18 @@ struct _viper_ctx_s
     bool    managed;
 };
 
+struct _viper_screen_s
+{
+    WINDOW              *screen;
+    struct list_head    managed_list;
+    struct list_head    unmanaged_list;
+
+    WINDOW              *wallpaper;
+    ViperBkgdFunc       wallpaper_agent;
+    uint32_t             states;
+};
+
+
 struct _viper_event_s
 {
     struct list_head        list;
@@ -54,16 +66,19 @@ struct _viper_wnd_s
 struct _viper_s
 {
     int                     cur_scr_id;
-    WINDOW                  *screen[MAX_SCREENS];
 
-    struct list_head        managed_list[MAX_SCREENS];
-    struct list_head        unmanaged_list[MAX_SCREENS];
+    struct _viper_screen_s  viper_screen[MAX_SCREENS];
+
+    // WINDOW                  *screen[MAX_SCREENS];
+
+    // struct list_head        managed_list[MAX_SCREENS];
+    // struct list_head        unmanaged_list[MAX_SCREENS];
     struct list_head        zombie_list;
 
     WINDOW                  *console_mouse;
 
-    WINDOW                  *wallpaper[MAX_SCREENS];
-    ViperBkgdFunc           wallpaper_agent[MAX_SCREENS];
+    // WINDOW                  *wallpaper[MAX_SCREENS];
+    // ViperBkgdFunc           wallpaper_agent[MAX_SCREENS];
     void                    *wallpaper_arg;
 
     ViperFunc               border_agent[2];

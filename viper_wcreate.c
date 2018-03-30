@@ -31,6 +31,7 @@ viper_window_create(int screen_id, bool managed, char *title,
     float x, float y, float width, float height)
 {
     extern VIPER    *viper;
+    viper_screen_t  *viper_screen;
     vwnd_t          *vwnd;
     vctx_t          *vctx;
     int             screen_width, screen_height;
@@ -42,6 +43,8 @@ viper_window_create(int screen_id, bool managed, char *title,
 
     if(screen_id == -1) screen_id = CURRENT_SCREEN_ID;
 
+    viper_screen = &viper->viper_screen[screen_id];
+
     // configure and set the context;
     vctx->screen_id = screen_id;
     vctx->managed = managed;
@@ -51,12 +54,12 @@ viper_window_create(int screen_id, bool managed, char *title,
     vwnd->window_state |= STATE_VISIBLE;
 
     if(managed == TRUE)
-        list_add(&vwnd->list, &viper->managed_list[screen_id]);
+        list_add(&vwnd->list, &viper_screen->managed_list);
     else
-        list_add(&vwnd->list, &viper->unmanaged_list[screen_id]);
+        list_add(&vwnd->list, &viper_screen->unmanaged_list);
 
     /* fetch the dimentions of the active screen. */
-    getmaxyx(viper->screen[screen_id], screen_height, screen_width);
+    getmaxyx(viper_screen->screen, screen_height, screen_width);
 
     /* handle special cases for width.  */
     if(width == WSIZE_FULLSCREEN)
