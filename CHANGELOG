@@ -1,3 +1,7 @@
+Version 2.1.7
+
+* [Bryan Christ] Partial framework for multiple screens.
+
 Version 2.1.6
 
 * [Bryan Christ] Init UTF-8 locale in viper_init(). 
