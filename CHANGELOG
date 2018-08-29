@@ -1,3 +1,8 @@
+Version 2.1.8
+
+* [Bryan Christ] Fix color mapping for terminals that support more
+  than 64 colors.
+
 Version 2.1.7
 
 * [Bryan Christ] Partial framework for multiple screens.
