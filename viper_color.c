@@ -23,41 +23,38 @@
 void
 viper_color_init(void)
 {
+    short               color_table[] =
+                            {   COLOR_BLACK, COLOR_RED, COLOR_GREEN,
+                                COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA,
+                                COLOR_CYAN, COLOR_WHITE };
+    int                 color_count;
     short				fg,bg;
 	int					i;
 	int					max_colors;
 	struct color_mtx	*matrix;
 	int					hard_pair = -1;
-	extern uint32_t		viper_global_flags;
 
 	start_color();
+    color_count = sizeof(color_table) / sizeof(color_table[0]);
 
 	/*	in order for fast color indexing to work properly, libviper must assume
 		that COLOR_BLACK is always 0 and COLOR_WHITE is always 7.  if this is
 		not true, we have to fall back to safe color.	*/
-	if(COLOR_BLACK == 0 && COLOR_WHITE == 7)
+
+    // calculate the size of the matrix
+    max_colors = color_count * color_count;
+
+	matrix  = (struct color_mtx*)calloc(1,
+        max_colors * sizeof(struct color_mtx));
+
+	for(i = 0;i < max_colors; i++)
 	{
-		viper_global_flags |= VIPER_FASTCOLOR;
+		fg = i / color_count;
+		bg = color_count - (i % color_count) - 1;
 
-		max_colors = COLORS * COLORS;
-		if(max_colors > COLOR_PAIRS) max_colors = COLOR_PAIRS;
+		matrix[i].bg = fg;
+		matrix[i].fg = bg;
 
-		for(i = 1;i < max_colors;i++)
-		{
-			bg = i / COLORS;
-			fg = COLORS - (i % COLORS) - 1;
-			init_pair(i, fg, bg);
-		}
-
-		return;
-	}
-
-	viper_global_flags &= ~VIPER_FASTCOLOR;
-	matrix =(struct color_mtx*)calloc(1, COLOR_PAIRS * sizeof(struct color_mtx));
-	for(i = 0;i < COLOR_PAIRS;i++)
-	{
-		matrix[i].fg = i / COLORS;
-		matrix[i].bg = i % COLORS;
 		/*
             according to ncurses documentation, color pair 0 is assumed to
             be WHITE foreground on BLACK background.  when we discover this
@@ -78,7 +75,7 @@ viper_color_init(void)
 		matrix[hard_pair].bg = bg;
 	}
 
-	for(i = 1;i < COLOR_PAIRS;i++) init_pair(i, matrix[i].fg, matrix[i].bg);
+	for(i = 1; i < max_colors; i++) init_pair(i, matrix[i].fg, matrix[i].bg);
 	free(matrix);
 
 	return;
