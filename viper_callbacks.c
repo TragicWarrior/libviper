@@ -17,7 +17,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
-#include <curses.h>
+#include <ncursesw/ncurses.h>
 
 #include "viper.h"
 #include "private.h"

@@ -3,11 +3,7 @@
 
 #include <inttypes.h>
 
-#ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
-#else
-#include <curses.h>
-#endif
 
 #if !defined(_NO_GPM) && defined(__linux)
 #include <gpm.h>
