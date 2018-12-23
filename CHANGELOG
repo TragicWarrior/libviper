@@ -1,3 +1,8 @@
+Version 3.0.0
+
+* [Bryan Christ] Require ncursesw.  First step in UTF-8 encoding
+  for Unicode support.
+
 Version 2.1.8
 
 * [Bryan Christ] Fix color mapping for terminals that support more

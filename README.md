@@ -22,7 +22,7 @@ Building libviper is typically pretty straight forward.
 
 REQUIREMENTS
 
-ncurses 5.4+
+ncursesw 5.4+
 
 OPTIONAL
 
