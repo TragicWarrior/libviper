@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#include <curses.h>
+#include <ncursesw/ncurses.h>
 
 #include "list.h"
 

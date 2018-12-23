@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include <curses.h>
+#include <ncursesw/ncurses.h>
 
 #include "viper.h"
 #include "vk_object.h"

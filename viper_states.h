@@ -3,11 +3,7 @@
 
 #include <stdbool.h>
 
-#ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
-#else
-#include <curses.h>
-#endif
 
 #include "viper.h"
 

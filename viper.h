@@ -8,11 +8,7 @@
 
 #include <sys/types.h>
 
-#ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
-#else
-#include <curses.h>
-#endif
 
 #define LIBVIPER_VERSION            "2.1.8"
 

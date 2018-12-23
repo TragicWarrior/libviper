@@ -1,11 +1,7 @@
 #ifndef _VIPER_CALLBACKS_H_
 #define	_VIPER_CALLBACKS_H_
 
-#ifdef _VIPER_WIDE
 #include <ncursesw/curses.h>
-#else
-#include <curses.h>
-#endif
 
 #include "viper.h"
 
