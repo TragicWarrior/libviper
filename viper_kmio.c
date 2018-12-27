@@ -260,7 +260,7 @@ viper_kmio_show_mouse(MEVENT *mouse_event)
     {
         viper->console_mouse = newwin(1, 1, 0, 0);
         color = mvwinch(screen_window, 0, 0);
-        pair_content(PAIR_NUMBER(color & A_COLOR), &fg, &bg);
+        viper_pair_content(PAIR_NUMBER(color & A_COLOR), &fg, &bg);
 
         if(bg == COLOR_RED || bg == COLOR_YELLOW || bg == COLOR_MAGENTA)
             color = VIPER_COLORS(COLOR_CYAN,COLOR_CYAN);
@@ -272,7 +272,7 @@ viper_kmio_show_mouse(MEVENT *mouse_event)
     if(mouse_event != NULL)
     {
         color = mvwinch(screen_window, mouse_event->y, mouse_event->x);
-        pair_content(PAIR_NUMBER(color & A_COLOR), &fg, &bg);
+        viper_pair_content(PAIR_NUMBER(color & A_COLOR), &fg, &bg);
 
         if(bg == COLOR_RED || bg == COLOR_YELLOW || bg == COLOR_MAGENTA)
             color = VIPER_COLORS(COLOR_CYAN,COLOR_CYAN);

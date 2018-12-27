@@ -86,7 +86,7 @@ viper_color_init(void)
 	return;
 }
 
-inline short
+short
 viper_color_pair(short fg, short bg)
 {
     extern int          viper_color_count;
@@ -105,11 +105,37 @@ viper_color_pair(short fg, short bg)
 	}
 
 	/* safe color indexing (slower)	*/
-	for(i = 1;i < COLOR_PAIRS;i++)
+	for(i = 1; i < COLOR_PAIRS; i++)
 	{
 		pair_content(i, &fg_color, &bg_color);
 		if(fg_color == fg && bg_color == bg) break;
 	}
 
 	return i;
+}
+
+int
+viper_pair_content(short pair, short *fg, short *bg)
+{
+    extern uint32_t     viper_global_flags;
+    extern int          viper_color_count;
+    int                 retval = 0;
+
+    if(!(viper_global_flags & VIPER_FASTCOLOR))
+    {
+        retval = pair_content(pair, fg, bg);
+        return retval;
+    }
+
+    // this works if VIPER_FASTCOLOR was specified
+    if(pair == 0)
+    {
+        *fg = COLOR_WHITE;
+        *bg = COLOR_BLACK;
+    }
+
+    *bg = (int)(pair / viper_color_count);
+    *fg = (viper_color_count - pair) - (pair % viper_color_count);
+
+    return 0;
 }

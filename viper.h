@@ -10,7 +10,7 @@
 
 #include <ncursesw/curses.h>
 
-#define LIBVIPER_VERSION            "3.0.1"
+#define LIBVIPER_VERSION            "3.1.0"
 
 #define MAX_SCREENS                 4
 
@@ -179,6 +179,7 @@ void            viper_screen_thaw(int screen_id);
 
 /* viper color facilities  */
 short           viper_color_pair(short fg, short bg);
+int             viper_pair_content(short pair, short *fb, short *bg);
 #define         VIPER_COLORS(fg,bg)    (COLOR_PAIR(viper_color_pair(fg, bg)))
 
 /* window construction and destruction */

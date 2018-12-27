@@ -1,3 +1,8 @@
+Version 3.1.0
+
+* [Bryan Christ] Create a FASTCOLOR interface which is equivalent
+  to pair_content() but avaialbe externally.
+
 Version 3.0.1
 
 * [Bryan Christ] Fixed FASTCOLOR mode which was broken.
