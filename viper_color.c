@@ -19,15 +19,20 @@
 
 #include "viper_color.h"
 #include "viper.h"
+#include "macros.h"
+
+short   viper_color_table[] =
+            {   COLOR_BLACK, COLOR_RED, COLOR_GREEN,
+                COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA,
+                COLOR_CYAN, COLOR_WHITE };
+
+int     viper_color_count;
 
 void
 viper_color_init(void)
 {
-    short               color_table[] =
-                            {   COLOR_BLACK, COLOR_RED, COLOR_GREEN,
-                                COLOR_YELLOW, COLOR_BLUE, COLOR_MAGENTA,
-                                COLOR_CYAN, COLOR_WHITE };
-    int                 color_count;
+    extern short        viper_color_table[];
+    extern int          viper_color_count;
     short				fg,bg;
 	int					i;
 	int					max_colors;
@@ -35,22 +40,22 @@ viper_color_init(void)
 	int					hard_pair = -1;
 
 	start_color();
-    color_count = sizeof(color_table) / sizeof(color_table[0]);
+    viper_color_count = ARRAY_SZ(viper_color_table);
 
 	/*	in order for fast color indexing to work properly, libviper must assume
 		that COLOR_BLACK is always 0 and COLOR_WHITE is always 7.  if this is
 		not true, we have to fall back to safe color.	*/
 
     // calculate the size of the matrix
-    max_colors = color_count * color_count;
+    max_colors = viper_color_count * viper_color_count;
 
 	matrix  = (struct color_mtx*)calloc(1,
         max_colors * sizeof(struct color_mtx));
 
 	for(i = 0;i < max_colors; i++)
 	{
-		fg = i / color_count;
-		bg = color_count - (i % color_count) - 1;
+		fg = i / viper_color_count;
+		bg = viper_color_count - (i % viper_color_count) - 1;
 
 		matrix[i].bg = fg;
 		matrix[i].fg = bg;
@@ -84,6 +89,7 @@ viper_color_init(void)
 inline short
 viper_color_pair(short fg, short bg)
 {
+    extern int          viper_color_count;
 	short               color_pair;
 	short               fg_color, bg_color;
 	int                 i;
@@ -94,7 +100,7 @@ viper_color_pair(short fg, short bg)
 	/*	use fast color indexing when possible.	*/
 	if(viper_global_flags & VIPER_FASTCOLOR)
 	{
-		color_pair = (bg * COLORS) +(COLORS - fg -1);
+		color_pair = (bg * viper_color_count) + (viper_color_count - fg -1);
 		return color_pair;
 	}
 
