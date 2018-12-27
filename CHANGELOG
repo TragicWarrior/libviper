@@ -1,3 +1,7 @@
+Version 3.0.1
+
+* [Bryan Christ] Fixed FASTCOLOR mode which was broken.
+
 Version 3.0.0
 
 * [Bryan Christ] Require ncursesw.  First step in UTF-8 encoding

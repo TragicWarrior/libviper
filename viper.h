@@ -10,7 +10,7 @@
 
 #include <ncursesw/curses.h>
 
-#define LIBVIPER_VERSION            "3.0.0"
+#define LIBVIPER_VERSION            "3.0.1"
 
 #define MAX_SCREENS                 4
 
