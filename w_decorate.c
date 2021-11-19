@@ -46,7 +46,7 @@ window_decorate(WINDOW *window, char *title, bool border)
     {
         x = x / 2;
         x = x - (strlen(title) / 2);
-        mvwprintw(window, 0, x, title);
+        mvwprintw(window, 0, x, "%s", title);
     }
 
     touchwin(window);
