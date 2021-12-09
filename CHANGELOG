@@ -1,3 +1,8 @@
+Version 3.1.1
+
+* [Sergei Trofimovich] User "%s" specifier for safety in a couple
+  of printf-style functions.
+
 Version 3.1.0
 
 * [Bryan Christ] Create a FASTCOLOR interface which is equivalent
