@@ -104,7 +104,7 @@ viper_msgbox_create(int screen_id, char *title, float x, float y,
     if(prompt != NULL)
     {
         tmp = (width - 1 - strlen(prompt)) / 2;
-        mvwprintw(WINDOW_FRAME(vwnd), height - 3, tmp, prompt);
+        mvwprintw(WINDOW_FRAME(vwnd), height - 3, tmp, "%s", prompt);
     }
 
     if(flags & MSGBOX_TYPE_OK)
