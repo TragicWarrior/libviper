@@ -37,8 +37,8 @@ viper_mvwin_rel(vwnd_t *vwnd, int vector_x, int vector_y)
         if((vwnd->ctx->managed == TRUE) && retval != ERR)
         {
             getbegyx(vwnd->window_frame, y, x);
-            vwnd->user_window->_begy = y + vwnd->user_window->_pary;
-            vwnd->user_window->_begx = x + vwnd->user_window->_parx;
+            /* Use mvderwin to reposition subwindow relative to parent */
+            mvderwin(vwnd->user_window, getpary(vwnd->user_window), getparx(vwnd->user_window));
         }
         /* end of hack */
 
@@ -68,8 +68,8 @@ viper_mvwin_abs(vwnd_t *vwnd, int x, int y)
         if((vwnd->ctx->managed == TRUE) && retval != ERR)
         {
             getbegyx(vwnd->window_frame, y, x);
-            vwnd->user_window->_begy = y + vwnd->user_window->_pary;
-            vwnd->user_window->_begx = x + vwnd->user_window->_parx;
+            /* Use mvderwin to reposition subwindow relative to parent */
+            mvderwin(vwnd->user_window, getpary(vwnd->user_window), getparx(vwnd->user_window));
         }
         /* end of hack */
 

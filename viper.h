@@ -8,6 +8,8 @@
 
 #include <sys/types.h>
 
+/* Expose ncurses internals for direct WINDOW struct access */
+#define NCURSES_OPAQUE 0
 #include <ncursesw/curses.h>
 
 #define LIBVIPER_VERSION            "3.1.1"

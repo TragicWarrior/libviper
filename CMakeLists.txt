@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(libviper)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC -s")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC -s -DNCURSES_OPAQUE=0")
 set(PROJECT_DESCRIPTION "A library for developing windowed apps on ncurses")
 
 if (("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") OR (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") AND (CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.0)))
