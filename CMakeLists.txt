@@ -14,6 +14,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 
 add_definitions("-D_REENTRANT")
 add_definitions("-D_GNU_SOURCE")
+add_definitions("-DNCURSES_INTERNALS")
 
 # needed for cchar_t definition and turn on "wide support"
 add_definitions("-D_XOPEN_SOURCE_EXTENDED")
