@@ -19,6 +19,9 @@ _vk_menu_dtor(vk_object_t *object);
 static int
 _vk_menu_kmio(vk_object_t *object, int32_t keystroke);
 
+static int
+_vk_menu_item_is_separator(vk_listbox_t *listbox, int idx);
+
 // super klass methods
 static int
 _vk_menu_set_frame(vk_menu_t *menu, int style);
@@ -181,21 +184,54 @@ _vk_menu_dtor(vk_object_t *object)
 }
 
 static int
+_vk_menu_item_is_separator(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 i = 0;
+
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx)
+        {
+            item = list_entry(pos, vk_item_t, list);
+            return (item->separator_style > 0) ? 1 : 0;
+        }
+        i++;
+    }
+
+    return 0;
+}
+
+static int
 _vk_menu_kmio(vk_object_t *object, int32_t keystroke)
 {
     vk_menu_t       *menu;
     vk_listbox_t    *listbox;
     int             retval;
+    int             saved_item;
+    int             direction = 0;
+    int             attempts;
 
     menu = VK_MENU(object);
     listbox = VK_LISTBOX(object);
 
     if(list_empty(&listbox->item_list)) return 0;
 
+    saved_item = listbox->curr_item;
+
     switch(keystroke)
     {
-        case KEY_UP:    listbox->curr_item--;           break;
-        case KEY_DOWN:  listbox->curr_item++;           break;
+        case KEY_UP:
+            listbox->curr_item--;
+            direction = -1;
+            break;
+
+        case KEY_DOWN:
+            listbox->curr_item++;
+            direction = 1;
+            break;
+
         case 10:
         {
             retval = listbox->_exec_item(listbox);
@@ -218,6 +254,43 @@ _vk_menu_kmio(vk_object_t *object, int32_t keystroke)
         else
             listbox->curr_item--;
     }
+
+    // skip over separators in the direction of travel
+    attempts = 0;
+    while(direction != 0
+        && _vk_menu_item_is_separator(listbox, listbox->curr_item)
+        && attempts < listbox->item_count)
+    {
+        listbox->curr_item += direction;
+
+        if(listbox->curr_item < 0)
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                listbox->curr_item = listbox->item_count - 1;
+            else
+            {
+                listbox->curr_item = saved_item;
+                break;
+            }
+        }
+
+        if(listbox->curr_item > (listbox->item_count - 1))
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                listbox->curr_item = 0;
+            else
+            {
+                listbox->curr_item = saved_item;
+                break;
+            }
+        }
+
+        attempts++;
+    }
+
+    // all items are separators -- revert to original position
+    if(attempts >= listbox->item_count)
+        listbox->curr_item = saved_item;
 
     // now cause the widget to redraw
     menu->_update(menu);
