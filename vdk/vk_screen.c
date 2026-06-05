@@ -118,6 +118,17 @@ vk_screen_set_surface(vk_screen_t *screen, int id)
 
     screen->active_surface = id;
 
+    /*
+        push the newly-active surface's bkgd onto stdscr.  stdscr is the
+        only WINDOW ncurses converts into the byte stream that the outer
+        terminal renders -- when wrefresh emits scroll / insert-line
+        optimizations for a heavy redraw, any cell the outer terminal
+        exposes during those operations takes stdscr's bkgd.  Without
+        this, exposed cells flash as the terminal's default (black)
+        between escape sequences.
+    */
+    vk_screen_apply_stdscr_bkgd(screen);
+
     vk_object_emit(VK_OBJECT(screen), VK_EVENT_ON_SURFACE_CHANGE);
 
     return 0;
@@ -137,6 +148,65 @@ vk_screen_get_surface_count(vk_screen_t *screen)
     if(screen == NULL) return -1;
 
     return screen->surface_count;
+}
+
+/*
+    Persist a wbkgdset value on the given surface's canvas.  The value is
+    stored on the surface and reapplied automatically after teleport,
+    where vk_screen_teleport otherwise creates a fresh canvas with the
+    ncurses default (black) background.  Consumers call this at surface
+    setup and whenever the per-surface color changes; libviper handles
+    keeping it in force, including pushing the value down to stdscr
+    whenever the changed surface is the active one (see
+    vk_screen_apply_stdscr_bkgd).
+*/
+int
+vk_screen_set_surface_bkgd(vk_screen_t *screen, int surface_id, chtype bkgd)
+{
+    vk_surface_t    *surface;
+
+    if(screen == NULL) return -1;
+    if(surface_id < 0 || surface_id >= screen->surface_count) return -1;
+
+    surface = screen->surfaces[surface_id];
+    if(surface == NULL) return -1;
+
+    surface->bkgd = bkgd;
+
+    if(surface->canvas != NULL)
+        wbkgdset(surface->canvas, bkgd);
+
+    if(surface_id == screen->active_surface)
+        vk_screen_apply_stdscr_bkgd(screen);
+
+    return 0;
+}
+
+/*
+    Push the active surface's stored bkgd onto stdscr.  stdscr is what
+    ncurses translates into the terminal byte stream during wrefresh;
+    setting its bkgd ensures that any cell exposed by hardware scroll /
+    insert-delete-line optimizations on the outer terminal renders in
+    the desktop's color rather than the terminal's default background.
+    Called automatically from vk_screen_set_surface (active change),
+    vk_screen_set_surface_bkgd (live color change), and vk_screen_teleport
+    (new SCREEN gets a fresh stdscr).
+*/
+int
+vk_screen_apply_stdscr_bkgd(vk_screen_t *screen)
+{
+    vk_surface_t    *surface;
+
+    if(screen == NULL) return -1;
+    if(screen->active_surface < 0 ||
+        screen->active_surface >= screen->surface_count) return -1;
+
+    surface = screen->surfaces[screen->active_surface];
+    if(surface == NULL) return -1;
+
+    wbkgdset(stdscr, surface->bkgd);
+
+    return 0;
 }
 
 inline WINDOW*
@@ -385,6 +455,10 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
 
         surface->canvas = newwin(screen->height, screen->width, 0, 0);
 
+        /* restore wbkgdset value across the new (post-teleport) canvas */
+        if(surface->bkgd != 0)
+            wbkgdset(surface->canvas, surface->bkgd);
+
         for(j = 0; j < surface->widget_count; j++)
         {
             vk_widget_recreate(surface->widgets[j]);
@@ -420,6 +494,11 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     while(wgetch(stdscr) != ERR)
         ;
     wtimeout(stdscr, -1);
+
+    /* stdscr is brand-new on the post-teleport SCREEN -- reapply the
+       active surface's bkgd so wrefresh on this stdscr generates terminal
+       output that fills exposed cells with the desktop color. */
+    vk_screen_apply_stdscr_bkgd(screen);
 
     vk_object_emit(VK_OBJECT(screen), VK_EVENT_ON_TELEPORT);
 

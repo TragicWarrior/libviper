@@ -354,6 +354,8 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 | `vk_screen_teleport` | Migrate the entire UI to a different PTY |
 | `vk_screen_set_wallpaper` | Register a wallpaper callback (`VkSurfaceBkgdFunc`) |
 | `vk_screen_set_overlay` | Register an overlay callback (same signature as wallpaper) |
+| `vk_screen_set_surface_bkgd` | Persist a `wbkgdset` value on a surface canvas; reapplied automatically after teleport |
+| `vk_screen_apply_stdscr_bkgd` | Push the active surface's bkgd onto `stdscr`; invoked automatically on active-surface change, live color change, and teleport |
 | `vk_screen_paint_wallpaper` | Manually invoke the wallpaper callback on the active surface |
 | `vk_screen_refresh` | Composite the active surface: erase, wallpaper, widget blit, overlay, refresh |
 | `vk_screen_destroy` | Tear down screen, restore evicted terminal, free resources |
@@ -391,6 +393,38 @@ on the surface canvas — it sets the window's background color pair, which
 causes ncurses pair 0 to inherit that color instead of the terminal
 default (white-on-black). This breaks any rendering that relies on pair 0,
 such as deck drop shadows.
+
+### Surface bkgd
+
+Each surface stores a `chtype bkgd` value via
+`vk_screen_set_surface_bkgd(screen, surface_id, bkgd)`. Two `WINDOW`s
+need this in force for flicker-free repaints:
+
+- **The surface's canvas** -- `wbkgdset` is applied immediately to the
+  surface canvas; the stored value is also reapplied automatically by
+  `vk_screen_teleport` after `newwin()` creates a fresh canvas, so the
+  setting survives terminal migrations.
+- **`stdscr`** -- `vk_screen_apply_stdscr_bkgd(screen)` pushes the
+  active surface's stored bkgd onto `stdscr`. This is invoked
+  automatically from `vk_screen_set_surface` (active surface change),
+  from `vk_screen_set_surface_bkgd` when the changed surface is the
+  active one (live color change), and from `vk_screen_teleport` after
+  the new SCREEN is established (the new `stdscr` would otherwise come
+  up with the ncurses default bkgd).
+
+The `stdscr` propagation matters because `stdscr` is the only `WINDOW`
+ncurses converts into the byte stream the outer terminal renders.
+When `wrefresh(stdscr)` decides to emit hardware-scroll /
+insert-delete-line optimizations for a heavy redraw, any cell the outer
+terminal exposes during those operations takes `stdscr`'s bkgd value.
+Without this, those exposed cells flash as the terminal's default
+background (typically black) before the next composite paints over
+them. With it, the exposed cells come up in the desktop's color.
+
+Consumers should set bkgd attribute bits to zero (e.g. just
+`' ' | COLOR_PAIR(N)`), since ncurses ORs the bkgd's attribute bits
+into every cell written to the WINDOW. A non-zero attribute (`A_BOLD`,
+`A_REVERSE`, etc.) in bkgd will bleed into all written content.
 
 ### Overlay
 

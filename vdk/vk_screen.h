@@ -18,6 +18,7 @@ struct _vk_surface_s
     vk_widget_t         **widgets;
     int                 widget_count;
     int                 widget_alloc;
+    chtype              bkgd;       /* wbkgdset value; survives teleport */
 };
 
 struct _vk_screen_s
