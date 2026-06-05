@@ -35,6 +35,12 @@ Version 4.0.0 (in progress)
   show/hide convenience functions. Frozen widgets snapshot their canvas
   into a composer window so the display holds while updates continue.
   No-resize widgets reject vk_widget_resize calls.
+* [Bryan Christ] Separate VDK from legacy libviper. New vdk.h public header
+  and vdk_color.h / vdk_color.c color system. VDK source files no longer
+  include viper.h. vdk_color_init() is optional; callers who skip it handle
+  start_color() and init_pair() themselves. Widgets use COLOR_PAIR() with
+  vdk_color_pair() internally (ncurses-native). viper.h includes vdk.h for
+  backwards compatibility.
 
 Version 3.1.1
 

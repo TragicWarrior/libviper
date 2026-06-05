@@ -2,7 +2,7 @@
 #define _VK_ITEM_H_
 
 #include "list.h"
-#include "viper.h"
+#include "vdk.h"
 
 
 struct _vk_item_s

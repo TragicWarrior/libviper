@@ -44,7 +44,7 @@ rudimentary RTTI mechanism.
 
 Each derived klass embeds its parent as the first struct member (`parent_klass`).
 A pointer to any derived type can be safely cast to any of its ancestors.
-Cast macros are defined in `viper.h`:
+Cast macros are defined in `vdk.h`:
 
 | Macro | Target Type |
 |-------|-------------|
@@ -204,13 +204,41 @@ All public API functions in the `.c` files are declared `inline` as a compiler
 hint to reduce call overhead. These are thin wrappers that validate arguments,
 assert klass identity, and dispatch through the virtual method pointers.
 
+## Headers
+
+`vdk.h` is the public header for VDK. It declares all VDK types, constants,
+cast macros, callback typedefs, and function prototypes. It includes
+`vdk_color.h`. VDK source files include `vdk.h` through their private
+headers and have no dependency on `viper.h`.
+
+`viper.h` is the legacy libviper header. It includes `vdk.h` for backwards
+compatibility, so existing code that includes `viper.h` continues to work.
+
+## Color System
+
+VDK uses ncurses color pairs. The `vdk_color.h` header provides:
+
+- `vdk_color_init()` — optional convenience that calls `start_color()` and
+  registers all 64 color pairs (8×8 matrix) via `init_pair()`. Must be
+  called after `vk_screen_create()`.
+- `vdk_color_pair(fg, bg)` — static inline function that maps an (fg, bg)
+  pair to an ncurses pair index using fast arithmetic. No globals.
+- `VDK_COLORS(fg, bg)` — convenience macro: `COLOR_PAIR(vdk_color_pair(fg, bg))`.
+
+Widget internals use `COLOR_PAIR(vdk_color_pair(fg, bg))` directly (the
+ncurses way) rather than the `VDK_COLORS` macro.
+
+If the caller does not call `vdk_color_init()`, they are responsible for
+calling `start_color()` and `init_pair()` themselves.
+
 ## Screens and Surfaces
 
 `vk_screen_t` manages the ncurses terminal (SCREEN) and provides virtual
 surfaces. It derives directly from `vk_object_t`, not `vk_widget_t`.
 
-`vk_screen_create()` calls `newterm()` on stdin/stdout, initializes colors,
-keypad, raw mode, and creates one default surface. Each surface holds its own
+`vk_screen_create()` calls `newterm()` on stdin/stdout, initializes
+keypad, raw mode, and creates one default surface. Color initialization
+is the caller's responsibility (see Color System below). Each surface holds its own
 full-screen canvas (WINDOW) and an array of attached widgets.
 
 | Function | Purpose |

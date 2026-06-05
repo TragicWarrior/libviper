@@ -2,14 +2,14 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <locale.h>
 #include <signal.h>
 #include <utmpx.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <dirent.h>
 
-#include "viper.h"
-#include "viper_color.h"
+#include "vdk.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_screen.h"
@@ -387,7 +387,6 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
 
     set_term(new_term);
 
-    viper_color_init();
     keypad(stdscr, TRUE);
     noecho();
     raw();
@@ -573,12 +572,12 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
     screen->fd_out = stdout;
     screen->fd_in = stdin;
 
+    setlocale(LC_CTYPE, "");
+
     screen->term = newterm(NULL, screen->fd_out, screen->fd_in);
     if(screen->term == NULL) return -1;
 
     set_term(screen->term);
-
-    viper_color_init();
 
     keypad(stdscr, TRUE);
     noecho();

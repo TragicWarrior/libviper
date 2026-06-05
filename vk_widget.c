@@ -4,7 +4,6 @@
 
 #include <ncursesw/ncurses.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 

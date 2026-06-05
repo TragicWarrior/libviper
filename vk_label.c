@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_label.h"
@@ -171,7 +170,7 @@ _vk_label_update(vk_label_t *label)
     widget = VK_WIDGET(label);
     widget->_erase(widget);
 
-    colors = VIPER_COLORS(widget->fg, widget->bg) | widget->attrs;
+    colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
     wbkgd(widget->canvas, ' ' | colors);
 
     if(label->text == NULL) return 0;

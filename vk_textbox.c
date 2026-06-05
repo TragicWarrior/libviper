@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_scroller.h"
@@ -272,7 +271,7 @@ _vk_textbox_update(vk_textbox_t *textbox)
     if(widget->vscroller != NULL) paint_width--;
     if(widget->hscroller != NULL) paint_height--;
 
-    paint_colors = VIPER_COLORS(widget->fg, widget->bg) | widget->attrs;
+    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
     wbkgd(widget->canvas, ' ' | paint_colors);
     wattron(widget->canvas, paint_colors);
 

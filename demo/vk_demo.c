@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
 
-#include "viper.h"
+#include "vdk.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_container.h"
@@ -100,7 +99,7 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
     {
         case 0:
         {
-            colors = VIPER_COLORS(COLOR_GREEN, COLOR_BLACK);
+            colors = VDK_COLORS(COLOR_GREEN, COLOR_BLACK);
             wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
@@ -114,7 +113,7 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
 
         case 1:
         {
-            colors = VIPER_COLORS(COLOR_YELLOW, COLOR_BLACK);
+            colors = VDK_COLORS(COLOR_YELLOW, COLOR_BLACK);
             wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
@@ -128,7 +127,7 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
 
         case 2:
         {
-            colors = VIPER_COLORS(COLOR_RED, COLOR_BLACK);
+            colors = VDK_COLORS(COLOR_RED, COLOR_BLACK);
             wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
@@ -142,7 +141,7 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
 
         case 3:
         {
-            colors = VIPER_COLORS(COLOR_BLUE, COLOR_BLACK);
+            colors = VDK_COLORS(COLOR_BLUE, COLOR_BLACK);
             wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
@@ -165,7 +164,7 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
         {
             cchar_t shade;
             wchar_t wch[2] = {0x2591, 0};
-            short   pair = viper_color_pair(COLOR_CYAN, COLOR_BLACK);
+            short   pair = vdk_color_pair(COLOR_CYAN, COLOR_BLACK);
 
             setcchar(&shade, wch, A_NORMAL, pair, NULL);
 
@@ -387,8 +386,8 @@ about_on_recreate(vk_widget_t *widget)
 {
     int attr;
 
-    attr = VIPER_COLORS(COLOR_YELLOW, COLOR_BLUE);
-    wbkgd(widget->canvas, ' ' | VIPER_COLORS(COLOR_WHITE, COLOR_BLUE));
+    attr = VDK_COLORS(COLOR_YELLOW, COLOR_BLUE);
+    wbkgd(widget->canvas, ' ' | VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
 
     wattron(widget->canvas, attr | A_BOLD);
     mvwprintw(widget->canvas, 1, 2, "VK Widget Toolkit");
@@ -579,14 +578,14 @@ int main(void)
     // shared
     vk_marquee_t    *marquee;
 
-    setlocale(LC_ALL, "");
-
     vk_screen = vk_screen_create();
     if(vk_screen == NULL)
     {
         fprintf(stderr, "vk_screen_create failed\n");
         return 1;
     }
+
+    vdk_color_init();
 
     screen = vk_screen_get_window(vk_screen);
     getmaxyx(screen, max_y, max_x);
@@ -846,7 +845,7 @@ int main(void)
             int     ch;
 
             screen = vk_screen_get_window(vk_screen);
-            colors = VIPER_COLORS(COLOR_WHITE, COLOR_BLUE) | A_BOLD;
+            colors = VDK_COLORS(COLOR_WHITE, COLOR_BLUE) | A_BOLD;
             werase(screen);
             wattron(screen, colors);
             mvwhline(screen, 0, 0, ' ', max_x);

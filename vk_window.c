@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_container.h"
@@ -339,7 +338,7 @@ _vk_window_draw_title(vk_window_t *window)
 
     fg = (frame->border_fg == -1) ? widget->fg : frame->border_fg;
     bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
-    border_colors = VIPER_COLORS(fg, bg);
+    border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
 
     wattron(widget->canvas, border_colors | A_BOLD);
     mvwprintw(widget->canvas, 0, col, "%.*s", title_len, window->title);

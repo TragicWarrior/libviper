@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_listbox.h"
@@ -661,8 +660,8 @@ _vk_listbox_update(vk_listbox_t *listbox)
     if(listbox->highlight_fg == -1) listbox->highlight_fg = widget->bg;
     if(listbox->highlight_bg == -1) listbox->highlight_bg = widget->fg;
 
-    paint_colors = VIPER_COLORS(widget->fg, widget->bg);
-    highlight = VIPER_COLORS(listbox->highlight_fg, listbox->highlight_bg);
+    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg));
+    highlight = COLOR_PAIR(vdk_color_pair(listbox->highlight_fg, listbox->highlight_bg));
 
     wattron(widget->canvas, paint_colors);
 

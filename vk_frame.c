@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_container.h"
@@ -277,7 +276,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
 
     fg = (frame->border_fg == -1) ? widget->fg : frame->border_fg;
     bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
-    border_colors = VIPER_COLORS(fg, bg);
+    border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
 
     wattron(widget->canvas, border_colors);
 
@@ -293,7 +292,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
         case VK_FRAME_SINGLE:
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
-            short   pair = viper_color_pair(fg, bg);
+            short   pair = vdk_color_pair(fg, bg);
 
             _vk_frame_build_cchar(&ls, WACS_VLINE, pair);
             _vk_frame_build_cchar(&rs, WACS_VLINE, pair);
@@ -312,7 +311,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
         case VK_FRAME_DOUBLE:
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
-            short   pair = viper_color_pair(fg, bg);
+            short   pair = vdk_color_pair(fg, bg);
 
             _vk_frame_build_cchar(&ls, WACS_D_VLINE, pair);
             _vk_frame_build_cchar(&rs, WACS_D_VLINE, pair);

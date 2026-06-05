@@ -1,7 +1,7 @@
 #ifndef _VK_OBJECT_H_
 #define _VK_OBJECT_H_
 
-#include "viper.h"
+#include "vdk.h"
 #include "stdarg.h"
 
 #define KLASS_SIZE(klass_size)  sizeof(klass_size)

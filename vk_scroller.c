@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_scroller.h"
@@ -326,8 +325,8 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
 
     fg = (scroller->border_fg == -1) ? sw->fg : scroller->border_fg;
     bg = (scroller->border_bg == -1) ? sw->bg : scroller->border_bg;
-    color_pair = viper_color_pair(fg, bg);
-    border_colors = VIPER_COLORS(fg, bg);
+    color_pair = vdk_color_pair(fg, bg);
+    border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
 
     if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
     {

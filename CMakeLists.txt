@@ -40,6 +40,7 @@ add_library(viper-static STATIC
     viper_private.c
     viper_callbacks.c
     viper_color.c
+    vdk_color.c
     viper_deck.c
     viper_events.c
     viper_keyboard.c
@@ -82,6 +83,7 @@ add_library(viper.o OBJECT
     viper_private.c
     viper_callbacks.c
     viper_color.c
+    vdk_color.c
     viper_deck.c
     viper_events.c
     viper_keyboard.c
@@ -147,7 +149,7 @@ configure_file(
 )
 
 install (TARGETS viper-static viper-shared DESTINATION lib)
-install (FILES viper.h DESTINATION include)
+install (FILES viper.h vdk.h vdk_color.h DESTINATION include)
 
 # Install pkgconfig files to libdata on BSD, otherwise lib
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")

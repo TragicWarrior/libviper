@@ -3,8 +3,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "viper.h"
-#include "private.h"
 #include "vk_object.h"
 
 

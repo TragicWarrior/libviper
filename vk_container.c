@@ -169,7 +169,7 @@ _vk_container_kmio(vk_object_t *object, int32_t keystroke)
     // the "tab" key changes focus by rotating the list
     if(keystroke == KEY_TAB)
     {
-        container->rotate(container, VECTOR_LEFT);
+        container->rotate(container, VK_VECTOR_LEFT);
     }
 
     widget = list_first_entry(&container->widget_list, vk_widget_t, list);
@@ -231,13 +231,13 @@ _vk_container_rotate(vk_container_t *container, int vector)
 {
     if(container == NULL) return -1;
 
-    if(vector == VECTOR_LEFT)
+    if(vector == VK_VECTOR_LEFT)
     {
         list_rotate_left(&container->widget_list);
         return 0;
     }
 
-    if(vector == VECTOR_RIGHT)
+    if(vector == VK_VECTOR_RIGHT)
     {
         list_rotate_right(&container->widget_list);
         return 0;
