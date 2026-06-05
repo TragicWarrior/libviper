@@ -19,6 +19,7 @@ struct _vk_widget_s
                                             // widgets (such as in a container)
 
     WINDOW              *canvas;            // where the widget is composed
+    WINDOW              *composer;          // blit source (== canvas, or frozen snapshot)
     WINDOW              *surface;           // where the widget blits to
 
     int                 x;                  // x coord relative to surface

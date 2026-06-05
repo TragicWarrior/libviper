@@ -82,7 +82,6 @@ vk_widget_draw(vk_widget_t *widget)
 
     if(widget == NULL) return -1;
     if(!(widget->state & STATE_VISIBLE)) return 0;
-    if(widget->state & STATE_FROZEN) return 0;
 
     retval = widget->_draw(widget);
 
@@ -124,9 +123,27 @@ vk_widget_get_state(vk_widget_t *widget)
 void
 vk_widget_set_state(vk_widget_t *widget, uint32_t state)
 {
+    uint32_t    old_state;
+
     if(widget == NULL) return;
 
+    old_state = widget->state;
     widget->state = state;
+
+    if((state & STATE_FROZEN) && !(old_state & STATE_FROZEN))
+    {
+        widget->composer = newwin(widget->height, widget->width, 0, 0);
+        overwrite(widget->canvas, widget->composer);
+    }
+
+    if(!(state & STATE_FROZEN) && (old_state & STATE_FROZEN))
+    {
+        if(widget->composer != widget->canvas)
+        {
+            delwin(widget->composer);
+            widget->composer = widget->canvas;
+        }
+    }
 }
 
 void
@@ -291,6 +308,7 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     va_end(args);
 
     widget->canvas = newwin(height, width, 0, 0);
+    widget->composer = widget->canvas;
     widget->width = width;
     widget->height = height;
     widget->x = 0;
@@ -382,8 +400,7 @@ _vk_widget_draw(vk_widget_t *widget)
     else
         dmaxrow = widget->y + widget->height;
 
-    // destructive copy of canvas to surface
-    retval = copywin(widget->canvas, widget->surface,
+    retval = copywin(widget->composer, widget->surface,
         0, 0,
         dminrow, dmincol,
         dmaxrow - 1, dmaxcol -1,
@@ -399,7 +416,12 @@ _vk_widget_recreate(vk_widget_t *widget)
 {
     if(widget == NULL) return -1;
 
+    if(widget->composer != widget->canvas)
+        delwin(widget->composer);
+
     widget->canvas = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state &= ~STATE_FROZEN;
 
     return (widget->canvas == NULL) ? -1 : 0;
 }
@@ -418,9 +440,16 @@ _vk_widget_erase(vk_widget_t *widget)
 static int
 _vk_widget_dtor(vk_object_t *object)
 {
+    vk_widget_t *widget;
+
     if(object == NULL) return -1;
 
-    delwin(VK_WIDGET(object)->canvas);
+    widget = VK_WIDGET(object);
+
+    if(widget->composer != widget->canvas)
+        delwin(widget->composer);
+
+    delwin(widget->canvas);
 
     vk_object_demote(object, vk_object_t);
     vk_object_destroy(object);

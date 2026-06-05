@@ -29,8 +29,9 @@ Version 4.0.0 (in progress)
   remainder pixels.
 * [Bryan Christ] Add widget state flags (STATE_VISIBLE, STATE_FROZEN,
   STATE_NORESIZE) as a uint32_t bitfield on vk_widget_t. Add get/set API,
-  show/hide convenience functions. Frozen widgets skip draw; no-resize
-  widgets reject vk_widget_resize calls.
+  show/hide convenience functions. Frozen widgets snapshot their canvas
+  into a composer window so the display holds while updates continue.
+  No-resize widgets reject vk_widget_resize calls.
 
 Version 3.1.1
 

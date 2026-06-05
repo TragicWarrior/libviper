@@ -239,7 +239,7 @@ set_marquee_text(vk_marquee_t *marquee, int surface)
         "  VK Klass Reference Demo"
         "  |  Built: " __DATE__ " " __TIME__
         "  |  TAB:focus  \xE2\x86\x91\xE2\x86\x93:nav  Enter:sel"
-        "  d:surface  h:marquee  t:teleport  q:quit",
+        "  d:surface  f:freeze  h:marquee  t:teleport  q:quit",
         surface + 1, surface_names[surface]);
 
     vk_marquee_set_text(marquee, text);
@@ -399,17 +399,18 @@ about_on_recreate(vk_widget_t *widget)
     mvwprintw(widget->canvas, 5,  4, "Up/Down ..... navigate items");
     mvwprintw(widget->canvas, 6,  4, "Enter ....... select item");
     mvwprintw(widget->canvas, 7,  4, "d ........... switch surface");
-    mvwprintw(widget->canvas, 8,  4, "h ........... toggle marquee");
-    mvwprintw(widget->canvas, 9,  4, "t ........... teleport to PTY");
-    mvwprintw(widget->canvas, 10, 4, "q ........... quit");
+    mvwprintw(widget->canvas, 8,  4, "f ........... freeze marquee");
+    mvwprintw(widget->canvas, 9,  4, "h ........... toggle marquee");
+    mvwprintw(widget->canvas, 10, 4, "t ........... teleport to PTY");
+    mvwprintw(widget->canvas, 11, 4, "q ........... quit");
 
-    mvwprintw(widget->canvas, 12, 2, "Features:");
-    mvwprintw(widget->canvas, 13, 4, "- Virtual surfaces");
-    mvwprintw(widget->canvas, 14, 4, "- Terminal migration (teleport)");
-    mvwprintw(widget->canvas, 15, 4, "- Scrollable containers");
-    mvwprintw(widget->canvas, 16, 4, "- Marquee text ticker");
-    mvwprintw(widget->canvas, 17, 4, "- Frame border styles");
-    mvwprintw(widget->canvas, 18, 4, "- Menu with separators");
+    mvwprintw(widget->canvas, 13, 2, "Features:");
+    mvwprintw(widget->canvas, 14, 4, "- Virtual surfaces");
+    mvwprintw(widget->canvas, 15, 4, "- Terminal migration (teleport)");
+    mvwprintw(widget->canvas, 16, 4, "- Scrollable containers");
+    mvwprintw(widget->canvas, 17, 4, "- Marquee text ticker");
+    mvwprintw(widget->canvas, 18, 4, "- Frame border styles");
+    mvwprintw(widget->canvas, 19, 4, "- Menu with separators");
 
     return 0;
 }
@@ -910,6 +911,11 @@ int main(void)
                 vk_widget_hide(VK_WIDGET(marquee));
             else
                 vk_widget_show(VK_WIDGET(marquee));
+        }
+        else if(key == 'f')
+        {
+            uint32_t st = vk_widget_get_state(VK_WIDGET(marquee));
+            vk_widget_set_state(VK_WIDGET(marquee), st ^ STATE_FROZEN);
         }
         else if(key == KEY_SRIGHT || key == KEY_SLEFT
             || key == '+' || key == '-')

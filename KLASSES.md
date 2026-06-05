@@ -483,9 +483,17 @@ to the wallpaper.
 
 ### Frozen
 
-A frozen widget's draw is skipped, but unlike a hidden widget this is
-intended for temporary suppression of output (e.g. during batch updates).
-The widget remains logically visible — it just doesn't repaint.
+A frozen widget remains visible but its display stops updating. This is
+implemented via a `composer` pointer on `vk_widget_t`. Normally `composer`
+points to `canvas` — the blit path reads from `composer`, so there is zero
+overhead. When `STATE_FROZEN` is set via `vk_widget_set_state()`, a
+snapshot of `canvas` is copied into a new window and `composer` is pointed
+at the snapshot. Updates continue mutating `canvas`, but the blit keeps
+sending the frozen snapshot to the surface. On unfreeze, the snapshot is
+deleted and `composer` is reset to `canvas`, resuming live content.
+
+Teleport clears `STATE_FROZEN` and frees the snapshot (the old SCREEN's
+windows are invalid on the new terminal).
 
 ### No-Resize
 
