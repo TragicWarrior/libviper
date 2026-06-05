@@ -101,7 +101,6 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
         case 0:
         {
             colors = VDK_COLORS(COLOR_GREEN, COLOR_BLACK);
-            wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
             for(y = 0; y < max_y; y++)
@@ -115,7 +114,6 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
         case 1:
         {
             colors = VDK_COLORS(COLOR_YELLOW, COLOR_BLACK);
-            wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
             for(y = 0; y < max_y; y++)
@@ -129,7 +127,6 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
         case 2:
         {
             colors = VDK_COLORS(COLOR_RED, COLOR_BLACK);
-            wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
             for(y = 0; y < max_y; y++)
@@ -143,7 +140,6 @@ wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
         case 3:
         {
             colors = VDK_COLORS(COLOR_BLUE, COLOR_BLACK);
-            wbkgd(canvas, ' ' | colors);
             wattron(canvas, colors);
 
             for(y = 0; y < max_y; y++)

@@ -26,15 +26,17 @@ vdk_color_init(void)
 
         matrix[i].bg = fg;
         matrix[i].fg = bg;
+
+        if(matrix[i].fg == COLOR_WHITE && matrix[i].bg == COLOR_BLACK)
+            hard_pair = i;
     }
 
-    // pair 0 can't be init_pair'd so white-on-black (which maps to 0)
-    // is unreachable.  steal the green-on-black slot for white-on-black.
-    hard_pair = vdk_color_pair(COLOR_GREEN, COLOR_BLACK);
+    // pair 0 can't be init_pair'd — swap white-on-black into index 0
+    // so it maps to the ncurses default pair.
     if(hard_pair > 0)
     {
-        matrix[hard_pair].fg = COLOR_WHITE;
-        matrix[hard_pair].bg = COLOR_BLACK;
+        matrix[hard_pair].fg = matrix[0].fg;
+        matrix[hard_pair].bg = matrix[0].bg;
     }
 
     for(i = 1; i < max_colors; i++)

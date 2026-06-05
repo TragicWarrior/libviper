@@ -7,7 +7,7 @@
 #include "vk_deck.h"
 #include "vdk_color.h"
 
-#define VK_SHADOW_PAIR      vdk_color_pair(COLOR_GREEN, COLOR_BLACK)
+#define VK_SHADOW_PAIR      vdk_color_pair(COLOR_WHITE, COLOR_BLACK)
 
 static int
 _vk_deck_ctor(vk_object_t *object, va_list *argp, ...);

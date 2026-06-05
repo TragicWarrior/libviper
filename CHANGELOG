@@ -50,15 +50,19 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Add optional drop shadows to vk_deck_t via
   vk_deck_set_shadow(). Shadow is an L-shaped strip (right + bottom edge)
   rendered white-on-black, composited per-child in z-order.
-* [Bryan Christ] Fix vdk_color_init() pair 0 swap. ncurses pair 0 cannot
-  be init_pair'd so white-on-black was unreachable. Steal the green-on-black
-  slot and load it with white-on-black colors. Deck shadows use this slot.
+* [Bryan Christ] Fix vdk_color_init() pair 0 swap to match legacy libviper
+  strategy. Swap white-on-black into index 0 so it maps to the ncurses
+  default pair. No color pairs are sacrificed.
 * [Bryan Christ] Add VK_FRAME_REVERSE modifier flag for border styles.
   OR it with VK_FRAME_SINGLE, VK_FRAME_DOUBLE, or VK_FRAME_ASCII to draw
   borders in reverse video. Supported by frames, windows, and scrollers.
 * [Bryan Christ] Add VkWindowDecorateFunc-based window chrome to demo deck
   windows: title-bar buttons (─ □ ✕) in reverse video flanked by tees that
   match the border style, and a horizontal separator under the heading.
+* [Bryan Christ] Fix demo wallpaper callbacks using wbkgd() on the surface
+  canvas, which poisoned ncurses pair 0 and caused deck shadows to inherit
+  the wallpaper color instead of rendering white-on-black. Wallpaper now
+  paints manually with wattron/mvwaddch.
 
 Version 3.1.1
 

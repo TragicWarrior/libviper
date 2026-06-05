@@ -226,11 +226,11 @@ VDK uses ncurses color pairs. The `vdk_color.h` header provides:
 - `vdk_color_init()` — optional convenience that calls `start_color()` and
   registers all 64 color pairs (8×8 matrix) via `init_pair()`. Must be
   called after `vk_screen_create()`. Because ncurses pair 0 cannot be
-  modified with `init_pair()`, white-on-black (which maps to pair 0 in the
-  formula) is unreachable. `vdk_color_init()` works around this by stealing
-  the green-on-black slot and loading it with white-on-black colors, so
-  `vdk_color_pair(COLOR_GREEN, COLOR_BLACK)` yields a usable white-on-black
-  pair. Green-on-black is sacrificed and unavailable after init.
+  modified with `init_pair()`, `vdk_color_init()` swaps white-on-black into
+  index 0 so it maps to the ncurses default pair. The color that originally
+  occupied index 0 moves to the slot white-on-black would have used. With
+  the standard 8-color table this is a no-op since white-on-black naturally
+  lands at index 0.
 - `vdk_color_pair(fg, bg)` — static inline function that maps an (fg, bg)
   pair to an ncurses pair index using fast arithmetic. No globals.
 - `VDK_COLORS(fg, bg)` — convenience macro: `COLOR_PAIR(vdk_color_pair(fg, bg))`.
@@ -291,6 +291,13 @@ calls required. The wallpaper shows through wherever widgets don't cover.
 
 `vk_screen_paint_wallpaper()` is also available for callers who need to
 invoke the wallpaper outside the normal refresh cycle.
+
+**Caveat:** wallpaper callbacks should paint the surface canvas manually
+with `wattron`/`mvwaddch` (or `setcchar`/`mvwadd_wch`). Avoid `wbkgd()`
+on the surface canvas — it sets the window's background color pair, which
+causes ncurses pair 0 to inherit that color instead of the terminal
+default (white-on-black). This breaks any rendering that relies on pair 0,
+such as deck drop shadows.
 
 ### Teleport
 
