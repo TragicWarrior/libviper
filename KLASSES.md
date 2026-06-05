@@ -30,6 +30,8 @@ vk_object_t
    ├─ vk_spinner (todo)
    │
    └─ vk_listbox_t
+      │
+      └─ vk_selectbox_t
 ```
 
 ## Klass Framework Overview
@@ -57,6 +59,7 @@ Cast macros are defined in `viper.h`:
 | `VK_MARQUEE(x)` | `vk_marquee_t *` |
 | `VK_LISTBOX(x)` | `vk_listbox_t *` |
 | `VK_WINDOW(x)` | `vk_window_t *` |
+| `VK_SELECTBOX(x)` | `vk_selectbox_t *` |
 | `VK_TEXTBOX(x)` | `vk_textbox_t *` |
 
 ## Klass Templates
@@ -71,7 +74,7 @@ require_klass(KLASS_NAME);    // extern reference from other files
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
-`VK_TEXTBOX_KLASS`.
+`VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`.
 The template carries the type's size, name, constructor, destructor, and
 optional kmio handler. It serves as both the type descriptor and the vtable
 seed.
@@ -97,6 +100,7 @@ vk_label_create(width)
 vk_marquee_create(width)
 vk_listbox_create(width, height)
 vk_window_create(width, height)
+vk_selectbox_create(width, height, mode)
 vk_textbox_create(width, height)
 ```
 
@@ -115,6 +119,7 @@ _vk_label_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_marquee_ctor    -> VK_LABEL_KLASS->ctor(object, argp)
 _vk_window_ctor     -> VK_FRAME_KLASS->ctor(object, argp)
 _vk_listbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_selectbox_ctor  -> VK_LISTBOX_KLASS->ctor(object, argp)
 _vk_textbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 ```
 
@@ -188,6 +193,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_scroller_t` | `ctor`, `dtor`, `_update`, `_draw_scrollbar` |
 | `vk_window_t` | `ctor`, `dtor`, `_draw_title` |
 | `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_update`, `_reset` |
+| `vk_selectbox_t` | `ctor`, `dtor`, `_update` (overrides listbox's `_update`, `_on_resize`, `_on_recreate`) |
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_textbox_t` | `ctor`, `dtor`, `_update` |
@@ -270,6 +276,9 @@ are pushed to an object via `vk_object_push_keystroke()`.
 - **vk_window_t** -- forwards keystrokes to its child widget.
 - **vk_listbox_t** -- handles `KEY_UP`, `KEY_DOWN`, and `Enter` (execute item).
   Skips separators during navigation.
+- **vk_selectbox_t** -- intercepts `Enter` and `Space` to toggle the current
+  item's checked state. All other keystrokes delegate to `VK_LISTBOX_KLASS->kmio`
+  for standard navigation. In radio mode, toggling unchecks all items first.
 - **vk_textbox_t** -- handles `KEY_UP`, `KEY_DOWN`, `KEY_PPAGE`, `KEY_NPAGE`,
   `KEY_HOME`, `KEY_END` for scrolling.
 
@@ -382,6 +391,9 @@ to children:
   resizes and repositions attached scrollers
 - **vk_box_t** -- recalculates slot dimensions and resizes each child
 - **vk_listbox_t** -- resizes and repositions attached scrollers, repaints
+- **vk_selectbox_t** -- resizes and repositions attached scrollers, repaints
+  (overrides listbox's `_on_resize` because listbox calls its static `_update`
+  directly rather than through the function pointer)
 - **vk_textbox_t** -- resizes and repositions attached scrollers, reflows
   text, repaints
 
@@ -414,6 +426,8 @@ after canvas recreation. Widget types install it in their ctors:
 
 - **vk_listbox_t** -- updates attached scroller surfaces, recreates them,
   then calls its `_update` to repaint items and scrollers
+- **vk_selectbox_t** -- same as listbox (overrides `_on_recreate` for the
+  same dispatch reason as `_on_resize`)
 - **vk_textbox_t** -- updates attached scroller surfaces, recreates them,
   then calls its `_update` to repaint text and scrollers
 
@@ -503,6 +517,60 @@ For `VK_SCROLL_LOOP`:
 Because `vk_object_assert` uses exact type matching, `vk_marquee_t`
 provides its own wrapper functions for text get/set (delegating to the
 label's text field internally).
+
+## Selectboxes
+
+`vk_selectbox_t` derives from `vk_listbox_t` and adds check/radio selection
+semantics. Items are rendered with indicator glyphs prepended to their names.
+
+| Constant | Mode |
+|----------|------|
+| `VK_SELECTBOX_CHECKBOX` | Multi-select: each item toggles independently |
+| `VK_SELECTBOX_RADIO` | Single-select: toggling unchecks all others first |
+
+### Glyph Styles
+
+The indicator style is set via `vk_selectbox_set_style()`:
+
+| Style | Checkbox unchecked / checked | Radio unchecked / checked | Width |
+|-------|------------------------------|---------------------------|-------|
+| `VK_FRAME_ASCII` | `[ ]` / `[x]` | `( )` / `(*)` | 4 cols |
+| `VK_FRAME_SINGLE` (default) | `[ ]` / `[✓]` | `○` / `●` | 4 / 2 cols |
+
+Unicode checkbox uses U+2713 (check mark) inside ASCII brackets. Unicode
+radio uses U+25CB (white circle) and U+25CF (black circle).
+
+### Item State
+
+Each `vk_item_t` carries a `flags` field. `VK_ITEM_CHECKED` (bit 0) tracks
+the checked state. The selectbox provides `check_item`, `uncheck_item`,
+`toggle_item`, `uncheck_all`, and `item_is_checked` APIs. Separators
+cannot be checked.
+
+### KMIO
+
+`Enter` and `Space` toggle the current item. In radio mode, all items are
+unchecked first, then the current item is checked. All other keystrokes
+(navigation, wrapping) delegate to `VK_LISTBOX_KLASS->kmio`.
+
+### Wrapper Functions
+
+Because `vk_object_assert` uses exact type matching, `vk_selectbox_t`
+provides its own wrapper functions (e.g. `vk_selectbox_add_item`,
+`vk_selectbox_set_wrap`, `vk_selectbox_set_highlight`) that assert
+`vk_selectbox_t` then delegate to the listbox's function pointers.
+
+### _update Override
+
+The selectbox overrides `VK_LISTBOX(selectbox)->_update` to point to its
+own rendering function. This ensures that internal listbox navigation
+(which calls `listbox->_update(listbox)` through the function pointer)
+dispatches to the selectbox's renderer, which prepends indicator glyphs.
+
+The selectbox also overrides `_on_resize` and `_on_recreate` because the
+listbox's versions call `_vk_listbox_update` directly (static function,
+not through the function pointer). The selectbox's overrides follow the
+same scroller-propagation pattern as the listbox's.
 
 ## Linked Lists
 

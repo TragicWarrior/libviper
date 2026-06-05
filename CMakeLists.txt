@@ -67,6 +67,7 @@ add_library(viper-static STATIC
     vk_widget.c
     vk_container.c
     vk_listbox.c
+    vk_selectbox.c
     vk_frame.c
     vk_scroller.c
     vk_window.c
@@ -108,6 +109,7 @@ add_library(viper.o OBJECT
     vk_widget.c
     vk_container.c
     vk_listbox.c
+    vk_selectbox.c
     vk_frame.c
     vk_scroller.c
     vk_window.c

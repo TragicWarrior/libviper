@@ -12,6 +12,7 @@ struct _vk_item_s
     char                *name;              // display name of item
 
     int                 separator_style;    // divider to use on a menu
+    unsigned int        flags;
 
     VkWidgetFunc        func;               // run when item is activated
     void                *anything;          // passed in as argument for func()

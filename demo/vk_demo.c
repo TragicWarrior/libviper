@@ -16,6 +16,7 @@
 #include "vk_marquee.h"
 #include "vk_window.h"
 #include "vk_textbox.h"
+#include "vk_selectbox.h"
 #include "vk_screen.h"
 
 #define NUM_SURFACES    3
@@ -125,7 +126,8 @@ build_textbox(int width, int height)
     textbox = vk_textbox_create(width, height);
     if(textbox == NULL) return NULL;
 
-    vk_widget_set_colors(VK_WIDGET(textbox), COLOR_WHITE, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(textbox), COLOR_GREEN, COLOR_BLACK);
+    vk_widget_set_attrs(VK_WIDGET(textbox), A_BOLD);
     vk_textbox_set_word_wrap(textbox, TRUE);
     vk_textbox_set_text(textbox, text);
 
@@ -176,8 +178,8 @@ build_listbox(int width, int height)
     listbox = vk_listbox_create(width, height);
     if(listbox == NULL) return NULL;
 
-    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_WHITE, COLOR_BLACK);
-    vk_listbox_set_highlight(listbox, COLOR_BLACK, COLOR_CYAN);
+    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_CYAN, COLOR_BLUE);
+    vk_listbox_set_highlight(listbox, COLOR_WHITE, COLOR_MAGENTA);
     vk_listbox_set_wrap(listbox, TRUE);
 
     for(i = 0; i < item_count; i++)
@@ -195,7 +197,7 @@ build_menu(int width, int height)
     listbox = vk_listbox_create(width, height);
     if(listbox == NULL) return NULL;
 
-    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_WHITE, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_YELLOW, COLOR_BLACK);
     vk_listbox_set_highlight(listbox, COLOR_BLACK, COLOR_GREEN);
     vk_listbox_set_wrap(listbox, TRUE);
 
@@ -274,8 +276,8 @@ build_lang_listbox(int width, int height)
     listbox = vk_listbox_create(width, height);
     if(listbox == NULL) return NULL;
 
-    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_WHITE, COLOR_BLACK);
-    vk_listbox_set_highlight(listbox, COLOR_BLACK, COLOR_YELLOW);
+    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_WHITE, COLOR_BLUE);
+    vk_listbox_set_highlight(listbox, COLOR_BLUE, COLOR_WHITE);
     vk_listbox_set_wrap(listbox, TRUE);
 
     for(i = 0; i < item_count; i++)
@@ -290,8 +292,8 @@ about_on_recreate(vk_widget_t *widget)
 {
     int attr;
 
-    attr = VIPER_COLORS(COLOR_CYAN, COLOR_BLACK);
-    wbkgd(widget->canvas, ' ' | VIPER_COLORS(COLOR_WHITE, COLOR_BLACK));
+    attr = VIPER_COLORS(COLOR_YELLOW, COLOR_BLUE);
+    wbkgd(widget->canvas, ' ' | VIPER_COLORS(COLOR_WHITE, COLOR_BLUE));
 
     wattron(widget->canvas, attr | A_BOLD);
     mvwprintw(widget->canvas, 1, 2, "VK Widget Toolkit");
@@ -324,11 +326,116 @@ build_about_widget(int width, int height)
     widget = vk_widget_create(width, height);
     if(widget == NULL) return NULL;
 
-    vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLACK);
+    vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLUE);
     widget->_on_recreate = about_on_recreate;
     about_on_recreate(widget);
 
     return widget;
+}
+
+static vk_selectbox_t*
+build_checkbox(int width, int height)
+{
+    vk_selectbox_t  *selectbox;
+
+    selectbox = vk_selectbox_create(width, height, VK_SELECTBOX_CHECKBOX);
+    if(selectbox == NULL) return NULL;
+
+    vk_widget_set_colors(VK_WIDGET(selectbox), COLOR_WHITE, COLOR_MAGENTA);
+    vk_selectbox_set_highlight(selectbox, COLOR_MAGENTA, COLOR_WHITE);
+    vk_selectbox_set_wrap(selectbox, TRUE);
+
+    vk_selectbox_add_item(selectbox, "Write unit tests", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Update documentation", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Fix memory leaks", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Code review", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Profile performance", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Add CI pipeline", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Refactor widgets", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Fix warnings", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Add error handling", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Write examples", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Audit dependencies", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Set up linter", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Benchmark rendering", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Add man pages", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Valgrind clean run", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Fuzzer harness", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Thread safety audit", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "API versioning", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Pkg-config update", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Release checklist", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Changelog review", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "License headers", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Static analysis", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Coverage report", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Cross-compile test", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "BSD port test", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Locale testing", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Mouse support", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Color fallbacks", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Accessibility pass", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Drag-and-drop", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Undo/redo stack", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Clipboard support", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Tab completion", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Search in listbox", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Config file parser", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Hotkey bindings", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Theme engine", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Plugin loader", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Event bus", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Focus ring debug", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Z-order manager", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Tooltip widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Statusbar widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Progress bar", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Spinner widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Tree view", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Table widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Split pane", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Dialog builder", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Form validation", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Input masks", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Date picker", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Color picker", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "File browser", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Notification popups", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Animation engine", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Double buffering", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Memory pool alloc", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Signal handling", NULL, NULL);
+
+    vk_selectbox_check_item(selectbox, 1);
+    vk_selectbox_check_item(selectbox, 3);
+
+    return selectbox;
+}
+
+static vk_selectbox_t*
+build_radio(int width, int height)
+{
+    vk_selectbox_t  *selectbox;
+
+    selectbox = vk_selectbox_create(width, height, VK_SELECTBOX_RADIO);
+    if(selectbox == NULL) return NULL;
+
+    vk_widget_set_colors(VK_WIDGET(selectbox), COLOR_BLACK, COLOR_CYAN);
+    vk_selectbox_set_highlight(selectbox, COLOR_CYAN, COLOR_BLACK);
+    vk_selectbox_set_wrap(selectbox, TRUE);
+
+    vk_selectbox_add_item(selectbox, "Default", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Dark", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Light", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Solarized", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Monokai", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Nord", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Dracula", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Gruvbox", NULL, NULL);
+
+    vk_selectbox_check_item(selectbox, 0);
+
+    return selectbox;
 }
 
 int main(void)
@@ -361,8 +468,15 @@ int main(void)
     vk_scroller_t   *lang_hscroller;
     vk_listbox_t    *lang_listbox;
 
-    // surface 2: about
+    // surface 2: selectbox
+    vk_box_t        *box2;
+    vk_window_t     *window4;
+    vk_window_t     *window5;
     vk_window_t     *about_window;
+    vk_scroller_t   *vscroller4;
+    vk_scroller_t   *vscroller5;
+    vk_selectbox_t  *checkbox;
+    vk_selectbox_t  *radio;
     vk_widget_t     *about;
 
     // shared
@@ -517,23 +631,67 @@ int main(void)
     vk_listbox_update(lang_listbox);
     vk_frame_update(lang_frame);
 
-    // --- surface 2: about ---
+    // --- surface 2: selectbox ---
 
     vk_screen_add_surface(vk_screen);
 
-    about_window = vk_window_create(max_x, box_h);
-    vk_window_set_border_style(about_window, VK_FRAME_SINGLE);
-    vk_window_set_border_colors(about_window, COLOR_CYAN, COLOR_BLACK);
-    vk_window_set_title(about_window, " About ");
-    vk_window_set_title_justify(about_window, VK_JUSTIFY_CENTER);
+    box2 = vk_box_create(max_x, box_h, VK_BOX_HORIZONTAL, 3);
+    vk_screen_attach_widget(vk_screen, 2, VK_WIDGET(box2));
+    vk_widget_move(VK_WIDGET(box2), 0, 1);
 
-    about = build_about_widget(max_x - 2, box_h - 2);
+    // pane 1: checkbox selectbox
+    window4 = vk_window_create(slot_w, box_h);
+    vk_window_set_title(window4, " Checkbox ");
+    vk_window_set_title_justify(window4, VK_JUSTIFY_LEFT);
+    vk_window_set_border_colors(window4, COLOR_CYAN, COLOR_BLACK);
+
+    checkbox = build_checkbox(inner_w, inner_h);
+    vk_window_set_child(window4, VK_WIDGET(checkbox));
+
+    vscroller4 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
+    vk_scroller_set_border_style(vscroller4, VK_FRAME_SINGLE);
+    vk_scroller_set_border_colors(vscroller4, COLOR_CYAN, COLOR_BLACK);
+    vk_scroller_set_scroll_source(vscroller4, VK_WIDGET(checkbox));
+    vk_scroller_set_scroll_info(vscroller4, listbox_scroll_info);
+    vk_widget_attach_scroller(VK_WIDGET(window4), vscroller4);
+
+    // pane 2: radio selectbox
+    window5 = vk_window_create(slot_w, box_h);
+    vk_window_set_title(window5, " Radio ");
+    vk_window_set_title_justify(window5, VK_JUSTIFY_CENTER);
+    vk_window_set_border_colors(window5, COLOR_WHITE, COLOR_BLACK);
+
+    radio = build_radio(inner_w, inner_h);
+    vk_window_set_child(window5, VK_WIDGET(radio));
+
+    vscroller5 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
+    vk_scroller_set_border_style(vscroller5, VK_FRAME_SINGLE);
+    vk_scroller_set_border_colors(vscroller5, COLOR_WHITE, COLOR_BLACK);
+    vk_scroller_set_scroll_source(vscroller5, VK_WIDGET(radio));
+    vk_scroller_set_scroll_info(vscroller5, listbox_scroll_info);
+    vk_widget_attach_scroller(VK_WIDGET(window5), vscroller5);
+
+    // pane 3: about
+    about_window = vk_window_create(slot_w, box_h);
+    vk_window_set_border_style(about_window, VK_FRAME_SINGLE);
+    vk_window_set_border_colors(about_window, COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_title(about_window, " About ");
+    vk_window_set_title_justify(about_window, VK_JUSTIFY_RIGHT);
+
+    about = build_about_widget(inner_w, inner_h);
     vk_window_set_child(about_window, about);
 
-    vk_screen_attach_widget(vk_screen, 2, VK_WIDGET(about_window));
-    vk_widget_move(VK_WIDGET(about_window), 0, 1);
+    vk_box_set_widget(box2, 0, VK_WIDGET(window4));
+    vk_box_set_widget(box2, 1, VK_WIDGET(window5));
+    vk_box_set_widget(box2, 2, VK_WIDGET(about_window));
 
+    vk_selectbox_update(checkbox);
+    vk_selectbox_update(radio);
+    vk_window_update(window4);
+    vk_window_update(window5);
     vk_window_update(about_window);
+
+    vk_box_update(box2);
 
     // --- initial draw and event loop ---
 
@@ -559,7 +717,7 @@ int main(void)
             vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
             vk_widget_resize(VK_WIDGET(box), max_x, box_h);
             vk_widget_resize(VK_WIDGET(lang_frame), max_x, box_h);
-            vk_widget_resize(VK_WIDGET(about_window), max_x, box_h);
+            vk_widget_resize(VK_WIDGET(box2), max_x, box_h);
         }
         else if(key == 'd')
         {
@@ -636,7 +794,7 @@ int main(void)
                 vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
                 vk_widget_resize(VK_WIDGET(box), max_x, box_h);
                 vk_widget_resize(VK_WIDGET(lang_frame), max_x, box_h);
-                vk_widget_resize(VK_WIDGET(about_window), max_x, box_h);
+                vk_widget_resize(VK_WIDGET(box2), max_x, box_h);
 
                 wtimeout(stdscr, 100);
             }
@@ -669,6 +827,8 @@ int main(void)
                 vk_object_push_keystroke(VK_OBJECT(box), key);
             else if(current_surface == 1)
                 vk_object_push_keystroke(VK_OBJECT(lang_frame), key);
+            else if(current_surface == 2)
+                vk_object_push_keystroke(VK_OBJECT(box2), key);
         }
 
         screen = vk_screen_get_window(vk_screen);
@@ -706,8 +866,23 @@ int main(void)
         }
         else if(current_surface == 2)
         {
+            short w4_fg = (box2->focused_slot == 0) ? COLOR_CYAN : COLOR_WHITE;
+            short w5_fg = (box2->focused_slot == 1) ? COLOR_GREEN : COLOR_WHITE;
+            short wa_fg = (box2->focused_slot == 2) ? COLOR_YELLOW : COLOR_WHITE;
+
+            vk_window_set_border_colors(window4, w4_fg, COLOR_BLACK);
+            vk_selectbox_update(checkbox);
+            vk_window_update(window4);
+
+            vk_window_set_border_colors(window5, w5_fg, COLOR_BLACK);
+            vk_selectbox_update(radio);
+            vk_window_update(window5);
+
+            vk_window_set_border_colors(about_window, wa_fg, COLOR_BLACK);
             vk_window_update(about_window);
-            vk_widget_draw(VK_WIDGET(about_window));
+
+            vk_box_update(box2);
+            vk_widget_draw(VK_WIDGET(box2));
         }
 
         vk_marquee_run(marquee);
@@ -737,7 +912,14 @@ int main(void)
     vk_frame_destroy(lang_frame);
     vk_listbox_destroy(lang_listbox);
 
+    vk_scroller_destroy(vscroller4);
+    vk_scroller_destroy(vscroller5);
+    vk_box_destroy(box2);
+    vk_window_destroy(window4);
+    vk_window_destroy(window5);
     vk_window_destroy(about_window);
+    vk_selectbox_destroy(checkbox);
+    vk_selectbox_destroy(radio);
     vk_widget_destroy(about);
 
     vk_screen_destroy(vk_screen);

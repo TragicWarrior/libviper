@@ -63,6 +63,11 @@
 
 #define VK_FLAG_ALLOW_WRAP          (1 << 1)
 
+#define VK_ITEM_CHECKED             (1 << 0)
+
+#define VK_SELECTBOX_CHECKBOX       0
+#define VK_SELECTBOX_RADIO          1
+
 #define VK_FRAME_NONE               0               // disables a frame
 #define VK_FRAME_SINGLE             1
 #define VK_FRAME_DOUBLE             2
@@ -118,6 +123,7 @@ typedef struct  _vk_surface_s       vk_surface_t;
 typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
+typedef struct  _vk_selectbox_s     vk_selectbox_t;
 typedef struct  _vk_frame_s         vk_frame_t;
 typedef struct  _vk_scroller_s      vk_scroller_t;
 typedef struct  _vk_window_s        vk_window_t;
@@ -299,6 +305,7 @@ void*           viper_window_get_userptr(vwnd_t *wnd);
 #define VK_WIDGET(x)            ((vk_widget_t *)x)
 #define VK_CONTAINER(x)         ((vk_container_t *)x)
 #define VK_LISTBOX(x)           ((vk_listbox_t *)x)
+#define VK_SELECTBOX(x)         ((vk_selectbox_t *)x)
 #define VK_FRAME(x)             ((vk_frame_t *)x)
 #define VK_SCROLLER(x)          ((vk_scroller_t *)x)
 #define VK_WINDOW(x)            ((vk_window_t *)x)
@@ -377,6 +384,22 @@ int             vk_listbox_update(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
 int             vk_listbox_add_separator(vk_listbox_t *listbox, int style);
 void            vk_listbox_destroy(vk_listbox_t *listbox);
+
+vk_selectbox_t* vk_selectbox_create(int width, int height, int mode);
+int             vk_selectbox_set_style(vk_selectbox_t *selectbox, int style);
+int             vk_selectbox_set_wrap(vk_selectbox_t *selectbox, bool allowed);
+int             vk_selectbox_set_highlight(vk_selectbox_t *selectbox,
+                    int fg, int bg);
+int             vk_selectbox_add_item(vk_selectbox_t *selectbox,
+                    char *name, VkWidgetFunc func, void *anything);
+int             vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx);
+bool            vk_selectbox_item_is_checked(vk_selectbox_t *selectbox,
+                    int idx);
+int             vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx);
+int             vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx);
+int             vk_selectbox_uncheck_all(vk_selectbox_t *selectbox);
+int             vk_selectbox_update(vk_selectbox_t *selectbox);
+void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
 vk_frame_t*     vk_frame_create(int width, int height);
 int             vk_frame_set_border_style(vk_frame_t *frame, int style);

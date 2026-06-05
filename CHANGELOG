@@ -15,6 +15,10 @@ Version 4.0.0 (in progress)
   content fits viewport (skip-draw semantics).
 * [Bryan Christ] Add scroller host support to vk_listbox_t and vk_textbox_t
   (borderless host pattern).
+* [Bryan Christ] Rename vk_desktop_t to vk_surface_t across all APIs and docs.
+* [Bryan Christ] Add vk_selectbox_t derived from vk_listbox_t with checkbox
+  (multi-select) and radio (single-select) modes, ASCII and Unicode glyph
+  styles, and scroller attachment support.
 
 Version 3.1.1
 
