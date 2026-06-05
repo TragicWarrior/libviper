@@ -82,7 +82,6 @@ set(VIPER_SOURCES
     viper_events.c
     viper_screen.c
     viper_states.c
-    viper_wcreate.c
     viper_wdestroy.c
     viper_wfind.c
     viper_wmove.c

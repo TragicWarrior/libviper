@@ -159,17 +159,12 @@ int             viper_pair_content(short pair, short *fb, short *bg);
 #define         VIPER_COLORS(fg,bg)    (COLOR_PAIR(vdk_color_pair(fg, bg)))
 
 /* window construction and destruction */
-vwnd_t*         viper_window_create(int screen_id, bool managed, char *title,
-                    float x, float y, float width, float height);
 #define         VWINDOW(wnd)              (*(WINDOW**)wnd)
 
 
 WINDOW*         viper_window_get_frame(vwnd_t *wnd);
 #define         WINDOW_FRAME(wnd)       (viper_window_get_frame(wnd))
 
-int             viper_window_set_limits(vwnd_t *wnd,
-                    int min_width, int min_height,
-                    int max_width, int max_height);
 
 /* window placement */
 vwnd_t*         viper_window_get_top(int screen_id, bool managed);
