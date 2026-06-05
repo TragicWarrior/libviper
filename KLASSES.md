@@ -4,18 +4,30 @@
 
 ```
 vk_object_t
-├── vk_screen_t
-└── vk_widget_t
-    ├── vk_container_t
-    │   ├── vk_box_t
-    │   └── vk_frame_t
-    │       └── vk_scroller_t
-    ├── vk_label_t
-    │   └── vk_marquee_t
-    ├── vk_button (todo)
-    ├── vk_spinner (todo)
-    └── vk_listbox_t
-        └── vk_menu_t
+│
+├─ vk_screen_t
+│
+└─ vk_widget_t
+   │
+   ├─ vk_container_t
+   │  │
+   │  ├─ vk_box_t
+   │  │
+   │  └─ vk_frame_t
+   │     │
+   │     └─ vk_scroller_t
+   │
+   ├─ vk_label_t
+   │  │
+   │  └─ vk_marquee_t
+   │
+   ├─ vk_button (todo)
+   │
+   ├─ vk_spinner (todo)
+   │
+   └─ vk_listbox_t
+      │
+      └─ vk_menu_t
 ```
 
 ## Klass Framework Overview
@@ -193,15 +205,33 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 | `vk_screen_attach_widget` | Attach a widget to a desktop |
 | `vk_screen_detach_widget` | Detach a widget from a desktop |
 | `vk_screen_resize` | Handle terminal resize (updates all desktop canvases) |
+| `vk_screen_poll_resize` | Poll actual terminal size via ioctl; calls resize if changed |
 | `vk_screen_teleport` | Migrate the entire UI to a different PTY |
 | `vk_screen_refresh` | Blit the active desktop canvas to stdscr and refresh |
+| `vk_screen_destroy` | Tear down screen, restore evicted terminal, free resources |
 
 ### Teleport
 
 `vk_screen_teleport(screen, pty_path)` migrates the UI to a different
-terminal. It opens the target PTY, creates a new ncurses SCREEN via
-`newterm()`, recreates all desktop canvases and widget trees on the new
-screen, then tears down the old terminal.
+terminal. The sequence is:
+
+1. **Release previous PTY** -- if an earlier teleport evicted a shell,
+   restore that PTY's termios, SIGCONT the shell, and SIGINT it so
+   readline redraws a clean prompt.
+2. **Evict target PTY** -- find the session leader on the target PTY
+   and SIGSTOP it so our process can claim the terminal. Session leader
+   discovery uses utmpx (POSIX) with a `/proc` fallback for modern
+   terminal emulators that don't write utmpx entries.
+3. **Save termios** -- snapshot the target PTY's terminal attributes
+   before ncurses changes them.
+4. **Create new SCREEN** -- open the PTY, call `newterm()`, initialize
+   colors/keypad/raw mode.
+5. **Recreate widgets** -- rebuild all desktop canvases and widget trees
+   on the new screen via `vk_widget_recreate()`.
+6. **Tear down old terminal** -- `endwin()` the old SCREEN, close old
+   file handles.
+7. **Drain input** -- flush stale terminal response bytes from the
+   `newterm`/`keypad` initialization sequences.
 
 Old ncurses WINDOWs are intentionally leaked during teleport because
 `delwin` on windows bound to a different SCREEN corrupts ncurses internal
@@ -209,8 +239,18 @@ state. The old SCREEN is shut down with `endwin()` but not `delscreen()`
 for the same reason. This is bounded: teleport is a rare operation and
 each invocation leaks only the previous set of canvases.
 
-After recreation, stale terminal response bytes (from `newterm`/`keypad`
-initialization sequences) are drained from the input buffer.
+On destroy, the screen performs the same PTY handoff: restore termios,
+SIGCONT, SIGINT.
+
+### Post-Teleport Resize
+
+After teleport, our process is not in the target terminal's session, so
+SIGWINCH from that terminal goes to the stopped shell, not us.
+`vk_screen_poll_resize()` works around this by calling
+`ioctl(TIOCGWINSZ)` on the screen's `fd_out` to read the actual terminal
+dimensions, comparing against stored values, and calling
+`vk_screen_resize()` if they differ. Callers should invoke it each tick
+of their event loop (the demo does this alongside `KEY_RESIZE` checks).
 
 ## KMIO (Keyboard/Mouse I/O)
 
