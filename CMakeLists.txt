@@ -67,6 +67,9 @@ set(VDK_SOURCES
 
 set(VKMIO_SOURCES
     vkmio/vk_kmio.c
+    vkmio/vk_zone.c
+    vkmio/vk_dblclick.c
+    vkmio/vk_drag.c
     )
 
 set(VIPER_SOURCES
