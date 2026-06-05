@@ -654,24 +654,39 @@ see `vk_marquee_t` for overflow scrolling.
 
 ## Buttons
 
-`vk_button_t` is a push button derived from `vk_widget_t` with a Win3.1 /
-VB DOS beveled style. The widget is 3 rows tall: a border row, the
-centered text row, and a border row. Width is `1 + textlen + 1`.
+`vk_button_t` is a push button derived from `vk_widget_t`. It supports
+two families of relief style: **3D** (the default) and **basic**.
 
-The bevel is a WACS_* single-line box with a two-tone color split that
-simulates a 3D raised look. Starting clockwise from the bottom-left corner
-(inclusive), the highlight color (white on face) covers the left edge,
-top-left corner, and top edge. From the top-right corner (inclusive), the
-shadow color (black on face) covers the right edge, bottom edge, and
-corners. On press, the highlight and shadow swap to simulate being pushed
-in. ASCII mode uses `+`, `-`, `|` with the same color split.
+Display width is measured via `wcswidth`, so UTF-8 text sizes correctly.
+
+### 3D relief (`VK_FRAME_SINGLE`, `VK_FRAME_ASCII`)
+
+The widget is 3 rows tall (border, centered text, border) and
+`1 + display_width + 1` columns wide. The bevel is a two-tone color
+split that simulates a raised look. Starting clockwise from the
+bottom-left corner (inclusive), the highlight color (white on face)
+covers the left edge, top-left corner, and top edge. From the top-right
+corner (inclusive), the shadow color (black on face) covers the right
+edge, bottom edge, and corners. On press, the highlight and shadow swap
+to give a sunken appearance. `VK_FRAME_SINGLE` uses WACS_* box-drawing
+characters; `VK_FRAME_ASCII` uses `+`, `-`, `|` with the same split.
+
+### Basic relief (`VK_BUTTON_BASIC`)
+
+A single-row button in the style of the Links text browser:
+`[ text ]`. The widget is 1 row tall and `2 + display_width + 2`
+columns wide. On press, the brackets render in reverse video.
+`vk_button_set_relief_style` automatically resizes the widget when
+switching between 3D and basic styles.
+
+### API
 
 | API | Description |
 |-----|-------------|
-| `vk_button_create(text)` | Create a button; text determines width |
+| `vk_button_create(text)` | Create a button (default: `VK_FRAME_SINGLE`) |
 | `vk_button_set_text` | Replace button text (no resize) |
-| `vk_button_set_relief_style` | `VK_FRAME_SINGLE` (unicode, default) or `VK_FRAME_ASCII` |
-| `vk_button_set_pressed_colors` | Set fg/bg for the pressed face |
+| `vk_button_set_relief_style` | `VK_FRAME_SINGLE`, `VK_FRAME_ASCII`, or `VK_BUTTON_BASIC` |
+| `vk_button_set_pressed_colors` | Set fg/bg for the pressed face (3D only) |
 | `vk_button_set_on_press` | Register a `VkWidgetFunc` callback + user data |
 | `vk_button_press` | Set pressed state and fire callback |
 | `vk_button_release` | Clear pressed state |

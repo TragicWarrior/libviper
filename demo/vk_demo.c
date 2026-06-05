@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <langinfo.h>
 
 #include "vdk.h"
 #include "vk_object.h"
@@ -21,8 +22,6 @@
 #include "vk_screen.h"
 
 #define NUM_SURFACES    5
-
-static vk_button_t *g_deck_button = NULL;
 
 static const char *surface_names[] =
 {
@@ -576,22 +575,6 @@ box_kmio(vk_object_t *object, int32_t keystroke)
 }
 
 static int
-settings_kmio(vk_object_t *object, int32_t keystroke)
-{
-    (void)object;
-
-    if((keystroke == KEY_CRLF || keystroke == ' ') && g_deck_button != NULL)
-    {
-        if(g_deck_button->pressed)
-            vk_button_release(g_deck_button);
-        else
-            vk_button_press(g_deck_button);
-    }
-
-    return 0;
-}
-
-static int
 deck_kmio(vk_object_t *object, int32_t keystroke)
 {
     vk_deck_t   *deck = VK_DECK(object);
@@ -606,6 +589,50 @@ deck_kmio(vk_object_t *object, int32_t keystroke)
     top = vk_deck_get_top(deck);
     if(top != NULL)
         return vk_object_push_keystroke(VK_OBJECT(top), keystroke);
+
+    return 0;
+}
+
+static int
+transport_kmio(vk_object_t *object, int32_t keystroke)
+{
+    static int      active_slot = -1;
+    vk_box_t        *box = VK_BOX(object);
+    vk_widget_t     *btn;
+
+    if(keystroke == KEY_LEFT)
+    {
+        if(box->focused_slot > 0)
+            box->focused_slot--;
+        else
+            box->focused_slot = box->slots - 1;
+        return 0;
+    }
+
+    if(keystroke == KEY_RIGHT)
+    {
+        box->focused_slot = (box->focused_slot + 1) % box->slots;
+        return 0;
+    }
+
+    if(keystroke == ' ')
+    {
+        if(active_slot >= 0 && active_slot < box->slots)
+        {
+            btn = box->slot_widgets[active_slot];
+            if(btn != NULL)
+                vk_button_release(VK_BUTTON(btn));
+        }
+
+        btn = box->slot_widgets[box->focused_slot];
+        if(btn != NULL)
+        {
+            vk_button_press(VK_BUTTON(btn));
+            active_slot = box->focused_slot;
+        }
+
+        return 0;
+    }
 
     return 0;
 }
@@ -967,8 +994,10 @@ int main(void)
     vk_window_t     *deck_win4;
     vk_window_t     *deck_win5;
     vk_box_t        *deck_box5;
-    vk_label_t      *deck_label5;
-    vk_button_t     *deck_button5;
+    vk_button_t     *deck_buttons[5];
+    vk_window_t     *deck_win6;
+    vk_box_t        *deck_box6;
+    vk_button_t     *deck_basic_buttons[3];
 
     // shared
     vk_marquee_t    *marquee;
@@ -1269,36 +1298,108 @@ int main(void)
     vk_deck_add_widget(deck, VK_WIDGET(deck_win4), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win4), 39, 11);
 
-    deck_win5 = vk_window_create(35, 10);
-    vk_window_set_title(deck_win5, " Settings ");
-    vk_window_set_border_style(deck_win5,
-        VK_FRAME_DOUBLE | VK_FRAME_REVERSE);
-    vk_window_set_border_colors(deck_win5, COLOR_MAGENTA, COLOR_BLACK);
-    vk_widget_set_colors(VK_WIDGET(deck_win5), COLOR_WHITE, COLOR_RED);
-    vk_window_set_decorate(deck_win5, deck_config_decorate, NULL);
-    vk_object_set_kmio(VK_OBJECT(deck_win5), settings_kmio);
+    {
+        int         has_utf8;
+        int         bi;
+        const char  *btn_labels_utf8[] =
+        {
+            "\xe2\x96\xb6 Play ",
+            "\xc2\xbb FF ",
+            "\xc2\xab RW ",
+            "\xe2\x96\xa0 Stop ",
+            "\xe2\x8f\xb8 Pause ",
+        };
+        const char  *btn_labels_ascii[] =
+        {
+            "Play ", "FF ", "RW ", "Stop ", "Pause ",
+        };
 
-    deck_label5 = vk_label_create(33);
-    vk_label_set_text(deck_label5, "Theme: Dark");
-    vk_widget_set_colors(VK_WIDGET(deck_label5), COLOR_WHITE, COLOR_RED);
-    vk_label_update(deck_label5);
+        has_utf8 = (strcmp(nl_langinfo(CODESET), "UTF-8") == 0);
 
-    deck_button5 = vk_button_create("Apply");
-    vk_widget_set_colors(VK_WIDGET(deck_button5), COLOR_WHITE, COLOR_RED);
-    vk_button_set_pressed_colors(deck_button5, COLOR_BLACK, COLOR_WHITE);
-    vk_button_update(deck_button5);
-    g_deck_button = deck_button5;
+        deck_win5 = vk_window_create(52, 5);
+        vk_window_set_title(deck_win5, " Transport ");
+        vk_window_set_border_style(deck_win5,
+            VK_FRAME_DOUBLE | VK_FRAME_REVERSE);
+        vk_window_set_border_colors(deck_win5, COLOR_MAGENTA, COLOR_BLACK);
+        vk_widget_set_colors(VK_WIDGET(deck_win5), COLOR_WHITE, COLOR_RED);
+        vk_window_set_decorate(deck_win5, deck_config_decorate, NULL);
 
-    deck_box5 = vk_box_create(33, 8, VK_BOX_VERTICAL, 2);
-    vk_widget_set_expand(VK_WIDGET(deck_label5));
-    vk_box_set_widget(deck_box5, 0, VK_WIDGET(deck_label5));
-    vk_box_set_widget(deck_box5, 1, VK_WIDGET(deck_button5));
+        for(bi = 0; bi < 5; bi++)
+        {
+            const char *label = has_utf8
+                ? btn_labels_utf8[bi] : btn_labels_ascii[bi];
 
-    vk_widget_set_expand(VK_WIDGET(deck_box5));
-    vk_window_set_child(deck_win5, VK_WIDGET(deck_box5));
-    vk_window_update(deck_win5);
-    vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
-    vk_widget_move(VK_WIDGET(deck_win5), 51, 14);
+            deck_buttons[bi] = vk_button_create(label);
+            vk_widget_set_colors(VK_WIDGET(deck_buttons[bi]),
+                COLOR_WHITE, COLOR_RED);
+            vk_button_set_pressed_colors(deck_buttons[bi],
+                COLOR_BLACK, COLOR_WHITE);
+            if(bi == 3)
+                vk_button_set_relief_style(deck_buttons[bi],
+                    VK_FRAME_ASCII);
+            vk_button_update(deck_buttons[bi]);
+        }
+
+        deck_box5 = vk_box_create(50, 3, VK_BOX_HORIZONTAL, 5);
+        wbkgd(VK_WIDGET(deck_box5)->canvas,
+            ' ' | COLOR_PAIR(vdk_color_pair(COLOR_WHITE, COLOR_RED)));
+
+        for(bi = 0; bi < 5; bi++)
+            vk_box_set_widget(deck_box5, bi, VK_WIDGET(deck_buttons[bi]));
+
+        vk_object_set_kmio(VK_OBJECT(deck_box5), transport_kmio);
+        vk_object_set_kmio(VK_OBJECT(deck_win5), frame_kmio);
+
+        VK_WIDGET(deck_buttons[0])->attrs = A_BOLD;
+
+        vk_widget_set_expand(VK_WIDGET(deck_box5));
+        vk_window_set_child(deck_win5, VK_WIDGET(deck_box5));
+        vk_window_update(deck_win5);
+        vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
+        vk_widget_move(VK_WIDGET(deck_win5), 51, 14);
+    }
+
+    // deck window 6: basic (Links-style) buttons
+    {
+        int bi;
+        const char *basic_labels[] = { "OK ", "Cancel ", "Help " };
+
+        deck_win6 = vk_window_create(38, 3);
+        vk_window_set_title(deck_win6, " Dialog ");
+        vk_window_set_border_style(deck_win6,
+            VK_FRAME_DOUBLE | VK_FRAME_REVERSE);
+        vk_window_set_border_colors(deck_win6, COLOR_MAGENTA, COLOR_BLACK);
+        vk_widget_set_colors(VK_WIDGET(deck_win6), COLOR_WHITE, COLOR_CYAN);
+        vk_window_set_decorate(deck_win6, deck_config_decorate, NULL);
+
+        for(bi = 0; bi < 3; bi++)
+        {
+            deck_basic_buttons[bi] = vk_button_create(basic_labels[bi]);
+            vk_widget_set_colors(VK_WIDGET(deck_basic_buttons[bi]),
+                COLOR_WHITE, COLOR_CYAN);
+            vk_button_set_relief_style(deck_basic_buttons[bi],
+                VK_BUTTON_BASIC);
+            vk_button_update(deck_basic_buttons[bi]);
+        }
+
+        deck_box6 = vk_box_create(36, 1, VK_BOX_HORIZONTAL, 3);
+        wbkgd(VK_WIDGET(deck_box6)->canvas,
+            ' ' | COLOR_PAIR(vdk_color_pair(COLOR_WHITE, COLOR_CYAN)));
+
+        for(bi = 0; bi < 3; bi++)
+            vk_box_set_widget(deck_box6, bi, VK_WIDGET(deck_basic_buttons[bi]));
+
+        vk_object_set_kmio(VK_OBJECT(deck_box6), transport_kmio);
+        vk_object_set_kmio(VK_OBJECT(deck_win6), frame_kmio);
+
+        VK_WIDGET(deck_basic_buttons[0])->attrs = A_BOLD;
+
+        vk_widget_set_expand(VK_WIDGET(deck_box6));
+        vk_window_set_child(deck_win6, VK_WIDGET(deck_box6));
+        vk_window_update(deck_win6);
+        vk_deck_add_widget(deck, VK_WIDGET(deck_win6), VK_DECK_TOP);
+        vk_widget_move(VK_WIDGET(deck_win6), 63, 17);
+    }
 
     // --- initial draw and event loop ---
 
@@ -1527,28 +1628,49 @@ int main(void)
             vk_widget_t *top = vk_deck_get_top(deck);
 
             short c1 = COLOR_WHITE, c2 = COLOR_RED, c3 = COLOR_WHITE;
-            short c4 = COLOR_YELLOW, c5 = COLOR_MAGENTA;
+            short c4 = COLOR_YELLOW, c5 = COLOR_MAGENTA, c6 = COLOR_MAGENTA;
             if(top == VK_WIDGET(deck_win1)) c1 = COLOR_YELLOW;
             else if(top == VK_WIDGET(deck_win2)) c2 = COLOR_GREEN;
             else if(top == VK_WIDGET(deck_win3)) c3 = COLOR_CYAN;
             else if(top == VK_WIDGET(deck_win4)) c4 = COLOR_WHITE;
             else if(top == VK_WIDGET(deck_win5)) c5 = COLOR_WHITE;
+            else if(top == VK_WIDGET(deck_win6)) c6 = COLOR_WHITE;
 
             vk_window_set_border_colors(deck_win1, c1, COLOR_BLACK);
             vk_window_set_border_colors(deck_win2, c2, COLOR_BLACK);
             vk_window_set_border_colors(deck_win3, c3, COLOR_BLACK);
             vk_window_set_border_colors(deck_win4, c4, COLOR_BLACK);
             vk_window_set_border_colors(deck_win5, c5, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win6, c6, COLOR_BLACK);
 
             vk_window_update(deck_win1);
             vk_window_update(deck_win2);
             vk_window_update(deck_win3);
             vk_window_update(deck_win4);
 
-            vk_label_update(deck_label5);
-            vk_button_update(deck_button5);
+            {
+                int bi;
+                for(bi = 0; bi < 5; bi++)
+                {
+                    VK_WIDGET(deck_buttons[bi])->attrs =
+                        (bi == deck_box5->focused_slot) ? A_BOLD : 0;
+                    vk_button_update(deck_buttons[bi]);
+                }
+            }
             vk_box_update(deck_box5);
             vk_window_update(deck_win5);
+
+            {
+                int bi;
+                for(bi = 0; bi < 3; bi++)
+                {
+                    VK_WIDGET(deck_basic_buttons[bi])->attrs =
+                        (bi == deck_box6->focused_slot) ? A_BOLD : 0;
+                    vk_button_update(deck_basic_buttons[bi]);
+                }
+            }
+            vk_box_update(deck_box6);
+            vk_window_update(deck_win6);
         }
 
         vk_marquee_run(marquee);
@@ -1592,11 +1714,20 @@ int main(void)
     vk_window_destroy(deck_win2);
     vk_window_destroy(deck_win3);
     vk_window_destroy(deck_win4);
-    g_deck_button = NULL;
-    vk_label_destroy(deck_label5);
-    vk_button_destroy(deck_button5);
+    {
+        int bi;
+        for(bi = 0; bi < 5; bi++)
+            vk_button_destroy(deck_buttons[bi]);
+    }
     vk_box_destroy(deck_box5);
     vk_window_destroy(deck_win5);
+    {
+        int bi;
+        for(bi = 0; bi < 3; bi++)
+            vk_button_destroy(deck_basic_buttons[bi]);
+    }
+    vk_box_destroy(deck_box6);
+    vk_window_destroy(deck_win6);
 
     vk_screen_destroy(vk_screen);
 

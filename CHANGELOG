@@ -72,9 +72,22 @@ Version 4.0.0 (in progress)
   Containers (vk_box_t, vk_frame_t) only resize a child to fill its slot
   when VK_STATE_EXPAND is set. Convenience macro: vk_widget_set_expand().
 * [Bryan Christ] Add cascading deck layout to demo. All 5 deck windows
-  now stack in a consistent +col,+row direction. The Settings window
-  contains a 2-row vertical vk_box_t with a vk_label_t in the top slot
-  and a vk_button_t (non-expanding) in the bottom slot.
+  now stack in a consistent +col,+row direction. The Transport window
+  contains a 5-slot horizontal vk_box_t with Play, FF, RW, Stop, and
+  Pause buttons. Unicode symbols (▶, », «, ■, ⏸) are prepended when
+  the locale supports UTF-8.
+* [Bryan Christ] Fix vk_button_t width calculation to use display width
+  (wcswidth) instead of byte length so UTF-8 button labels size correctly.
+* [Bryan Christ] Add VK_BUTTON_BASIC relief style for Links-style
+  single-row buttons: [ text ] with reverse-video brackets on press.
+  vk_button_set_relief_style automatically resizes the widget when
+  switching between 3D (height 3) and basic (height 1) styles.
+* [Bryan Christ] Add keyboard navigation to demo transport buttons
+  (Left/Right to move focus, Space to press). Focused button renders
+  with A_BOLD highlight. Pressed state persists until another button
+  is pressed.
+* [Bryan Christ] Add Dialog deck window to demo with OK, Cancel, Help
+  buttons using VK_BUTTON_BASIC relief style.
 
 Version 3.1.1
 

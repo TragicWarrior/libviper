@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <wchar.h>
 
 #include "vk_object.h"
 #include "vk_widget.h"
@@ -18,6 +19,23 @@ _vk_button_update(vk_button_t *button);
 static void
 _vk_button_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
     attr_t extra);
+
+static int
+_vk_button_text_width(const char *text)
+{
+    wchar_t     wbuf[256];
+    size_t      n;
+    int         w;
+
+    if(text == NULL) return 0;
+
+    n = mbstowcs(wbuf, text, 255);
+    if(n == (size_t)-1) return strlen(text);
+    wbuf[n] = L'\0';
+
+    w = wcswidth(wbuf, n);
+    return (w >= 0) ? w : (int)strlen(text);
+}
 
 
 require_klass(VK_WIDGET_KLASS);
@@ -40,7 +58,7 @@ vk_button_create(const char *text)
 
     if(text == NULL) return NULL;
 
-    text_len = strlen(text);
+    text_len = _vk_button_text_width(text);
     if(text_len < 1) return NULL;
 
     width = 1 + text_len + 1;
@@ -85,13 +103,26 @@ vk_button_get_text(vk_button_t *button)
 inline int
 vk_button_set_relief_style(vk_button_t *button, int style)
 {
+    vk_widget_t *widget;
+    int         text_width;
+
     if(button == NULL) return -1;
 
     if(!vk_object_assert(button, vk_button_t)) return -1;
 
-    if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII) return -1;
+    if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
+        && style != VK_BUTTON_BASIC)
+        return -1;
 
     button->relief_style = style;
+
+    widget = VK_WIDGET(button);
+    text_width = _vk_button_text_width(button->text);
+
+    if(style == VK_BUTTON_BASIC)
+        vk_widget_resize(widget, 2 + text_width + 2, 1);
+    else
+        vk_widget_resize(widget, 1 + text_width + 1, 3);
 
     return 0;
 }
@@ -255,16 +286,8 @@ _vk_button_update(vk_button_t *button)
     widget = VK_WIDGET(button);
     widget->_erase(widget);
 
-    if(button->pressed)
-    {
-        fg = button->pressed_fg;
-        bg = button->pressed_bg;
-    }
-    else
-    {
-        fg = widget->fg;
-        bg = widget->bg;
-    }
+    fg = widget->fg;
+    bg = widget->bg;
 
     face_colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
 
@@ -281,26 +304,47 @@ _vk_button_update(vk_button_t *button)
     right_col = widget->width - 1;
     bottom_row = widget->height - 1;
 
-    if(button->text != NULL)
-    {
-        int text_len = strlen(button->text);
-        int max_text = widget->width - 2;
-        int text_col;
-
-        if(text_len > max_text) text_len = max_text;
-        text_col = 1 + (max_text - text_len) / 2;
-
-        wattron(widget->canvas, face_colors);
-        mvwprintw(widget->canvas, 1, text_col, "%.*s", max_text, button->text);
-        wattroff(widget->canvas, face_colors);
-    }
-
     switch(button->relief_style)
     {
+        case VK_BUTTON_BASIC:
+        {
+            int bracket_colors = face_colors;
+
+            if(button->pressed)
+                bracket_colors |= A_REVERSE;
+
+            wattron(widget->canvas, bracket_colors);
+            mvwaddch(widget->canvas, 0, 0, '[');
+            mvwaddch(widget->canvas, 0, right_col, ']');
+            wattroff(widget->canvas, bracket_colors);
+
+            if(button->text != NULL)
+            {
+                wattron(widget->canvas, face_colors);
+                mvwaddstr(widget->canvas, 0, 2, button->text);
+                wattroff(widget->canvas, face_colors);
+            }
+            break;
+        }
+
         case VK_FRAME_ASCII:
         {
             int hi_colors = COLOR_PAIR(hi_pair) | widget->attrs;
             int sh_colors = COLOR_PAIR(sh_pair) | widget->attrs;
+
+            if(button->text != NULL)
+            {
+                int text_width = _vk_button_text_width(button->text);
+                int max_cols = widget->width - 2;
+                int text_col;
+
+                if(text_width > max_cols) text_width = max_cols;
+                text_col = 1 + (max_cols - text_width) / 2;
+
+                wattron(widget->canvas, face_colors);
+                mvwaddstr(widget->canvas, 1, text_col, button->text);
+                wattroff(widget->canvas, face_colors);
+            }
 
             mvwaddch(widget->canvas, 0, 0, '+' | hi_colors);
             for(i = 1; i < right_col; i++)
@@ -323,6 +367,20 @@ _vk_button_update(vk_button_t *button)
         default:
         {
             cchar_t cc;
+
+            if(button->text != NULL)
+            {
+                int text_width = _vk_button_text_width(button->text);
+                int max_cols = widget->width - 2;
+                int text_col;
+
+                if(text_width > max_cols) text_width = max_cols;
+                text_col = 1 + (max_cols - text_width) / 2;
+
+                wattron(widget->canvas, face_colors);
+                mvwaddstr(widget->canvas, 1, text_col, button->text);
+                wattroff(widget->canvas, face_colors);
+            }
 
             _vk_button_build_cchar(&cc, WACS_ULCORNER, hi_pair, 0);
             mvwadd_wch(widget->canvas, 0, 0, &cc);

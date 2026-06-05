@@ -32,6 +32,9 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_FRAME_ASCII              3
 #define VK_FRAME_REVERSE            (1 << 4)
 
+/* button relief styles (in addition to VK_FRAME_SINGLE / VK_FRAME_ASCII) */
+#define VK_BUTTON_BASIC             4
+
 /* separator styles */
 #define VK_SEPARATOR_BLANK          1
 #define VK_SEPARATOR_SINGLE         2
