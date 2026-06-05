@@ -357,6 +357,8 @@ int             vk_widget_resize(vk_widget_t *widget, int width, int height);
 int             vk_widget_recreate(vk_widget_t *widget);
 void            vk_widget_fill(vk_widget_t *widget, chtype ch);
 int             vk_widget_draw(vk_widget_t *widget);
+uint32_t        vk_widget_get_state(vk_widget_t *widget);
+void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
 void            vk_widget_show(vk_widget_t *widget);
 void            vk_widget_hide(vk_widget_t *widget);
 bool            vk_widget_is_visible(vk_widget_t *widget);

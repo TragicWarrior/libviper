@@ -461,19 +461,37 @@ after canvas recreation. Widget types install it in their ctors:
 Callers can also set `_on_recreate` directly on plain `vk_widget_t`
 instances for custom content (the same way `_on_resize` is set).
 
-## Widget Visibility
+## Widget State Flags
 
-Any widget can be hidden or shown at runtime via `vk_widget_hide()` and
-`vk_widget_show()`. A hidden widget's `_draw` is skipped entirely — it
-does not blit to its surface. Query the current state with
-`vk_widget_is_visible()`.
+`vk_widget_t` carries a `uint32_t state` bitfield. The ctor initializes it
+to `STATE_VISIBLE`. State can be read with `vk_widget_get_state()` and
+written with `vk_widget_set_state()`.
 
-Since `vk_screen_refresh()` erases the surface canvas before compositing,
-hidden widgets simply leave their region transparent to the wallpaper.
-No explicit cleanup is needed — the next refresh handles it.
+| Flag | Bit | Effect |
+|------|-----|--------|
+| `STATE_VISIBLE` | `1 << 1` | Widget is drawn during refresh. Cleared = hidden. |
+| `STATE_FROZEN` | `1 << 3` | Widget skips drawing but remains visible in layout. |
+| `STATE_NORESIZE` | `1 << 7` | `vk_widget_resize()` returns -1 immediately. |
 
-All widgets default to visible (the `hidden` field is zero-initialized
-by `calloc` during construction).
+### Visibility
+
+`vk_widget_show()` and `vk_widget_hide()` set/clear `STATE_VISIBLE`.
+`vk_widget_is_visible()` queries it. When not visible, `vk_widget_draw()`
+returns 0 without blitting. Since `vk_screen_refresh()` erases the surface
+canvas before compositing, hidden widgets leave their region transparent
+to the wallpaper.
+
+### Frozen
+
+A frozen widget's draw is skipped, but unlike a hidden widget this is
+intended for temporary suppression of output (e.g. during batch updates).
+The widget remains logically visible — it just doesn't repaint.
+
+### No-Resize
+
+When `STATE_NORESIZE` is set, `vk_widget_resize()` refuses to change the
+widget's dimensions and returns -1. Useful for fixed-size widgets that
+should not be affected by parent layout changes.
 
 ## Widget Attributes
 

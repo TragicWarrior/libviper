@@ -81,7 +81,8 @@ vk_widget_draw(vk_widget_t *widget)
     int retval;
 
     if(widget == NULL) return -1;
-    if(widget->hidden) return 0;
+    if(!(widget->state & STATE_VISIBLE)) return 0;
+    if(widget->state & STATE_FROZEN) return 0;
 
     retval = widget->_draw(widget);
 
@@ -93,7 +94,7 @@ vk_widget_show(vk_widget_t *widget)
 {
     if(widget == NULL) return;
 
-    widget->hidden = false;
+    widget->state |= STATE_VISIBLE;
 }
 
 void
@@ -101,7 +102,7 @@ vk_widget_hide(vk_widget_t *widget)
 {
     if(widget == NULL) return;
 
-    widget->hidden = true;
+    widget->state &= ~STATE_VISIBLE;
 }
 
 bool
@@ -109,7 +110,23 @@ vk_widget_is_visible(vk_widget_t *widget)
 {
     if(widget == NULL) return false;
 
-    return !widget->hidden;
+    return (widget->state & STATE_VISIBLE) ? true : false;
+}
+
+uint32_t
+vk_widget_get_state(vk_widget_t *widget)
+{
+    if(widget == NULL) return 0;
+
+    return widget->state;
+}
+
+void
+vk_widget_set_state(vk_widget_t *widget, uint32_t state)
+{
+    if(widget == NULL) return;
+
+    widget->state = state;
 }
 
 void
@@ -149,6 +166,7 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     int retval;
 
     if(widget == NULL) return -1;
+    if(widget->state & STATE_NORESIZE) return -1;
     if(width == WSIZE_UNCHANGED) width = widget->width;
     if(height == WSIZE_UNCHANGED) height = widget->height;
 
@@ -256,6 +274,7 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
 
     widget->fg = COLOR_BLACK;
     widget->bg = COLOR_WHITE;
+    widget->state = STATE_VISIBLE;
 
     widget->ctor = _vk_widget_ctor;
     widget->dtor = _vk_widget_dtor;
