@@ -569,6 +569,8 @@ int             vk_deck_remove_widget(vk_deck_t *deck,
 int             vk_deck_set_top(vk_deck_t *deck, vk_widget_t *widget);
 vk_widget_t*    vk_deck_get_top(vk_deck_t *deck);
 int             vk_deck_cycle(vk_deck_t *deck, int vector);
+int             vk_deck_count(vk_deck_t *deck);
+vk_widget_t*    vk_deck_get_widget(vk_deck_t *deck, int index);
 int             vk_deck_set_shadow(vk_deck_t *deck, bool enabled);
 int             vk_deck_set_shadow_colors(vk_deck_t *deck,
                     short fg, short bg);

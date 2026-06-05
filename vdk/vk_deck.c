@@ -115,6 +115,38 @@ vk_deck_cycle(vk_deck_t *deck, int vector)
     return 0;
 }
 
+int
+vk_deck_count(vk_deck_t *deck)
+{
+    struct list_head    *pos;
+    int                 count = 0;
+
+    if(deck == NULL) return 0;
+
+    list_for_each(pos, &deck->widget_list) count++;
+
+    return count;
+}
+
+vk_widget_t*
+vk_deck_get_widget(vk_deck_t *deck, int index)
+{
+    struct list_head    *pos;
+    int                 i = 0;
+
+    if(deck == NULL) return NULL;
+    if(index < 0) return NULL;
+
+    list_for_each(pos, &deck->widget_list)
+    {
+        if(i == index)
+            return list_entry(pos, vk_widget_t, list);
+        i++;
+    }
+
+    return NULL;
+}
+
 inline int
 vk_deck_set_shadow(vk_deck_t *deck, bool enabled)
 {
