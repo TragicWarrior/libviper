@@ -13,6 +13,44 @@ Version 4.0.0 (in progress)
   Button press emits VK_EVENT_ON_CLOSE with the button index as result.
   Supports VK_FRAME_SINGLE, VK_FRAME_ASCII, and VK_BUTTON_BASIC styles.
   All window APIs available via convenience macros.
+* [Bryan Christ] Add vk_viewport_t widget: a scrollable window into a
+  logical canvas served by a consumer-supplied get_row callback.  Source
+  config is POD (vk_viewport_src_t) and the viewport asks for one row at
+  a time when it repaints.  Pairs with vk_scroller via
+  vk_viewport_scroll_info.
+* [Bryan Christ] Add vk_grid_t layout primitive: 2D sister to vk_box.
+  Per-column and per-row natural sizing + expand bits.  Hybrid mode --
+  any cell can hold a slot widget (composited like vk_box) OR be a paint
+  area (consumer paints into the grid's canvas using
+  vk_grid_get_cell_rect).  Configurable gap reserves space between cells
+  and around the outer edge for subclass decorations.
+* [Bryan Christ] Add vk_table_t (vk_grid subclass): renders dividers
+  between cells and around the outer edge in single/double/ASCII line
+  styles.  Reuses vk_grid's gap as the divider channel and exposes
+  internal helpers (_vk_table_update, _vk_table_pick_junction,
+  _vk_table_compute_lines) so subclasses can overlay per-cell decorations.
+* [Bryan Christ] Add vk_color_t (vk_table subclass): 16-cell ANSI color
+  picker.  Cells are paint-mode (no slot widget overhead); layout is any
+  cols*rows == 16 (1x16, 2x8, 4x4, 8x2, 16x1).  Built-in arrow / Tab /
+  Shift-Tab / Enter navigation; the focused cell's surrounding dividers
+  are re-drawn in a configurable highlight color via the same junction
+  glyphs vk_table uses.
+* [Bryan Christ] vk_label override of _recreate: rerender label->text
+  after the canvas is reallocated.  Previously labels rendered blank on
+  the new SCREEN after vk_screen_teleport.
+* [Bryan Christ] Add vk_screen_get_fd(vk_screen_t *) -> int.  Returns
+  fileno(screen->fd_out), letting consumers write raw terminal-mode
+  escapes directly to the active SCREEN's output instead of stdout
+  (which is wrong after teleport).
+* [Bryan Christ] vk_screen_teleport now writes \033[?1003l to the OLD
+  output before endwin, disabling any-event mouse tracking on the
+  terminal we are walking away from.  Without it the launching shell
+  saw raw \033[M mouse-report bytes for every cursor movement.
+* [Bryan Christ] vk_kmio: vk_kmio_init / vk_kmio_shutdown now take an
+  int fd and write mouse-mode escapes through it via write(2) instead
+  of printf/fflush(stdout).  This keeps the keyboard/mouse layer
+  independent of stdio + lets callers re-bind kmio to a new fd after
+  teleport.  Pass vk_screen_get_fd(screen) at every call site.
 
 Version 3.1.1
 

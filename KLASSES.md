@@ -17,6 +17,12 @@ vk_object_t
    │  │  │
    │  │  └─ vk_filedialog_t
    │  │
+   │  ├─ vk_grid_t
+   │  │  │
+   │  │  └─ vk_table_t
+   │  │     │
+   │  │     └─ vk_color_t
+   │  │
    │  └─ vk_frame_t
    │     │
    │     └─ vk_window_t
@@ -42,6 +48,8 @@ vk_object_t
    ├─ vk_menubar_t
    │
    ├─ vk_calendar_t
+   │
+   ├─ vk_viewport_t
    │
    └─ vk_listbox_t
       │
@@ -71,6 +79,10 @@ Cast macros are defined in `vdk.h`:
 | `VK_FRAME(x)` | `vk_frame_t *` |
 | `VK_SCROLLER(x)` | `vk_scroller_t *` |
 | `VK_BOX(x)` | `vk_box_t *` |
+| `VK_GRID(x)` | `vk_grid_t *` |
+| `VK_TABLE(x)` | `vk_table_t *` |
+| `VK_COLOR(x)` | `vk_color_t *` |
+| `VK_VIEWPORT(x)` | `vk_viewport_t *` |
 | `VK_LABEL(x)` | `vk_label_t *` |
 | `VK_MARQUEE(x)` | `vk_marquee_t *` |
 | `VK_LISTBOX(x)` | `vk_listbox_t *` |
@@ -98,11 +110,12 @@ require_klass(KLASS_NAME);    // extern reference from other files
 
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
+`VK_GRID_KLASS`, `VK_TABLE_KLASS`, `VK_COLOR_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
 `VK_SELECTBOX_KLASS`, `VK_DROPDOWN_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
 `VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
 `VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`,
-`VK_POPUP_KLASS`.
+`VK_POPUP_KLASS`, `VK_VIEWPORT_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -123,6 +136,10 @@ vk_container_create(width, height)
 vk_frame_create(width, height)
 vk_scroller_create(flags)
 vk_box_create(width, height, orientation, slots)
+vk_grid_create(width, height, cols, rows)
+vk_table_create(width, height, cols, rows, divider_style)
+vk_color_create(width, height, cols, rows, divider_style)
+vk_viewport_create(width, height)
 vk_label_create(width)
 vk_marquee_create(width)
 vk_listbox_create(width, height)
@@ -151,6 +168,10 @@ _vk_container_ctor  -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_frame_ctor      -> VK_CONTAINER_KLASS->ctor(object, argp)
 _vk_scroller_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_box_ctor        -> VK_CONTAINER_KLASS->ctor(object, argp)
+_vk_grid_ctor       -> VK_CONTAINER_KLASS->ctor(object, argp)
+_vk_table_ctor      -> VK_GRID_KLASS->ctor(object, argp)
+_vk_color_ctor      -> VK_TABLE_KLASS->ctor(object, argp)
+_vk_viewport_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_label_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_marquee_ctor    -> VK_LABEL_KLASS->ctor(object, argp)
 _vk_window_ctor     -> VK_FRAME_KLASS->ctor(object, argp)

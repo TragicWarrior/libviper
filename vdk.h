@@ -141,6 +141,9 @@ typedef struct  _vk_frame_s         vk_frame_t;
 typedef struct  _vk_scroller_s      vk_scroller_t;
 typedef struct  _vk_window_s        vk_window_t;
 typedef struct  _vk_box_s           vk_box_t;
+typedef struct  _vk_grid_s          vk_grid_t;
+typedef struct  _vk_table_s         vk_table_t;
+typedef struct  _vk_color_s         vk_color_t;
 typedef struct  _vk_label_s         vk_label_t;
 typedef struct  _vk_textbox_s       vk_textbox_t;
 typedef struct  _vk_marquee_s       vk_marquee_t;
@@ -196,6 +199,9 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_SCROLLER(x)          ((vk_scroller_t *)x)
 #define VK_WINDOW(x)            ((vk_window_t *)x)
 #define VK_BOX(x)               ((vk_box_t *)x)
+#define VK_GRID(x)              ((vk_grid_t *)x)
+#define VK_TABLE(x)             ((vk_table_t *)x)
+#define VK_COLOR(x)             ((vk_color_t *)x)
 #define VK_LABEL(x)             ((vk_label_t *)x)
 #define VK_TEXTBOX(x)           ((vk_textbox_t *)x)
 #define VK_MARQUEE(x)           ((vk_marquee_t *)x)
@@ -473,6 +479,50 @@ int             vk_box_set_subfocus(vk_box_t *box, int slot);
 int             vk_box_get_subfocus(vk_box_t *box);
 int             vk_box_update(vk_box_t *box);
 void            vk_box_destroy(vk_box_t *box);
+
+/* vk_grid -- 2D layout container; cells can be widget slots or paint areas */
+vk_grid_t*      vk_grid_create(int width, int height, int cols, int rows);
+int             vk_grid_set_homogeneous(vk_grid_t *grid, bool homogeneous);
+int             vk_grid_set_gap(vk_grid_t *grid, int gap);
+int             vk_grid_get_gap(vk_grid_t *grid);
+int             vk_grid_set_col_width(vk_grid_t *grid, int col, int width);
+int             vk_grid_set_row_height(vk_grid_t *grid, int row, int height);
+int             vk_grid_set_col_expand(vk_grid_t *grid, int col, bool expand);
+int             vk_grid_set_row_expand(vk_grid_t *grid, int row, bool expand);
+int             vk_grid_set_widget(vk_grid_t *grid, int col, int row,
+                    vk_widget_t *widget);
+vk_widget_t*    vk_grid_get_widget(vk_grid_t *grid, int col, int row);
+int             vk_grid_get_cell_rect(vk_grid_t *grid, int col, int row,
+                    int *out_x, int *out_y, int *out_w, int *out_h);
+int             vk_grid_get_cols(vk_grid_t *grid);
+int             vk_grid_get_rows(vk_grid_t *grid);
+int             vk_grid_set_subfocus(vk_grid_t *grid, int col, int row);
+int             vk_grid_get_subfocus_col(vk_grid_t *grid);
+int             vk_grid_get_subfocus_row(vk_grid_t *grid);
+int             vk_grid_update(vk_grid_t *grid);
+void            vk_grid_destroy(vk_grid_t *grid);
+
+/* vk_table -- vk_grid with rendered dividers (single/double/ascii) */
+vk_table_t*     vk_table_create(int width, int height, int cols, int rows,
+                    int divider_style);
+int             vk_table_set_divider_style(vk_table_t *table, int style);
+int             vk_table_get_divider_style(vk_table_t *table);
+int             vk_table_set_border_colors(vk_table_t *table,
+                    short fg, short bg);
+int             vk_table_set_border_attrs(vk_table_t *table, attr_t attrs);
+int             vk_table_update(vk_table_t *table);
+void            vk_table_destroy(vk_table_t *table);
+
+/* vk_color -- 16-cell ANSI-color picker (vk_table subclass) */
+vk_color_t*     vk_color_create(int width, int height, int cols, int rows,
+                    int divider_style);
+int             vk_color_set_selected(vk_color_t *color, short idx);
+short           vk_color_get_selected(vk_color_t *color);
+int             vk_color_set_focus_colors(vk_color_t *color,
+                    short fg, short bg);
+int             vk_color_set_focus_attrs(vk_color_t *color, attr_t attrs);
+int             vk_color_update(vk_color_t *color);
+void            vk_color_destroy(vk_color_t *color);
 
 /* vk_label */
 vk_label_t*     vk_label_create(int width);
