@@ -23,6 +23,8 @@ vk_object_t
    │  │
    │  └─ vk_marquee_t
    │
+   ├─ vk_deck_t
+   │
    ├─ vk_textbox_t
    │
    ├─ vk_button (todo)
@@ -61,6 +63,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_WINDOW(x)` | `vk_window_t *` |
 | `VK_SELECTBOX(x)` | `vk_selectbox_t *` |
 | `VK_TEXTBOX(x)` | `vk_textbox_t *` |
+| `VK_DECK(x)` | `vk_deck_t *` |
 
 ## Klass Templates
 
@@ -74,7 +77,7 @@ require_klass(KLASS_NAME);    // extern reference from other files
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
-`VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`.
+`VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`.
 The template carries the type's size, name, constructor, destructor, and
 optional kmio handler. It serves as both the type descriptor and the vtable
 seed.
@@ -102,6 +105,7 @@ vk_listbox_create(width, height)
 vk_window_create(width, height)
 vk_selectbox_create(width, height, mode)
 vk_textbox_create(width, height)
+vk_deck_create(void)
 ```
 
 ## Constructor Chaining
@@ -121,6 +125,7 @@ _vk_window_ctor     -> VK_FRAME_KLASS->ctor(object, argp)
 _vk_listbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_selectbox_ctor  -> VK_LISTBOX_KLASS->ctor(object, argp)
 _vk_textbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_deck_ctor       -> VK_WIDGET_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -197,6 +202,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_textbox_t` | `ctor`, `dtor`, `_update` |
+| `vk_deck_t` | `ctor`, `dtor`, `_update` (overrides widget's `_draw`, `_erase`, `_resize`, `_recreate`) |
 
 ## Public API Inline Convention
 
@@ -342,6 +348,8 @@ are pushed to an object via `vk_object_push_keystroke()`.
   for standard navigation. In radio mode, toggling unchecks all items first.
 - **vk_textbox_t** -- handles `KEY_UP`, `KEY_DOWN`, `KEY_PPAGE`, `KEY_NPAGE`,
   `KEY_HOME`, `KEY_END` for scrolling.
+- **vk_deck_t** -- `KEY_TAB` rotates the z-order stack (top moves to
+  bottom); all other keystrokes forward to the topmost widget.
 
 ## Frames and Scrollers
 
@@ -441,6 +449,46 @@ The box's `_update` erases, then for each slot: positions, resizes, and draws
 the child widget. The box does not propagate resize to grandchildren (e.g. a
 frame's child won't be resized if the box resizes the frame).
 
+## Decks
+
+`vk_deck_t` is a z-order manager derived from `vk_widget_t`. It maintains a
+linked list of child widgets in stacking order and composites them bottom-to-top
+during the screen refresh cycle.
+
+Unlike other widget types, the deck has **no canvas of its own**. The ctor
+frees the canvas allocated by the widget base class and sets it to NULL.
+During `_draw`, the deck iterates its children in reverse (bottom-to-top)
+and draws each one directly onto the deck's surface (the screen surface
+canvas). Children use the standard destructive `copywin` so overlapping
+windows correctly occlude what's beneath them.
+
+Because the deck has no canvas, `_erase` and `_resize` are no-ops, and
+`vk_deck_create()` takes no size parameters.
+
+| Constant | Position |
+|----------|----------|
+| `VK_DECK_TOP` | Add widget above all others (default) |
+| `VK_DECK_BOTTOM` | Add widget below all others |
+
+| Function | Purpose |
+|----------|---------|
+| `vk_deck_create()` | Create an empty deck |
+| `vk_deck_add_widget(deck, widget, position)` | Insert widget at top or bottom of stack |
+| `vk_deck_remove_widget(deck, widget)` | Remove widget from stack |
+| `vk_deck_set_top(deck, widget)` | Move a widget already in the deck to the top |
+| `vk_deck_get_top(deck)` | Return the topmost widget (or NULL) |
+| `vk_deck_cycle(deck, vector)` | Rotate the stack (`VK_VECTOR_LEFT` / `VK_VECTOR_RIGHT`) |
+| `vk_deck_update(deck)` | Manually composite children (delegates to `_draw`) |
+| `vk_deck_destroy(deck)` | Detach all children and destroy |
+
+The deck's `_draw` sets each child's `surface` pointer to `deck->surface`
+before drawing. This means children do not need a valid surface at add time —
+the binding happens lazily during the screen refresh cycle.
+
+`_recreate` (teleport) propagates `vk_widget_recreate()` to all children so
+they rebuild their canvases on the new SCREEN. The deck itself has nothing
+to recreate.
+
 ## Resize Propagation
 
 `vk_widget_t` has an `_on_resize` hook slot. When `vk_widget_resize()` 
@@ -478,6 +526,7 @@ it to propagate through the widget tree:
   scrollers, then recreates the child
 - **vk_window_t** -- same as frame (scrollers first, then child)
 - **vk_box_t** -- creates its canvas, then recreates each slot's widget
+- **vk_deck_t** -- propagates recreate to children (deck has no canvas to recreate)
 
 All update child and scroller surface pointers before propagating so
 widgets blit to the correct parent canvas.
@@ -680,4 +729,5 @@ throughout:
 
 - `vk_widget_t.list` -- widget membership in a container
 - `vk_container_t.widget_list` -- children of a container
+- `vk_deck_t.widget_list` -- z-ordered widget stack (head->next = top)
 - `vk_listbox_t.item_list` -- items in a listbox/menu (`vk_item_t` nodes)

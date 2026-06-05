@@ -16,6 +16,7 @@
 #include "vk_window.h"
 #include "vk_textbox.h"
 #include "vk_selectbox.h"
+#include "vk_deck.h"
 #include "vk_screen.h"
 
 #define NUM_SURFACES    5
@@ -26,7 +27,7 @@ static const char *surface_names[] =
     "Languages",
     "Selectbox",
     "Dotfield",
-    "Shade",
+    "Deck",
 };
 
 static int
@@ -226,6 +227,47 @@ build_textbox(int width, int height)
     vk_textbox_set_text(textbox, text);
 
     return textbox;
+}
+
+static void
+deck_notes_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+{
+    (void)window;
+    (void)data;
+
+    mvwprintw(canvas, 1, 2, "Meeting Notes");
+    mvwprintw(canvas, 3, 2, "- Review architecture");
+    mvwprintw(canvas, 4, 2, "- Update timeline");
+    mvwprintw(canvas, 5, 2, "- Assign tasks");
+    mvwprintw(canvas, 6, 2, "- Plan next sprint");
+    mvwprintw(canvas, 7, 2, "- Demo to stakeholders");
+}
+
+static void
+deck_tasks_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+{
+    (void)window;
+    (void)data;
+
+    mvwprintw(canvas, 1, 2, "Task List");
+    mvwprintw(canvas, 3, 2, "[x] Implement deck widget");
+    mvwprintw(canvas, 4, 2, "[x] Z-order management");
+    mvwprintw(canvas, 5, 2, "[ ] Hit testing");
+    mvwprintw(canvas, 6, 2, "[ ] Mouse drag support");
+    mvwprintw(canvas, 7, 2, "[ ] Window shadows");
+}
+
+static void
+deck_help_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+{
+    (void)window;
+    (void)data;
+
+    mvwprintw(canvas, 1, 2, "VK Deck Widget");
+    mvwprintw(canvas, 3, 2, "TAB cycles through the");
+    mvwprintw(canvas, 4, 2, "window stack. The top");
+    mvwprintw(canvas, 5, 2, "window receives focus");
+    mvwprintw(canvas, 6, 2, "and keyboard input.");
 }
 
 static void
@@ -575,6 +617,12 @@ int main(void)
     vk_selectbox_t  *radio;
     vk_widget_t     *about;
 
+    // surface 4: deck
+    vk_deck_t       *deck;
+    vk_window_t     *deck_win1;
+    vk_window_t     *deck_win2;
+    vk_window_t     *deck_win3;
+
     // shared
     vk_marquee_t    *marquee;
 
@@ -795,9 +843,42 @@ int main(void)
 
     vk_screen_add_surface(vk_screen);
 
-    // --- surface 4: shade wallpaper ---
+    // --- surface 4: deck ---
 
     vk_screen_add_surface(vk_screen);
+
+    deck = vk_deck_create();
+    vk_screen_attach_widget(vk_screen, 4, VK_WIDGET(deck));
+
+    deck_win1 = vk_window_create(35, 10);
+    vk_window_set_title(deck_win1, " Notes ");
+    vk_window_set_border_style(deck_win1, VK_FRAME_SINGLE);
+    vk_window_set_border_colors(deck_win1, COLOR_WHITE, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(deck_win1), COLOR_WHITE, COLOR_BLUE);
+    vk_window_set_decorate(deck_win1, deck_notes_decorate, NULL);
+    vk_window_update(deck_win1);
+    vk_deck_add_widget(deck, VK_WIDGET(deck_win1), VK_DECK_TOP);
+    vk_widget_move(VK_WIDGET(deck_win1), 3, 2);
+
+    deck_win2 = vk_window_create(35, 10);
+    vk_window_set_title(deck_win2, " Tasks ");
+    vk_window_set_border_style(deck_win2, VK_FRAME_DOUBLE);
+    vk_window_set_border_colors(deck_win2, COLOR_WHITE, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(deck_win2), COLOR_WHITE, COLOR_GREEN);
+    vk_window_set_decorate(deck_win2, deck_tasks_decorate, NULL);
+    vk_window_update(deck_win2);
+    vk_deck_add_widget(deck, VK_WIDGET(deck_win2), VK_DECK_TOP);
+    vk_widget_move(VK_WIDGET(deck_win2), 15, 5);
+
+    deck_win3 = vk_window_create(35, 10);
+    vk_window_set_title(deck_win3, " Help ");
+    vk_window_set_border_style(deck_win3, VK_FRAME_SINGLE);
+    vk_window_set_border_colors(deck_win3, COLOR_WHITE, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(deck_win3), COLOR_WHITE, COLOR_MAGENTA);
+    vk_window_set_decorate(deck_win3, deck_help_decorate, NULL);
+    vk_window_update(deck_win3);
+    vk_deck_add_widget(deck, VK_WIDGET(deck_win3), VK_DECK_TOP);
+    vk_widget_move(VK_WIDGET(deck_win3), 27, 8);
 
     // --- initial draw and event loop ---
 
@@ -900,7 +981,7 @@ int main(void)
                 vk_widget_resize(VK_WIDGET(box), max_x, box_h);
                 vk_widget_resize(VK_WIDGET(lang_frame), max_x, box_h);
                 vk_widget_resize(VK_WIDGET(box2), max_x, box_h);
-
+    
                 wtimeout(stdscr, 100);
             }
         }
@@ -913,7 +994,7 @@ int main(void)
         }
         else if(key == 'f')
         {
-            if(vk_widget_get_state(VK_WIDGET(marquee)) & STATE_FROZEN)
+            if(vk_widget_get_state(VK_WIDGET(marquee)) & VK_STATE_FROZEN)
                 vk_widget_thaw(VK_WIDGET(marquee));
             else
                 vk_widget_freeze(VK_WIDGET(marquee));
@@ -951,6 +1032,8 @@ int main(void)
                 vk_object_push_keystroke(VK_OBJECT(lang_frame), key);
             else if(current_surface == 2)
                 vk_object_push_keystroke(VK_OBJECT(box2), key);
+            else if(current_surface == 4)
+                vk_object_push_keystroke(VK_OBJECT(deck), key);
         }
 
         if(current_surface == 0)
@@ -1000,6 +1083,23 @@ int main(void)
 
             vk_box_update(box2);
         }
+        else if(current_surface == 4)
+        {
+            vk_widget_t *top = vk_deck_get_top(deck);
+
+            short c1 = COLOR_WHITE, c2 = COLOR_WHITE, c3 = COLOR_WHITE;
+            if(top == VK_WIDGET(deck_win1)) c1 = COLOR_YELLOW;
+            else if(top == VK_WIDGET(deck_win2)) c2 = COLOR_GREEN;
+            else if(top == VK_WIDGET(deck_win3)) c3 = COLOR_CYAN;
+
+            vk_window_set_border_colors(deck_win1, c1, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win2, c2, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win3, c3, COLOR_BLACK);
+
+            vk_window_update(deck_win1);
+            vk_window_update(deck_win2);
+            vk_window_update(deck_win3);
+        }
 
         vk_marquee_run(marquee);
         vk_screen_refresh(vk_screen);
@@ -1036,6 +1136,11 @@ int main(void)
     vk_selectbox_destroy(checkbox);
     vk_selectbox_destroy(radio);
     vk_widget_destroy(about);
+
+    vk_deck_destroy(deck);
+    vk_window_destroy(deck_win1);
+    vk_window_destroy(deck_win2);
+    vk_window_destroy(deck_win3);
 
     vk_screen_destroy(vk_screen);
 

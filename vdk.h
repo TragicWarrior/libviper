@@ -15,11 +15,9 @@
 #define WPOS_UNCHANGED              -1
 
 /* widget state flags */
-#define STATE_VISIBLE               (1UL << 1)
-#define STATE_FOCUS                 (1UL << 2)
-#define STATE_FROZEN                (1UL << 3)
-#define STATE_SHADOWED              (1UL << 5)
-#define STATE_NORESIZE              (1UL << 7)
+#define VK_STATE_VISIBLE            (1UL << 1)
+#define VK_STATE_FROZEN             (1UL << 3)
+#define VK_STATE_NORESIZE           (1UL << 7)
 
 /* frame / border styles */
 #define VK_FRAME_NONE               0
@@ -66,6 +64,10 @@
 #define VK_VECTOR_LEFT              1
 #define VK_VECTOR_RIGHT             -1
 
+/* deck widget position */
+#define VK_DECK_TOP                 0
+#define VK_DECK_BOTTOM              1
+
 /* keystroke definitions */
 #ifndef KEY_TAB
 #define KEY_TAB                     9
@@ -89,6 +91,7 @@ typedef struct  _vk_box_s           vk_box_t;
 typedef struct  _vk_label_s         vk_label_t;
 typedef struct  _vk_textbox_s       vk_textbox_t;
 typedef struct  _vk_marquee_s       vk_marquee_t;
+typedef struct  _vk_deck_s          vk_deck_t;
 
 /* callback typedefs */
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
@@ -114,6 +117,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_LABEL(x)             ((vk_label_t *)x)
 #define VK_TEXTBOX(x)           ((vk_textbox_t *)x)
 #define VK_MARQUEE(x)           ((vk_marquee_t *)x)
+#define VK_DECK(x)              ((vk_deck_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -158,15 +162,15 @@ int             vk_widget_draw(vk_widget_t *widget);
 uint32_t        vk_widget_get_state(vk_widget_t *widget);
 void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
 #define         vk_widget_freeze(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) | STATE_FROZEN)
+                    vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_FROZEN)
 #define         vk_widget_thaw(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) & ~STATE_FROZEN)
+                    vk_widget_set_state(w, vk_widget_get_state(w) & ~VK_STATE_FROZEN)
 #define         vk_widget_show(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) | STATE_VISIBLE)
+                    vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_VISIBLE)
 #define         vk_widget_hide(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) & ~STATE_VISIBLE)
+                    vk_widget_set_state(w, vk_widget_get_state(w) & ~VK_STATE_VISIBLE)
 #define         vk_widget_is_visible(w) \
-                    (vk_widget_get_state(w) & STATE_VISIBLE)
+                    (vk_widget_get_state(w) & VK_STATE_VISIBLE)
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
 void            vk_widget_destroy(vk_widget_t *widget);
 
@@ -298,5 +302,17 @@ int             vk_marquee_set_pause(vk_marquee_t *marquee, int duration);
 int             vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat);
 int             vk_marquee_run(vk_marquee_t *marquee);
 void            vk_marquee_destroy(vk_marquee_t *marquee);
+
+/* vk_deck */
+vk_deck_t*      vk_deck_create(void);
+int             vk_deck_add_widget(vk_deck_t *deck,
+                    vk_widget_t *widget, int position);
+int             vk_deck_remove_widget(vk_deck_t *deck,
+                    vk_widget_t *widget);
+int             vk_deck_set_top(vk_deck_t *deck, vk_widget_t *widget);
+vk_widget_t*    vk_deck_get_top(vk_deck_t *deck);
+int             vk_deck_cycle(vk_deck_t *deck, int vector);
+int             vk_deck_update(vk_deck_t *deck);
+void            vk_deck_destroy(vk_deck_t *deck);
 
 #endif

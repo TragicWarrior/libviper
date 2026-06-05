@@ -15,6 +15,13 @@
 /* VDK public header (included for backwards compatibility) */
 #include "vdk.h"
 
+/* legacy widget state flags (used by vwnd_t window_state) */
+#define STATE_VISIBLE               VK_STATE_VISIBLE
+#define STATE_FOCUS                 (1UL << 2)
+#define STATE_FROZEN                VK_STATE_FROZEN
+#define STATE_SHADOWED              (1UL << 5)
+#define STATE_NORESIZE              VK_STATE_NORESIZE
+
 #define LIBVIPER_VERSION            "3.1.1"
 
 #define MAX_SCREENS                 4

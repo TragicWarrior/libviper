@@ -76,6 +76,7 @@ add_library(viper-static STATIC
     vk_label.c
     vk_textbox.c
     vk_marquee.c
+    vk_deck.c
     )
 
 add_library(viper.o OBJECT
@@ -119,6 +120,7 @@ add_library(viper.o OBJECT
     vk_label.c
     vk_textbox.c
     vk_marquee.c
+    vk_deck.c
     )
 
 add_library(viper-shared SHARED

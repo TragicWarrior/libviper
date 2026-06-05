@@ -80,7 +80,7 @@ vk_widget_draw(vk_widget_t *widget)
     int retval;
 
     if(widget == NULL) return -1;
-    if(!(widget->state & STATE_VISIBLE)) return 0;
+    if(!(widget->state & VK_STATE_VISIBLE)) return 0;
 
     retval = widget->_draw(widget);
 
@@ -105,13 +105,13 @@ vk_widget_set_state(vk_widget_t *widget, uint32_t state)
     old_state = widget->state;
     widget->state = state;
 
-    if((state & STATE_FROZEN) && !(old_state & STATE_FROZEN))
+    if((state & VK_STATE_FROZEN) && !(old_state & VK_STATE_FROZEN))
     {
         widget->composer = newwin(widget->height, widget->width, 0, 0);
         overwrite(widget->canvas, widget->composer);
     }
 
-    if(!(state & STATE_FROZEN) && (old_state & STATE_FROZEN))
+    if(!(state & VK_STATE_FROZEN) && (old_state & VK_STATE_FROZEN))
     {
         if(widget->composer != widget->canvas)
         {
@@ -158,7 +158,7 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     int retval;
 
     if(widget == NULL) return -1;
-    if(widget->state & STATE_NORESIZE) return -1;
+    if(widget->state & VK_STATE_NORESIZE) return -1;
     if(width == WSIZE_UNCHANGED) width = widget->width;
     if(height == WSIZE_UNCHANGED) height = widget->height;
 
@@ -266,7 +266,7 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
 
     widget->fg = COLOR_BLACK;
     widget->bg = COLOR_WHITE;
-    widget->state = STATE_VISIBLE;
+    widget->state = VK_STATE_VISIBLE;
 
     widget->ctor = _vk_widget_ctor;
     widget->dtor = _vk_widget_dtor;
@@ -396,7 +396,7 @@ _vk_widget_recreate(vk_widget_t *widget)
 
     widget->canvas = newwin(widget->height, widget->width, 0, 0);
     widget->composer = widget->canvas;
-    widget->state &= ~STATE_FROZEN;
+    widget->state &= ~VK_STATE_FROZEN;
 
     return (widget->canvas == NULL) ? -1 : 0;
 }

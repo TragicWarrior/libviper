@@ -35,6 +35,9 @@ Version 4.0.0 (in progress)
   show/hide convenience functions. Frozen widgets snapshot their canvas
   into a composer window so the display holds while updates continue.
   No-resize widgets reject vk_widget_resize calls.
+* [Bryan Christ] Add vk_deck_t z-order manager. Canvas-less widget that
+  composites children directly onto its surface during draw. Supports
+  add-to-top/bottom, set-top, cycle, and TAB-driven focus rotation.
 * [Bryan Christ] Separate VDK from legacy libviper. New vdk.h public header
   and vdk_color.h / vdk_color.c color system. VDK source files no longer
   include viper.h. vdk_color_init() is optional; callers who skip it handle
