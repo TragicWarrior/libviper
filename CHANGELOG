@@ -27,6 +27,9 @@ Version 4.0.0 (in progress)
   blit, refresh.
 * [Bryan Christ] Fix vk_box_t initial layout not sizing last slot to absorb
   remainder pixels.
+* [Bryan Christ] Add convenience macros for widget state (freeze/thaw,
+  show/hide, is_visible). Declare all public API functions inline across
+  every klass for reduced call overhead.
 * [Bryan Christ] Add widget state flags (STATE_VISIBLE, STATE_FROZEN,
   STATE_NORESIZE) as a uint32_t bitfield on vk_widget_t. Add get/set API,
   show/hide convenience functions. Frozen widgets snapshot their canvas

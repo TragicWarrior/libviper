@@ -359,9 +359,16 @@ void            vk_widget_fill(vk_widget_t *widget, chtype ch);
 int             vk_widget_draw(vk_widget_t *widget);
 uint32_t        vk_widget_get_state(vk_widget_t *widget);
 void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
-void            vk_widget_show(vk_widget_t *widget);
-void            vk_widget_hide(vk_widget_t *widget);
-bool            vk_widget_is_visible(vk_widget_t *widget);
+#define         vk_widget_freeze(w) \
+                    vk_widget_set_state(w, vk_widget_get_state(w) | STATE_FROZEN)
+#define         vk_widget_thaw(w) \
+                    vk_widget_set_state(w, vk_widget_get_state(w) & ~STATE_FROZEN)
+#define         vk_widget_show(w) \
+                    vk_widget_set_state(w, vk_widget_get_state(w) | STATE_VISIBLE)
+#define         vk_widget_hide(w) \
+                    vk_widget_set_state(w, vk_widget_get_state(w) & ~STATE_VISIBLE)
+#define         vk_widget_is_visible(w) \
+                    (vk_widget_get_state(w) & STATE_VISIBLE)
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
 void            vk_widget_destroy(vk_widget_t *widget);
 

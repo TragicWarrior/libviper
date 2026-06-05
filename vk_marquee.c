@@ -30,7 +30,7 @@ declare_klass(VK_MARQUEE_KLASS)
 };
 
 
-vk_marquee_t*
+inline vk_marquee_t*
 vk_marquee_create(int width)
 {
     vk_marquee_t    *marquee;
@@ -42,7 +42,7 @@ vk_marquee_create(int width)
     return marquee;
 }
 
-int
+inline int
 vk_marquee_set_text(vk_marquee_t *marquee, const char *text)
 {
     vk_label_t  *label;
@@ -79,7 +79,7 @@ vk_marquee_set_text(vk_marquee_t *marquee, const char *text)
     return 0;
 }
 
-const char*
+inline const char*
 vk_marquee_get_text(vk_marquee_t *marquee)
 {
     if(marquee == NULL) return NULL;
@@ -89,7 +89,7 @@ vk_marquee_get_text(vk_marquee_t *marquee)
     return VK_LABEL(marquee)->text;
 }
 
-int
+inline int
 vk_marquee_set_direction(vk_marquee_t *marquee, int direction)
 {
     if(marquee == NULL) return -1;
@@ -105,7 +105,7 @@ vk_marquee_set_direction(vk_marquee_t *marquee, int direction)
     return 0;
 }
 
-int
+inline int
 vk_marquee_set_speed(vk_marquee_t *marquee, int interval)
 {
     if(marquee == NULL) return -1;
@@ -119,7 +119,7 @@ vk_marquee_set_speed(vk_marquee_t *marquee, int interval)
     return 0;
 }
 
-int
+inline int
 vk_marquee_set_pause(vk_marquee_t *marquee, int duration)
 {
     if(marquee == NULL) return -1;
@@ -133,7 +133,7 @@ vk_marquee_set_pause(vk_marquee_t *marquee, int duration)
     return 0;
 }
 
-int
+inline int
 vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat)
 {
     if(marquee == NULL) return -1;
@@ -145,7 +145,7 @@ vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat)
     return 0;
 }
 
-int
+inline int
 vk_marquee_run(vk_marquee_t *marquee)
 {
     if(marquee == NULL) return -1;
@@ -155,7 +155,7 @@ vk_marquee_run(vk_marquee_t *marquee)
     return VK_LABEL(marquee)->_update(VK_LABEL(marquee));
 }
 
-void
+inline void
 vk_marquee_destroy(vk_marquee_t *marquee)
 {
     if(marquee == NULL) return;

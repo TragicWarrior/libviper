@@ -45,7 +45,7 @@ declare_klass(VK_CONTAINER_KLASS)
 
 
 // create a new widget from scratch
-vk_container_t*
+inline vk_container_t*
 vk_container_create(int width, int height)
 {
     vk_container_t  *container;
@@ -58,7 +58,7 @@ vk_container_create(int width, int height)
     return container;
 }
 
-int
+inline int
 vk_container_add_widget(vk_container_t *container, vk_widget_t *widget)
 {
     if(container == NULL) return -1;
@@ -71,7 +71,7 @@ vk_container_add_widget(vk_container_t *container, vk_widget_t *widget)
     return 0;
 }
 
-int
+inline int
 vk_container_remove_widget(vk_container_t *container, vk_widget_t *widget)
 {
     if(container == NULL) return -1;
@@ -84,7 +84,7 @@ vk_container_remove_widget(vk_container_t *container, vk_widget_t *widget)
     return 0;
 }
 
-int
+inline int
 vk_container_vacate(vk_container_t *container)
 {
     if(container == NULL) return -1;
@@ -96,7 +96,7 @@ vk_container_vacate(vk_container_t *container)
     return 0;
 }
 
-int
+inline int
 vk_container_destroy(vk_container_t *container)
 {
     if(container == NULL) return -1;

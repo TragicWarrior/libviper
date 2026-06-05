@@ -28,7 +28,7 @@ declare_klass(VK_LABEL_KLASS)
 };
 
 
-vk_label_t*
+inline vk_label_t*
 vk_label_create(int width)
 {
     vk_label_t  *label;
@@ -40,7 +40,7 @@ vk_label_create(int width)
     return label;
 }
 
-int
+inline int
 vk_label_set_text(vk_label_t *label, const char *text)
 {
     if(label == NULL) return -1;
@@ -59,7 +59,7 @@ vk_label_set_text(vk_label_t *label, const char *text)
     return 0;
 }
 
-const char*
+inline const char*
 vk_label_get_text(vk_label_t *label)
 {
     if(label == NULL) return NULL;
@@ -69,7 +69,7 @@ vk_label_get_text(vk_label_t *label)
     return label->text;
 }
 
-int
+inline int
 vk_label_set_justify(vk_label_t *label, int justify)
 {
     if(label == NULL) return -1;
@@ -84,7 +84,7 @@ vk_label_set_justify(vk_label_t *label, int justify)
     return 0;
 }
 
-int
+inline int
 vk_label_update(vk_label_t *label)
 {
     if(label == NULL) return -1;
@@ -94,7 +94,7 @@ vk_label_update(vk_label_t *label)
     return label->_update(label);
 }
 
-void
+inline void
 vk_label_destroy(vk_label_t *label)
 {
     if(label == NULL) return;

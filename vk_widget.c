@@ -42,7 +42,7 @@ declare_klass(VK_WIDGET_KLASS)
 
 
 // create a new widget from scratch
-vk_widget_t*
+inline vk_widget_t*
 vk_widget_create(int width, int height)
 {
     vk_widget_t     *widget;
@@ -56,7 +56,7 @@ vk_widget_create(int width, int height)
 }
 
 
-int
+inline int
 vk_widget_set_surface(vk_widget_t *widget, WINDOW *surface)
 {
     if(widget == NULL) return -1;
@@ -67,7 +67,7 @@ vk_widget_set_surface(vk_widget_t *widget, WINDOW *surface)
     return 0;
 }
 
-WINDOW*
+inline WINDOW*
 vk_widget_get_surface(vk_widget_t *widget)
 {
     if(widget == NULL) return NULL;
@@ -75,7 +75,7 @@ vk_widget_get_surface(vk_widget_t *widget)
     return widget->surface;
 }
 
-int
+inline int
 vk_widget_draw(vk_widget_t *widget)
 {
     int retval;
@@ -88,31 +88,7 @@ vk_widget_draw(vk_widget_t *widget)
     return retval;
 }
 
-void
-vk_widget_show(vk_widget_t *widget)
-{
-    if(widget == NULL) return;
-
-    widget->state |= STATE_VISIBLE;
-}
-
-void
-vk_widget_hide(vk_widget_t *widget)
-{
-    if(widget == NULL) return;
-
-    widget->state &= ~STATE_VISIBLE;
-}
-
-bool
-vk_widget_is_visible(vk_widget_t *widget)
-{
-    if(widget == NULL) return false;
-
-    return (widget->state & STATE_VISIBLE) ? true : false;
-}
-
-uint32_t
+inline uint32_t
 vk_widget_get_state(vk_widget_t *widget)
 {
     if(widget == NULL) return 0;
@@ -120,7 +96,7 @@ vk_widget_get_state(vk_widget_t *widget)
     return widget->state;
 }
 
-void
+inline void
 vk_widget_set_state(vk_widget_t *widget, uint32_t state)
 {
     uint32_t    old_state;
@@ -146,7 +122,7 @@ vk_widget_set_state(vk_widget_t *widget, uint32_t state)
     }
 }
 
-void
+inline void
 vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
 {
     if(widget == NULL) return;
@@ -157,7 +133,7 @@ vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
     return;
 }
 
-void
+inline void
 vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
 {
     if(widget == NULL) return;
@@ -165,7 +141,7 @@ vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
     widget->attrs = attrs;
 }
 
-int
+inline int
 vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
 {
     if(widget == NULL) return -1;
@@ -177,7 +153,7 @@ vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
     return 0;
 }
 
-int
+inline int
 vk_widget_resize(vk_widget_t *widget, int width, int height)
 {
     int retval;
@@ -197,7 +173,7 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     return retval;
 }
 
-int
+inline int
 vk_widget_erase(vk_widget_t *widget)
 {
     int retval;
@@ -209,7 +185,7 @@ vk_widget_erase(vk_widget_t *widget)
     return retval;
 }
 
-void
+inline void
 vk_widget_fill(vk_widget_t *widget, chtype ch)
 {
     long            i;
@@ -227,7 +203,7 @@ vk_widget_fill(vk_widget_t *widget, chtype ch)
     return;
 }
 
-int
+inline int
 vk_widget_move(vk_widget_t *widget, int x, int y)
 {
     int retval;
@@ -239,7 +215,7 @@ vk_widget_move(vk_widget_t *widget, int x, int y)
     return retval;
 }
 
-int
+inline int
 vk_widget_recreate(vk_widget_t *widget)
 {
     int retval;
@@ -254,7 +230,7 @@ vk_widget_recreate(vk_widget_t *widget)
     return retval;
 }
 
-void
+inline void
 vk_widget_destroy(vk_widget_t *widget)
 {
     if(widget == NULL) return;

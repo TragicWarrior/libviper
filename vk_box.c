@@ -39,7 +39,7 @@ declare_klass(VK_BOX_KLASS)
 };
 
 
-vk_box_t*
+inline vk_box_t*
 vk_box_create(int width, int height, int orientation, int slots)
 {
     vk_box_t    *box;
@@ -53,7 +53,7 @@ vk_box_create(int width, int height, int orientation, int slots)
     return box;
 }
 
-int
+inline int
 vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
 {
     vk_container_t  *container;
@@ -110,7 +110,7 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
     return 0;
 }
 
-vk_widget_t*
+inline vk_widget_t*
 vk_box_get_widget(vk_box_t *box, int slot)
 {
     if(box == NULL) return NULL;
@@ -122,7 +122,7 @@ vk_box_get_widget(vk_box_t *box, int slot)
     return box->slot_widgets[slot];
 }
 
-int
+inline int
 vk_box_update(vk_box_t *box)
 {
     if(box == NULL) return -1;
@@ -132,7 +132,7 @@ vk_box_update(vk_box_t *box)
     return box->_update(box);
 }
 
-void
+inline void
 vk_box_destroy(vk_box_t *box)
 {
     if(box == NULL) return;

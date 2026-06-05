@@ -74,7 +74,7 @@ declare_klass(VK_LISTBOX_KLASS)
 
 
 // create a new widget from scratch
-vk_listbox_t*
+inline vk_listbox_t*
 vk_listbox_create(int width, int height)
 {
     vk_listbox_t    *listbox;
@@ -87,7 +87,7 @@ vk_listbox_create(int width, int height)
     return listbox;
 }
 
-int
+inline int
 vk_listbox_set_wrap(vk_listbox_t *listbox, bool allowed)
 {
     if(listbox == NULL) return -1;
@@ -100,7 +100,7 @@ vk_listbox_set_wrap(vk_listbox_t *listbox, bool allowed)
     return 0;
 }
 
-int
+inline int
 vk_listbox_set_title(vk_listbox_t *listbox, char *title)
 {
     if(listbox == NULL) return -1;
@@ -117,7 +117,7 @@ vk_listbox_set_title(vk_listbox_t *listbox, char *title)
     return 0;
 }
 
-int
+inline int
 vk_listbox_get_title(vk_listbox_t *listbox, char *buf, int buf_sz)
 {
     if(listbox == NULL) return -1;
@@ -132,7 +132,7 @@ vk_listbox_get_title(vk_listbox_t *listbox, char *buf, int buf_sz)
     return 0;
 }
 
-int
+inline int
 vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg)
 {
     if(listbox == NULL) return -1;
@@ -143,7 +143,7 @@ vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg)
     return 0;
 }
 
-int
+inline int
 vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything)
 {
@@ -158,7 +158,7 @@ vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     return idx;
 }
 
-int
+inline int
 vk_listbox_update(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return -1;
@@ -171,7 +171,7 @@ vk_listbox_update(vk_listbox_t *listbox)
     return 0;
 }
 
-int
+inline int
 vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
 {
     int retval;
@@ -184,7 +184,7 @@ vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
     return retval;
 }
 
-int
+inline int
 vk_listbox_get_metrics(vk_listbox_t *listbox, int *width, int *height)
 {
     vk_item_t           *item;
@@ -222,7 +222,7 @@ vk_listbox_get_metrics(vk_listbox_t *listbox, int *width, int *height)
     return 0;
 }
 
-int
+inline int
 vk_listbox_reset(vk_listbox_t *listbox)
 {
     int retval;
@@ -237,7 +237,7 @@ vk_listbox_reset(vk_listbox_t *listbox)
     return retval;
 }
 
-int
+inline int
 vk_listbox_add_separator(vk_listbox_t *listbox, int style)
 {
     if(listbox == NULL) return -1;
@@ -245,7 +245,7 @@ vk_listbox_add_separator(vk_listbox_t *listbox, int style)
     return listbox->_add_separator(listbox, style);
 }
 
-void
+inline void
 vk_listbox_destroy(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return;

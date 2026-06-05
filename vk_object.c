@@ -18,7 +18,7 @@ declare_klass(VK_OBJECT_KLASS)
     .size = KLASS_SIZE(vk_object_t),
 };
 
-vk_object_t*
+inline vk_object_t*
 vk_object_construct(const void *klass, ...)
 {
     vk_object_t     *object;
@@ -44,7 +44,7 @@ vk_object_construct(const void *klass, ...)
     return object;
 }
 
-int
+inline int
 vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
 {
     int retval;
@@ -59,7 +59,7 @@ vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
     return retval;
 }
 
-int
+inline int
 vk_object_destroy(vk_object_t *object)
 {
     /*

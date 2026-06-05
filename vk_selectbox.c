@@ -47,7 +47,7 @@ declare_klass(VK_SELECTBOX_KLASS)
 };
 
 
-vk_selectbox_t*
+inline vk_selectbox_t*
 vk_selectbox_create(int width, int height, int mode)
 {
     vk_selectbox_t  *selectbox;
@@ -60,7 +60,7 @@ vk_selectbox_create(int width, int height, int mode)
     return selectbox;
 }
 
-int
+inline int
 vk_selectbox_set_style(vk_selectbox_t *selectbox, int style)
 {
     if(selectbox == NULL) return -1;
@@ -72,7 +72,7 @@ vk_selectbox_set_style(vk_selectbox_t *selectbox, int style)
     return 0;
 }
 
-int
+inline int
 vk_selectbox_set_wrap(vk_selectbox_t *selectbox, bool allowed)
 {
     if(selectbox == NULL) return -1;
@@ -87,7 +87,7 @@ vk_selectbox_set_wrap(vk_selectbox_t *selectbox, bool allowed)
     return 0;
 }
 
-int
+inline int
 vk_selectbox_set_highlight(vk_selectbox_t *selectbox, int fg, int bg)
 {
     if(selectbox == NULL) return -1;
@@ -100,7 +100,7 @@ vk_selectbox_set_highlight(vk_selectbox_t *selectbox, int fg, int bg)
     return 0;
 }
 
-int
+inline int
 vk_selectbox_add_item(vk_selectbox_t *selectbox, char *name,
     VkWidgetFunc func, void *anything)
 {
@@ -112,7 +112,7 @@ vk_selectbox_add_item(vk_selectbox_t *selectbox, char *name,
         name, func, anything);
 }
 
-int
+inline int
 vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx)
 {
     vk_item_t   *item;
@@ -138,7 +138,7 @@ vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx)
     return 0;
 }
 
-bool
+inline bool
 vk_selectbox_item_is_checked(vk_selectbox_t *selectbox, int idx)
 {
     vk_item_t   *item;
@@ -153,7 +153,7 @@ vk_selectbox_item_is_checked(vk_selectbox_t *selectbox, int idx)
     return (item->flags & VK_ITEM_CHECKED) ? true : false;
 }
 
-int
+inline int
 vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx)
 {
     vk_item_t   *item;
@@ -174,7 +174,7 @@ vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx)
     return 0;
 }
 
-int
+inline int
 vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx)
 {
     vk_item_t   *item;
@@ -191,7 +191,7 @@ vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx)
     return 0;
 }
 
-int
+inline int
 vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
 {
     vk_listbox_t        *listbox;
@@ -213,7 +213,7 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
     return 0;
 }
 
-int
+inline int
 vk_selectbox_update(vk_selectbox_t *selectbox)
 {
     if(selectbox == NULL) return -1;
@@ -223,7 +223,7 @@ vk_selectbox_update(vk_selectbox_t *selectbox)
     return VK_LISTBOX(selectbox)->_update(VK_LISTBOX(selectbox));
 }
 
-void
+inline void
 vk_selectbox_destroy(vk_selectbox_t *selectbox)
 {
     if(selectbox == NULL) return;

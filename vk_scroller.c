@@ -51,7 +51,7 @@ declare_klass(VK_SCROLLER_KLASS)
 };
 
 
-vk_scroller_t*
+inline vk_scroller_t*
 vk_scroller_create(int flags)
 {
     vk_scroller_t   *scroller;
@@ -62,7 +62,7 @@ vk_scroller_create(int flags)
     return scroller;
 }
 
-int
+inline int
 vk_scroller_set_border_style(vk_scroller_t *scroller, int style)
 {
     if(scroller == NULL) return -1;
@@ -76,7 +76,7 @@ vk_scroller_set_border_style(vk_scroller_t *scroller, int style)
     return 0;
 }
 
-int
+inline int
 vk_scroller_set_border_colors(vk_scroller_t *scroller, short fg, short bg)
 {
     if(scroller == NULL) return -1;
@@ -89,7 +89,7 @@ vk_scroller_set_border_colors(vk_scroller_t *scroller, short fg, short bg)
     return 0;
 }
 
-int
+inline int
 vk_scroller_set_scroll_info(vk_scroller_t *scroller, VkScrollInfoFunc func)
 {
     if(scroller == NULL) return -1;
@@ -101,7 +101,7 @@ vk_scroller_set_scroll_info(vk_scroller_t *scroller, VkScrollInfoFunc func)
     return 0;
 }
 
-int
+inline int
 vk_scroller_set_scroll_source(vk_scroller_t *scroller, vk_widget_t *source)
 {
     if(scroller == NULL) return -1;
@@ -113,7 +113,7 @@ vk_scroller_set_scroll_source(vk_scroller_t *scroller, vk_widget_t *source)
     return 0;
 }
 
-int
+inline int
 vk_scroller_update(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return -1;
@@ -123,7 +123,7 @@ vk_scroller_update(vk_scroller_t *scroller)
     return scroller->_update(scroller);
 }
 
-void
+inline void
 vk_scroller_destroy(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return;
@@ -135,7 +135,7 @@ vk_scroller_destroy(vk_scroller_t *scroller)
     return;
 }
 
-int
+inline int
 vk_widget_attach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
 {
     vk_widget_t *sw;
@@ -176,7 +176,7 @@ vk_widget_attach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
     return 0;
 }
 
-int
+inline int
 vk_widget_detach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
 {
     if(host == NULL || scroller == NULL) return -1;

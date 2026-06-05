@@ -914,8 +914,10 @@ int main(void)
         }
         else if(key == 'f')
         {
-            uint32_t st = vk_widget_get_state(VK_WIDGET(marquee));
-            vk_widget_set_state(VK_WIDGET(marquee), st ^ STATE_FROZEN);
+            if(vk_widget_get_state(VK_WIDGET(marquee)) & STATE_FROZEN)
+                vk_widget_thaw(VK_WIDGET(marquee));
+            else
+                vk_widget_freeze(VK_WIDGET(marquee));
         }
         else if(key == KEY_SRIGHT || key == KEY_SLEFT
             || key == '+' || key == '-')

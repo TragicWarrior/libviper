@@ -40,7 +40,7 @@ declare_klass(VK_SCREEN_KLASS)
 };
 
 
-vk_screen_t*
+inline vk_screen_t*
 vk_screen_create(void)
 {
     vk_screen_t *screen;
@@ -50,7 +50,7 @@ vk_screen_create(void)
     return screen;
 }
 
-int
+inline int
 vk_screen_add_surface(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
@@ -81,7 +81,7 @@ vk_screen_add_surface(vk_screen_t *screen)
     return id;
 }
 
-int
+inline int
 vk_screen_del_surface(vk_screen_t *screen, int id)
 {
     vk_surface_t    **new_array;
@@ -113,7 +113,7 @@ vk_screen_del_surface(vk_screen_t *screen, int id)
     return 0;
 }
 
-int
+inline int
 vk_screen_switch_surface(vk_screen_t *screen, int id)
 {
     if(screen == NULL) return -1;
@@ -127,7 +127,7 @@ vk_screen_switch_surface(vk_screen_t *screen, int id)
     return 0;
 }
 
-WINDOW*
+inline WINDOW*
 vk_screen_get_window(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
@@ -145,7 +145,7 @@ vk_screen_get_window(vk_screen_t *screen)
     return surface->canvas;
 }
 
-int
+inline int
 vk_screen_attach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t *widget)
 {
@@ -180,7 +180,7 @@ vk_screen_attach_widget(vk_screen_t *screen, int surface_id,
     return 0;
 }
 
-int
+inline int
 vk_screen_detach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t *widget)
 {
@@ -217,7 +217,7 @@ vk_screen_detach_widget(vk_screen_t *screen, int surface_id,
     return 0;
 }
 
-int
+inline int
 vk_screen_resize(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
@@ -246,7 +246,7 @@ vk_screen_resize(vk_screen_t *screen)
     return 0;
 }
 
-int
+inline int
 vk_screen_poll_resize(vk_screen_t *screen)
 {
     struct winsize  ws;
@@ -267,7 +267,7 @@ vk_screen_poll_resize(vk_screen_t *screen)
     return 1;
 }
 
-int
+inline int
 vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
 {
     if(screen == NULL) return -1;
@@ -279,7 +279,7 @@ vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
     return 0;
 }
 
-int
+inline int
 vk_screen_paint_wallpaper(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
@@ -302,7 +302,7 @@ vk_screen_paint_wallpaper(vk_screen_t *screen)
     return 0;
 }
 
-int
+inline int
 vk_screen_refresh(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
@@ -333,7 +333,7 @@ vk_screen_refresh(vk_screen_t *screen)
     return 0;
 }
 
-int
+inline int
 vk_screen_teleport(vk_screen_t *screen, const char *pty)
 {
     SCREEN          *new_term;
@@ -548,7 +548,7 @@ _vk_screen_evict_pty(const char *pty)
     return sid;
 }
 
-void
+inline void
 vk_screen_destroy(vk_screen_t *screen)
 {
     if(screen == NULL) return;

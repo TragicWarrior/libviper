@@ -45,7 +45,7 @@ declare_klass(VK_TEXTBOX_KLASS)
 };
 
 
-vk_textbox_t*
+inline vk_textbox_t*
 vk_textbox_create(int width, int height)
 {
     vk_textbox_t    *textbox;
@@ -58,7 +58,7 @@ vk_textbox_create(int width, int height)
     return textbox;
 }
 
-int
+inline int
 vk_textbox_set_text(vk_textbox_t *textbox, const char *text)
 {
     if(textbox == NULL) return -1;
@@ -75,7 +75,7 @@ vk_textbox_set_text(vk_textbox_t *textbox, const char *text)
     return 0;
 }
 
-const char*
+inline const char*
 vk_textbox_get_text(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return NULL;
@@ -85,7 +85,7 @@ vk_textbox_get_text(vk_textbox_t *textbox)
     return textbox->text;
 }
 
-int
+inline int
 vk_textbox_set_word_wrap(vk_textbox_t *textbox, bool enabled)
 {
     if(textbox == NULL) return -1;
@@ -102,7 +102,7 @@ vk_textbox_set_word_wrap(vk_textbox_t *textbox, bool enabled)
     return 0;
 }
 
-int
+inline int
 vk_textbox_get_line_count(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
@@ -112,7 +112,7 @@ vk_textbox_get_line_count(vk_textbox_t *textbox)
     return textbox->line_count;
 }
 
-int
+inline int
 vk_textbox_update(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
@@ -122,7 +122,7 @@ vk_textbox_update(vk_textbox_t *textbox)
     return textbox->_update(textbox);
 }
 
-void
+inline void
 vk_textbox_destroy(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return;

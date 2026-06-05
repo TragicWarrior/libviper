@@ -41,7 +41,7 @@ declare_klass(VK_WINDOW_KLASS)
 };
 
 
-vk_window_t*
+inline vk_window_t*
 vk_window_create(int width, int height)
 {
     vk_window_t *window;
@@ -54,7 +54,7 @@ vk_window_create(int width, int height)
     return window;
 }
 
-int
+inline int
 vk_window_set_title(vk_window_t *window, const char *title)
 {
     if(window == NULL) return -1;
@@ -68,7 +68,7 @@ vk_window_set_title(vk_window_t *window, const char *title)
     return 0;
 }
 
-const char*
+inline const char*
 vk_window_get_title(vk_window_t *window)
 {
     if(window == NULL) return NULL;
@@ -78,7 +78,7 @@ vk_window_get_title(vk_window_t *window)
     return window->title;
 }
 
-int
+inline int
 vk_window_set_title_justify(vk_window_t *window, int justify)
 {
     if(window == NULL) return -1;
@@ -92,7 +92,7 @@ vk_window_set_title_justify(vk_window_t *window, int justify)
     return 0;
 }
 
-int
+inline int
 vk_window_set_decorate(vk_window_t *window, VkWindowDecorateFunc func,
     void *data)
 {
@@ -106,7 +106,7 @@ vk_window_set_decorate(vk_window_t *window, VkWindowDecorateFunc func,
     return 0;
 }
 
-int
+inline int
 vk_window_set_border_style(vk_window_t *window, int style)
 {
     if(window == NULL) return -1;
@@ -116,7 +116,7 @@ vk_window_set_border_style(vk_window_t *window, int style)
     return VK_FRAME(window)->_set_border_style(VK_FRAME(window), style);
 }
 
-int
+inline int
 vk_window_set_border_colors(vk_window_t *window, short fg, short bg)
 {
     if(window == NULL) return -1;
@@ -129,7 +129,7 @@ vk_window_set_border_colors(vk_window_t *window, short fg, short bg)
     return 0;
 }
 
-int
+inline int
 vk_window_set_child(vk_window_t *window, vk_widget_t *child)
 {
     if(window == NULL) return -1;
@@ -139,7 +139,7 @@ vk_window_set_child(vk_window_t *window, vk_widget_t *child)
     return VK_FRAME(window)->_set_child(VK_FRAME(window), child);
 }
 
-vk_widget_t*
+inline vk_widget_t*
 vk_window_get_child(vk_window_t *window)
 {
     if(window == NULL) return NULL;
@@ -149,7 +149,7 @@ vk_window_get_child(vk_window_t *window)
     return VK_FRAME(window)->child;
 }
 
-int
+inline int
 vk_window_update(vk_window_t *window)
 {
     if(window == NULL) return -1;
@@ -159,7 +159,7 @@ vk_window_update(vk_window_t *window)
     return VK_FRAME(window)->_update(VK_FRAME(window));
 }
 
-void
+inline void
 vk_window_destroy(vk_window_t *window)
 {
     if(window == NULL) return;

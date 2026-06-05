@@ -52,7 +52,7 @@ declare_klass(VK_FRAME_KLASS)
 };
 
 
-vk_frame_t*
+inline vk_frame_t*
 vk_frame_create(int width, int height)
 {
     vk_frame_t  *frame;
@@ -64,7 +64,7 @@ vk_frame_create(int width, int height)
     return frame;
 }
 
-int
+inline int
 vk_frame_set_border_style(vk_frame_t *frame, int style)
 {
     if(frame == NULL) return -1;
@@ -74,7 +74,7 @@ vk_frame_set_border_style(vk_frame_t *frame, int style)
     return frame->_set_border_style(frame, style);
 }
 
-int
+inline int
 vk_frame_set_border_colors(vk_frame_t *frame, short fg, short bg)
 {
     if(frame == NULL) return -1;
@@ -87,7 +87,7 @@ vk_frame_set_border_colors(vk_frame_t *frame, short fg, short bg)
     return 0;
 }
 
-int
+inline int
 vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
 {
     if(frame == NULL) return -1;
@@ -97,7 +97,7 @@ vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
     return frame->_set_child(frame, child);
 }
 
-vk_widget_t*
+inline vk_widget_t*
 vk_frame_get_child(vk_frame_t *frame)
 {
     if(frame == NULL) return NULL;
@@ -107,7 +107,7 @@ vk_frame_get_child(vk_frame_t *frame)
     return frame->child;
 }
 
-int
+inline int
 vk_frame_update(vk_frame_t *frame)
 {
     if(frame == NULL) return -1;
@@ -117,7 +117,7 @@ vk_frame_update(vk_frame_t *frame)
     return frame->_update(frame);
 }
 
-void
+inline void
 vk_frame_destroy(vk_frame_t *frame)
 {
     if(frame == NULL) return;

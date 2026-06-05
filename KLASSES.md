@@ -198,6 +198,12 @@ dispatch. Public APIs call through these pointers.
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_textbox_t` | `ctor`, `dtor`, `_update` |
 
+## Public API Inline Convention
+
+All public API functions in the `.c` files are declared `inline` as a compiler
+hint to reduce call overhead. These are thin wrappers that validate arguments,
+assert klass identity, and dispatch through the virtual method pointers.
+
 ## Screens and Surfaces
 
 `vk_screen_t` manages the ncurses terminal (SCREEN) and provides virtual
