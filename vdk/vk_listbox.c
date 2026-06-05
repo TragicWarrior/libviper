@@ -737,7 +737,8 @@ _vk_listbox_update(vk_listbox_t *listbox)
     if(listbox->highlight_fg == -1) listbox->highlight_fg = widget->bg;
     if(listbox->highlight_bg == -1) listbox->highlight_bg = widget->fg;
 
-    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg));
+    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
+        | widget->attrs;
     highlight = COLOR_PAIR(vdk_color_pair(listbox->highlight_fg, listbox->highlight_bg));
 
     wattron(widget->canvas, paint_colors);
