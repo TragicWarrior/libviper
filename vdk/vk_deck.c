@@ -5,7 +5,6 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_deck.h"
-#include "vdk_color.h"
 
 #define VK_SHADOW_PAIR      vdk_color_pair(COLOR_WHITE, COLOR_BLACK)
 

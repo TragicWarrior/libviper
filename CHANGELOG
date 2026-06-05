@@ -38,12 +38,12 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Add vk_deck_t z-order manager. Canvas-less widget that
   composites children directly onto its surface during draw. Supports
   add-to-top/bottom, set-top, cycle, and TAB-driven focus rotation.
-* [Bryan Christ] Separate VDK from legacy libviper. New vdk.h public header
-  and vdk_color.h / vdk_color.c color system. VDK source files no longer
-  include viper.h. vdk_color_init() is optional; callers who skip it handle
-  start_color() and init_pair() themselves. Widgets use COLOR_PAIR() with
-  vdk_color_pair() internally (ncurses-native). viper.h includes vdk.h for
-  backwards compatibility.
+* [Bryan Christ] Separate VDK from legacy libviper. vdk.h is the single
+  public header; non-public sources live in vdk/. VDK source files no
+  longer include viper.h. vdk_color_init() is optional; callers who skip
+  it handle start_color() and init_pair() themselves. Widgets use
+  COLOR_PAIR() with vdk_color_pair() internally (ncurses-native). viper.h
+  includes vdk.h for backwards compatibility.
 * [Bryan Christ] Make VDK widgets IO-agnostic. Remove built-in kmio handlers
   from all klasses. Add vk_object_set_kmio() and VkKmioFunc typedef so
   applications install their own keystroke handlers at runtime.

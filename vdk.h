@@ -8,7 +8,12 @@
 #define NCURSES_OPAQUE 0
 #include <ncursesw/curses.h>
 
-#include "vdk_color.h"
+#define VDK_COLOR_COUNT             8
+
+void            vdk_color_init(void);
+short           vdk_color_pair(short fg, short bg);
+
+#define VDK_COLORS(fg, bg)  (COLOR_PAIR(vdk_color_pair(fg, bg)))
 
 /* size / position sentinels */
 #define WSIZE_UNCHANGED             -2

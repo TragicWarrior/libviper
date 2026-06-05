@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "vdk_color.h"
+#include "vdk.h"
 
 void
 vdk_color_init(void)
@@ -43,4 +43,12 @@ vdk_color_init(void)
         init_pair(i, matrix[i].fg, matrix[i].bg);
 
     free(matrix);
+}
+
+short
+vdk_color_pair(short fg, short bg)
+{
+    if(fg == COLOR_WHITE && bg == COLOR_BLACK) return 0;
+
+    return (bg * VDK_COLOR_COUNT) + (VDK_COLOR_COUNT - fg - 1);
 }

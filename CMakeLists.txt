@@ -152,7 +152,7 @@ configure_file(
 )
 
 install (TARGETS viper-static viper-shared DESTINATION lib)
-install (FILES viper.h vdk.h vdk_color.h DESTINATION include)
+install (FILES viper.h vdk.h DESTINATION include)
 
 # Install pkgconfig files to libdata on BSD, otherwise lib
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")
