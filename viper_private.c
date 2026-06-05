@@ -69,6 +69,11 @@ viper_init(uint32_t init_flags)
         viper->border_agent[0] = viper_default_border_agent_unfocus;
         viper->border_agent[1] = viper_default_border_agent_focus;
         mousemask(mouse_mask, NULL);
+        if(mouse_mask & REPORT_MOUSE_POSITION)
+        {
+            printf("\033[?1003h");
+            fflush(stdout);
+        }
 
         for(i = 0; i < MAX_SCREENS; i++)
         {
@@ -125,6 +130,8 @@ viper_end(void)
         viper = NULL;
     }
 
+    printf("\033[?1003l");
+    fflush(stdout);
     curs_set(1);
     endwin();
     SCREEN_WINDOW = NULL;
