@@ -133,6 +133,17 @@ vk_kmio_get_mouse_event(void)
     return last_mouse_event;
 }
 
+int
+vk_kmio_mouse_drain(MEVENT *mouse_event)
+{
+#if !defined(_NO_GPM) && defined(__linux)
+    return vk_kmio_gpm(mouse_event, VK_GPM_CMD_DRAIN);
+#else
+    (void)mouse_event;
+    return -1;
+#endif
+}
+
 #if !defined(_NO_GPM) && defined(__linux)
 int
 vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
@@ -184,7 +195,7 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     mio_poll.events = POLLIN;
     mio_poll.fd = mio_fd;
 
-    if(poll(&mio_poll, 1, 1) < 1) return -1;
+    if(poll(&mio_poll, 1, (cmd == VK_GPM_CMD_DRAIN) ? 0 : 1) < 1) return -1;
     if(Gpm_GetEvent(&g_event) < 1) return -1;
 
     memset(mouse_event, 0, sizeof(MEVENT));

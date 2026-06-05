@@ -19,11 +19,17 @@
 
 /* GPM commands */
 #define VK_GPM_CMD_CLOSE       (1 << 1)
+#define VK_GPM_CMD_DRAIN       (1 << 2)
 
 int         vk_kmio_init(uint32_t flags);
 void        vk_kmio_shutdown(void);
 int32_t     vk_kmio_fetch(MEVENT *mouse_event);
 MEVENT*     vk_kmio_get_mouse_event(void);
+
+/* non-blocking: read the next already-pending mouse event (used to
+   coalesce drag/move events).  returns 0 if one was read, -1 if none is
+   immediately available.  a no-op returning -1 when GPM is unavailable. */
+int         vk_kmio_mouse_drain(MEVENT *mouse_event);
 
 #if !defined(_NO_GPM) && defined(__linux)
 int         vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd);
