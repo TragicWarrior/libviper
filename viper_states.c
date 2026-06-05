@@ -127,6 +127,8 @@ viper_window_set_focus(vwnd_t *vwnd)
     vwnd->window_state |= STATE_FOCUS;
     viper_event_run(vwnd, "window-focus");
 
+    viper_screen_redraw(screen_id, REDRAW_ALL);
+
     return TRUE;
 }
 
