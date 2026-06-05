@@ -88,6 +88,20 @@ Version 4.0.0 (in progress)
   is pressed.
 * [Bryan Christ] Add Dialog deck window to demo with OK, Cancel, Help
   buttons using VK_BUTTON_BASIC relief style.
+* [Bryan Christ] Add homogeneous/non-homogeneous layout modes to
+  vk_box_t. Homogeneous (default) distributes slots evenly and centers
+  children. Non-homogeneous sizes each slot to its child's natural
+  dimension; VK_STATE_EXPAND children absorb leftover space.
+* [Bryan Christ] Add vk_filler_t: a minimal 1x1 blank widget born with
+  VK_STATE_EXPAND. Useful as a spacer in non-homogeneous boxes.
+* [Bryan Christ] Add vk_input_t single-line text input widget. Supports
+  3D sunken relief (VK_FRAME_SINGLE, VK_FRAME_ASCII) and Links-style
+  basic relief (VK_BUTTON_BASIC). Full editing API: insert, backspace,
+  delete, cursor movement, home/end, clear. Dynamic text buffer with
+  optional max length. Horizontal scrolling for text wider than the
+  field width.
+* [Bryan Christ] Add Input deck window to demo showcasing both 3D and
+  basic input styles with a keyboard handler for text editing.
 
 Version 3.1.1
 

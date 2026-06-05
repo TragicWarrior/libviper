@@ -17,6 +17,7 @@ struct _vk_box_s
     int                 slots;
     vk_widget_t         **slot_widgets;
     int                 focused_slot;
+    bool                homogeneous;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

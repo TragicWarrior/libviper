@@ -79,6 +79,8 @@ add_library(viper-static STATIC
     vdk/vk_textbox.c
     vdk/vk_marquee.c
     vdk/vk_deck.c
+    vdk/vk_filler.c
+    vdk/vk_input.c
     )
 
 add_library(viper.o OBJECT
@@ -124,6 +126,8 @@ add_library(viper.o OBJECT
     vdk/vk_textbox.c
     vdk/vk_marquee.c
     vdk/vk_deck.c
+    vdk/vk_filler.c
+    vdk/vk_input.c
     )
 
 add_library(viper-shared SHARED

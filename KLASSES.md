@@ -29,6 +29,10 @@ vk_object_t
    │
    ├─ vk_button_t
    │
+   ├─ vk_input_t
+   │
+   ├─ vk_filler_t
+   │
    ├─ vk_spinner (todo)
    │
    └─ vk_listbox_t
@@ -64,6 +68,9 @@ Cast macros are defined in `vdk.h`:
 | `VK_SELECTBOX(x)` | `vk_selectbox_t *` |
 | `VK_TEXTBOX(x)` | `vk_textbox_t *` |
 | `VK_DECK(x)` | `vk_deck_t *` |
+| `VK_BUTTON(x)` | `vk_button_t *` |
+| `VK_INPUT(x)` | `vk_input_t *` |
+| `VK_FILLER(x)` | `vk_filler_t *` |
 
 ## Klass Templates
 
@@ -77,7 +84,8 @@ require_klass(KLASS_NAME);    // extern reference from other files
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
-`VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`.
+`VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
+`VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -105,6 +113,9 @@ vk_window_create(width, height)
 vk_selectbox_create(width, height, mode)
 vk_textbox_create(width, height)
 vk_deck_create(void)
+vk_button_create(text)
+vk_input_create(width)
+vk_filler_create(void)
 ```
 
 ## Constructor Chaining
@@ -125,6 +136,9 @@ _vk_listbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_selectbox_ctor  -> VK_LISTBOX_KLASS->ctor(object, argp)
 _vk_textbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_deck_ctor       -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_button_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_input_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_filler_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -202,6 +216,9 @@ dispatch. Public APIs call through these pointers.
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_textbox_t` | `ctor`, `dtor`, `_update` |
 | `vk_deck_t` | `ctor`, `dtor`, `_update` (overrides widget's `_draw`, `_erase`, `_resize`, `_recreate`) |
+| `vk_button_t` | `ctor`, `dtor`, `_update` |
+| `vk_input_t` | `ctor`, `dtor`, `_update` |
+| `vk_filler_t` | `ctor`, `dtor` |
 
 ## Public API Inline Convention
 
@@ -465,16 +482,31 @@ or inside the frame (which the child will overwrite).
 | `VK_BOX_VERTICAL` | Children arranged top-to-bottom in rows |
 
 The number of slots is fixed at creation (default 1). Each slot holds one
-widget, placed via `vk_box_set_widget(box, slot, widget)`. Slots are evenly
-sized based on the box dimensions; the last slot absorbs any remainder.
+widget, placed via `vk_box_set_widget(box, slot, widget)`.
 
 The box ctor extracts `orientation` and `slots` from the va_arg chain after
 the parent (container -> widget) consumes `width` and `height`. This is the
 first klass to consume extra construction parameters beyond the base pair.
 
-The box's `_update` erases, then for each slot: positions, resizes, and draws
-the child widget. The box does not propagate resize to grandchildren (e.g. a
-frame's child won't be resized if the box resizes the frame).
+### Homogeneous Mode (Default)
+
+By default, boxes are **homogeneous**: slots are evenly sized based on the
+box dimensions (the last slot absorbs any remainder). Each child is centered
+within its slot on both axes. Children with `VK_STATE_EXPAND` are resized
+to fill their slot; non-expand children keep their natural dimensions and
+are centered.
+
+### Non-Homogeneous Mode
+
+`vk_box_set_homogeneous(box, false)` switches to non-homogeneous layout.
+Each slot is sized to its child's natural dimension (width for horizontal,
+height for vertical). Children with `VK_STATE_EXPAND` absorb leftover
+space evenly, with the last expand child taking any remainder.
+
+The box's `_update` erases, then for each slot: positions, resizes (if
+expand), and draws the child widget. The box does not propagate resize to
+grandchildren (e.g. a frame's child won't be resized if the box resizes
+the frame).
 
 ## Decks
 
@@ -696,6 +728,57 @@ Normal colors are set via `vk_widget_set_colors()`. The button is
 IO-agnostic; the application calls `vk_button_press()` /
 `vk_button_release()` to toggle state.
 
+## Inputs
+
+`vk_input_t` is a single-line text input derived from `vk_widget_t`. It
+supports two relief style families matching the button widget:
+
+### 3D Relief (`VK_FRAME_SINGLE`, `VK_FRAME_ASCII`)
+
+The widget is 3 rows tall with a sunken border (inverted bevel from
+buttons): black shadow on top/left, white highlight on bottom/right.
+`VK_FRAME_SINGLE` uses WACS_* box-drawing characters; `VK_FRAME_ASCII`
+uses `+`, `-`, `|`. The text field occupies the middle row between the
+borders.
+
+### Basic Relief (`VK_BUTTON_BASIC`)
+
+A single-row input in the style of the Links text browser: `[ text ]`.
+The text field sits between the brackets.
+
+### Text Editing
+
+The input manages a dynamically-growing text buffer (initial capacity 256,
+doubles via realloc). The cursor position and horizontal scroll offset are
+maintained so text wider than the field width scrolls as the cursor moves.
+The cursor is rendered with `A_REVERSE` on the character at the cursor
+position.
+
+`vk_input_set_max_length()` enforces an optional character limit. When set,
+inserts beyond the limit are rejected and existing text is truncated.
+
+### API
+
+| API | Description |
+|-----|-------------|
+| `vk_input_create(width)` | Create an input (minimum width 5, default 3D style) |
+| `vk_input_set_text(input, text)` | Replace text (NULL clears), cursor moves to end |
+| `vk_input_get_text(input)` | Return current text (const pointer) |
+| `vk_input_set_relief_style` | `VK_FRAME_SINGLE`, `VK_FRAME_ASCII`, or `VK_BUTTON_BASIC` |
+| `vk_input_set_max_length` | Set maximum character count (0 = unlimited) |
+| `vk_input_insert_char(input, ch)` | Insert printable ASCII (32-126) at cursor |
+| `vk_input_backspace(input)` | Delete character before cursor |
+| `vk_input_delete(input)` | Delete character at cursor |
+| `vk_input_move_cursor(input, offset)` | Move cursor by offset (clamped to bounds) |
+| `vk_input_home(input)` | Move cursor to start |
+| `vk_input_end(input)` | Move cursor to end |
+| `vk_input_clear(input)` | Clear text and reset cursor/scroll |
+| `vk_input_update(input)` | Redraw the input |
+| `vk_input_destroy(input)` | Destroy the input |
+
+The input is IO-agnostic; the application installs a `kmio` handler that
+maps keystrokes to the editing API functions.
+
 ## Textboxes
 
 `vk_textbox_t` is a multi-line read-only text display derived from
@@ -805,6 +888,18 @@ The selectbox also overrides `_on_resize` and `_on_recreate` because the
 listbox's versions call `_vk_listbox_update` directly (static function,
 not through the function pointer). The selectbox's overrides follow the
 same scroller-propagation pattern as the listbox's.
+
+## Fillers
+
+`vk_filler_t` is a minimal blank widget derived from `vk_widget_t`. It is
+created at 1x1 with `VK_STATE_EXPAND` set, so it absorbs all available
+space when placed in a container. Use it as a spacer in non-homogeneous
+boxes to push other widgets apart.
+
+| API | Description |
+|-----|-------------|
+| `vk_filler_create()` | Create a 1x1 filler with expand enabled |
+| `vk_filler_destroy(filler)` | Destroy the filler |
 
 ## Linked Lists
 

@@ -103,6 +103,8 @@ typedef struct  _vk_textbox_s       vk_textbox_t;
 typedef struct  _vk_marquee_s       vk_marquee_t;
 typedef struct  _vk_deck_s          vk_deck_t;
 typedef struct  _vk_button_s        vk_button_t;
+typedef struct  _vk_filler_s        vk_filler_t;
+typedef struct  _vk_input_s         vk_input_t;
 
 /* callback typedefs */
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
@@ -131,6 +133,8 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_MARQUEE(x)           ((vk_marquee_t *)x)
 #define VK_DECK(x)              ((vk_deck_t *)x)
 #define VK_BUTTON(x)            ((vk_button_t *)x)
+#define VK_FILLER(x)            ((vk_filler_t *)x)
+#define VK_INPUT(x)             ((vk_input_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -285,6 +289,7 @@ void            vk_window_destroy(vk_window_t *window);
 /* vk_box */
 vk_box_t*       vk_box_create(int width, int height,
                     int orientation, int slots);
+int             vk_box_set_homogeneous(vk_box_t *box, bool homogeneous);
 int             vk_box_set_widget(vk_box_t *box, int slot,
                     vk_widget_t *widget);
 vk_widget_t*    vk_box_get_widget(vk_box_t *box, int slot);
@@ -345,5 +350,25 @@ int             vk_button_press(vk_button_t *button);
 int             vk_button_release(vk_button_t *button);
 int             vk_button_update(vk_button_t *button);
 void            vk_button_destroy(vk_button_t *button);
+
+/* vk_filler */
+vk_filler_t*    vk_filler_create(void);
+void            vk_filler_destroy(vk_filler_t *filler);
+
+/* vk_input */
+vk_input_t*     vk_input_create(int width);
+int             vk_input_set_text(vk_input_t *input, const char *text);
+const char*     vk_input_get_text(vk_input_t *input);
+int             vk_input_set_relief_style(vk_input_t *input, int style);
+int             vk_input_set_max_length(vk_input_t *input, int max);
+int             vk_input_insert_char(vk_input_t *input, int ch);
+int             vk_input_backspace(vk_input_t *input);
+int             vk_input_delete(vk_input_t *input);
+int             vk_input_move_cursor(vk_input_t *input, int offset);
+int             vk_input_home(vk_input_t *input);
+int             vk_input_end(vk_input_t *input);
+int             vk_input_clear(vk_input_t *input);
+int             vk_input_update(vk_input_t *input);
+void            vk_input_destroy(vk_input_t *input);
 
 #endif

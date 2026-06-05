@@ -49,6 +49,18 @@ vk_box_create(int width, int height, int orientation, int slots)
 }
 
 inline int
+vk_box_set_homogeneous(vk_box_t *box, bool homogeneous)
+{
+    if(box == NULL) return -1;
+
+    if(!vk_object_assert(box, vk_box_t)) return -1;
+
+    box->homogeneous = homogeneous;
+
+    return 0;
+}
+
+inline int
 vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
 {
     vk_container_t  *container;
@@ -71,33 +83,34 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
     if(widget != NULL)
     {
         vk_widget_t *bw = VK_WIDGET(box);
-        int         pos = 0;
-        int         slot_size;
-        int         j;
 
         container->add_widget(container, widget);
         vk_widget_set_surface(widget, bw->canvas);
 
-        for(j = 0; j <= slot; j++)
+        if(box->homogeneous && (widget->state & VK_STATE_EXPAND))
         {
-            if(box->orientation == VK_BOX_HORIZONTAL)
+            int pos = 0;
+            int slot_size;
+            int j;
+
+            for(j = 0; j <= slot; j++)
             {
-                slot_size = bw->width / box->slots;
-                if(j == box->slots - 1)
-                    slot_size = bw->width - pos;
-            }
-            else
-            {
-                slot_size = bw->height / box->slots;
-                if(j == box->slots - 1)
-                    slot_size = bw->height - pos;
+                if(box->orientation == VK_BOX_HORIZONTAL)
+                {
+                    slot_size = bw->width / box->slots;
+                    if(j == box->slots - 1)
+                        slot_size = bw->width - pos;
+                }
+                else
+                {
+                    slot_size = bw->height / box->slots;
+                    if(j == box->slots - 1)
+                        slot_size = bw->height - pos;
+                }
+
+                if(j < slot) pos += slot_size;
             }
 
-            if(j < slot) pos += slot_size;
-        }
-
-        if(widget->state & VK_STATE_EXPAND)
-        {
             if(box->orientation == VK_BOX_HORIZONTAL)
                 vk_widget_resize(widget, slot_size, bw->height);
             else
@@ -172,6 +185,7 @@ _vk_box_ctor(vk_object_t *object, va_list *argp, ...)
     box->slots = slots;
     box->slot_widgets = calloc(slots, sizeof(vk_widget_t *));
     box->focused_slot = 0;
+    box->homogeneous = true;
 
     box->ctor = _vk_box_ctor;
     box->dtor = _vk_box_dtor;
@@ -221,38 +235,94 @@ _vk_box_on_resize(vk_widget_t *widget)
     vk_box_t        *box;
     vk_widget_t     *child;
     int             i;
-    int             slot_size;
-    int             pos;
+    bool            horiz;
 
     box = VK_BOX(widget);
-    pos = 0;
+    horiz = (box->orientation == VK_BOX_HORIZONTAL);
 
-    for(i = 0; i < box->slots; i++)
+    if(box->homogeneous)
     {
-        if(box->orientation == VK_BOX_HORIZONTAL)
-        {
-            slot_size = widget->width / box->slots;
-            if(i == box->slots - 1)
-                slot_size = widget->width - pos;
-        }
-        else
-        {
-            slot_size = widget->height / box->slots;
-            if(i == box->slots - 1)
-                slot_size = widget->height - pos;
-        }
+        int pos = 0;
 
-        child = box->slot_widgets[i];
-
-        if(child != NULL && (child->state & VK_STATE_EXPAND))
+        for(i = 0; i < box->slots; i++)
         {
-            if(box->orientation == VK_BOX_HORIZONTAL)
-                vk_widget_resize(child, slot_size, widget->height);
+            int slot_size;
+
+            if(horiz)
+            {
+                slot_size = widget->width / box->slots;
+                if(i == box->slots - 1)
+                    slot_size = widget->width - pos;
+            }
             else
-                vk_widget_resize(child, widget->width, slot_size);
+            {
+                slot_size = widget->height / box->slots;
+                if(i == box->slots - 1)
+                    slot_size = widget->height - pos;
+            }
+
+            child = box->slot_widgets[i];
+
+            if(child != NULL && (child->state & VK_STATE_EXPAND))
+            {
+                if(horiz)
+                    vk_widget_resize(child, slot_size, widget->height);
+                else
+                    vk_widget_resize(child, widget->width, slot_size);
+            }
+
+            pos += slot_size;
+        }
+    }
+    else
+    {
+        int natural_total = 0;
+        int expand_count = 0;
+        int leftover;
+        int expand_size;
+        int expand_remain;
+        int expand_idx;
+        int dimension;
+
+        dimension = horiz ? widget->width : widget->height;
+
+        for(i = 0; i < box->slots; i++)
+        {
+            child = box->slot_widgets[i];
+            if(child == NULL) continue;
+
+            if(child->state & VK_STATE_EXPAND)
+                expand_count++;
+            else
+                natural_total += horiz ? child->width : child->height;
         }
 
-        pos += slot_size;
+        leftover = dimension - natural_total;
+        if(leftover < 0) leftover = 0;
+
+        expand_size = (expand_count > 0) ? leftover / expand_count : 0;
+        expand_remain = (expand_count > 0)
+            ? leftover - expand_size * expand_count : 0;
+        expand_idx = 0;
+
+        for(i = 0; i < box->slots; i++)
+        {
+            child = box->slot_widgets[i];
+            if(child == NULL) continue;
+
+            if(child->state & VK_STATE_EXPAND)
+            {
+                int sz = expand_size;
+                expand_idx++;
+                if(expand_idx == expand_count)
+                    sz += expand_remain;
+
+                if(horiz)
+                    vk_widget_resize(child, sz, widget->height);
+                else
+                    vk_widget_resize(child, widget->width, sz);
+            }
+        }
     }
 
     return 0;
@@ -286,46 +356,136 @@ _vk_box_update(vk_box_t *box)
     vk_widget_t     *widget;
     vk_widget_t     *child;
     int             i;
-    int             slot_size;
     int             pos;
+    bool            horiz;
 
     if(box == NULL) return -1;
 
     widget = VK_WIDGET(box);
     widget->_erase(widget);
+    horiz = (box->orientation == VK_BOX_HORIZONTAL);
 
-    pos = 0;
-
-    for(i = 0; i < box->slots; i++)
+    if(box->homogeneous)
     {
-        if(box->orientation == VK_BOX_HORIZONTAL)
+        pos = 0;
+
+        for(i = 0; i < box->slots; i++)
         {
-            slot_size = widget->width / box->slots;
-            if(i == box->slots - 1)
-                slot_size = widget->width - pos;
+            int slot_size;
+
+            if(horiz)
+            {
+                slot_size = widget->width / box->slots;
+                if(i == box->slots - 1)
+                    slot_size = widget->width - pos;
+            }
+            else
+            {
+                slot_size = widget->height / box->slots;
+                if(i == box->slots - 1)
+                    slot_size = widget->height - pos;
+            }
+
+            child = box->slot_widgets[i];
+
+            if(child != NULL)
+            {
+                int xoff, yoff;
+
+                child->surface = widget->canvas;
+
+                if(horiz)
+                {
+                    xoff = (slot_size - child->width) / 2;
+                    yoff = (widget->height - child->height) / 2;
+                }
+                else
+                {
+                    xoff = (widget->width - child->width) / 2;
+                    yoff = (slot_size - child->height) / 2;
+                }
+
+                if(xoff < 0) xoff = 0;
+                if(yoff < 0) yoff = 0;
+
+                if(horiz)
+                    vk_widget_move(child, pos + xoff, yoff);
+                else
+                    vk_widget_move(child, xoff, pos + yoff);
+
+                vk_widget_draw(child);
+            }
+
+            pos += slot_size;
         }
-        else
+    }
+    else
+    {
+        int natural_total = 0;
+        int expand_count = 0;
+        int leftover;
+        int expand_size;
+        int expand_remain;
+        int expand_idx;
+        int dimension;
+
+        dimension = horiz ? widget->width : widget->height;
+
+        for(i = 0; i < box->slots; i++)
         {
-            slot_size = widget->height / box->slots;
-            if(i == box->slots - 1)
-                slot_size = widget->height - pos;
+            child = box->slot_widgets[i];
+            if(child == NULL) continue;
+
+            if(child->state & VK_STATE_EXPAND)
+                expand_count++;
+            else
+                natural_total += horiz ? child->width : child->height;
         }
 
-        child = box->slot_widgets[i];
+        leftover = dimension - natural_total;
+        if(leftover < 0) leftover = 0;
 
-        if(child != NULL)
+        expand_size = (expand_count > 0) ? leftover / expand_count : 0;
+        expand_remain = (expand_count > 0)
+            ? leftover - expand_size * expand_count : 0;
+        expand_idx = 0;
+
+        pos = 0;
+
+        for(i = 0; i < box->slots; i++)
         {
+            int slot_size;
+
+            child = box->slot_widgets[i];
+            if(child == NULL) continue;
+
+            if(child->state & VK_STATE_EXPAND)
+            {
+                slot_size = expand_size;
+                expand_idx++;
+                if(expand_idx == expand_count)
+                    slot_size += expand_remain;
+
+                if(horiz)
+                    vk_widget_resize(child, slot_size, widget->height);
+                else
+                    vk_widget_resize(child, widget->width, slot_size);
+            }
+            else
+            {
+                slot_size = horiz ? child->width : child->height;
+            }
+
             child->surface = widget->canvas;
 
-            if(box->orientation == VK_BOX_HORIZONTAL)
+            if(horiz)
                 vk_widget_move(child, pos, 0);
             else
                 vk_widget_move(child, 0, pos);
 
             vk_widget_draw(child);
+            pos += slot_size;
         }
-
-        pos += slot_size;
     }
 
     return 0;
