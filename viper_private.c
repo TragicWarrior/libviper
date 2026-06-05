@@ -27,7 +27,6 @@
 #include "private.h"
 #include "viper_color.h"
 #include "viper_callbacks.h"
-#include "viper_kmio.h"
 #include "viper_wdestroy.h"
 
 WINDOW      *SCREEN_WINDOW = NULL;

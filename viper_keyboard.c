@@ -22,7 +22,6 @@
 #include "viper.h"
 #include "private.h"
 #include "viper_states.h"
-#include "viper_kmio.h"
 
 void
 viper_window_set_key_func(vwnd_t *vwnd, ViperWkeyFunc func)
