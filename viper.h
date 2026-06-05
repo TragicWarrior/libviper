@@ -177,11 +177,6 @@ void            viper_window_modify_border(vwnd_t *wnd,
                     int attrs, short colors);
 void            viper_window_close(vwnd_t *vwnd);
 
-/* special construction:  a message dialog box  */
-vwnd_t*         viper_msgbox_create(int screen_id, char *title,
-                    float x, float y, int width, int height,
-                    char *msg, uint32_t flags);
-
 /* window placement */
 vwnd_t*         viper_window_get_top(int screen_id, bool managed);
 bool            viper_window_set_top(vwnd_t *wnd);

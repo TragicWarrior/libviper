@@ -82,7 +82,6 @@ set(VIPER_SOURCES
     viper_events.c
     viper_keyboard.c
     viper_kmio.c
-    viper_msgbox.c
     viper_screen.c
     viper_states.c
     viper_userptr.c
