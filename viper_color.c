@@ -17,6 +17,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------*/
 
+#include <limits.h>
+
 #include "viper_color.h"
 #include "viper.h"
 #include "macros.h"
@@ -27,6 +29,28 @@ short   viper_color_table[] =
                 COLOR_CYAN, COLOR_WHITE };
 
 int     viper_color_count;
+
+static void
+_viper_color_init_extended(void)
+{
+    int     fg, bg;
+    int     fg_half;
+    int     pair_idx;
+
+    for(fg = 0; fg < 256; fg += 2)
+    {
+        fg_half = fg >> 1;
+
+        for(bg = 0; bg < 256; bg++)
+        {
+            pair_idx = 64 + (bg * 128) + fg_half;
+
+            if(pair_idx <= 0 || pair_idx > SHRT_MAX) continue;
+
+            init_pair(pair_idx, fg, bg);
+        }
+    }
+}
 
 void
 viper_color_init(void)
@@ -83,6 +107,8 @@ viper_color_init(void)
 	for(i = 1; i < max_colors; i++) init_pair(i, matrix[i].fg, matrix[i].bg);
 	free(matrix);
 
+	if(COLORS >= 256) _viper_color_init_extended();
+
 	return;
 }
 
@@ -96,6 +122,13 @@ viper_color_pair(short fg, short bg)
 	extern uint32_t     viper_global_flags;
 
 	if(fg == COLOR_WHITE && bg == COLOR_BLACK) return 0;
+
+	if(fg > 7 || bg > 7)
+	{
+		i = 64 + (bg * 128) + (fg >> 1);
+		if(i > 0 && i <= SHRT_MAX) return (short)i;
+		return 0;
+	}
 
 	/*	use fast color indexing when possible.	*/
 	if(viper_global_flags & VIPER_FASTCOLOR)
@@ -121,17 +154,27 @@ viper_pair_content(short pair, short *fg, short *bg)
     extern int          viper_color_count;
     int                 retval = 0;
 
-    if(!(viper_global_flags & VIPER_FASTCOLOR))
-    {
-        retval = pair_content(pair, fg, bg);
-        return retval;
-    }
-
-    // this works if VIPER_FASTCOLOR was specified
     if(pair == 0)
     {
         *fg = COLOR_WHITE;
         *bg = COLOR_BLACK;
+        return 0;
+    }
+
+    if(pair >= 64)
+    {
+        int idx = pair - 64;
+
+        *bg = idx / 128;
+        *fg = (idx % 128) * 2;
+
+        return 0;
+    }
+
+    if(!(viper_global_flags & VIPER_FASTCOLOR))
+    {
+        retval = pair_content(pair, fg, bg);
+        return retval;
     }
 
     *bg = (int)(pair / viper_color_count);
