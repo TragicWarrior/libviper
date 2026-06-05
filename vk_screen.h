@@ -12,7 +12,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 
-struct _vk_desktop_s
+struct _vk_surface_s
 {
     WINDOW              *canvas;
     vk_widget_t         **widgets;
@@ -28,9 +28,9 @@ struct _vk_screen_s
     FILE                *fd_in;
     FILE                *fd_out;
 
-    vk_desktop_t        **desktops;
-    int                 desktop_count;
-    int                 active_desktop;
+    vk_surface_t        **surfaces;
+    int                 surface_count;
+    int                 active_surface;
 
     int                 width;
     int                 height;

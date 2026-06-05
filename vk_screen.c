@@ -20,11 +20,11 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...);
 static int
 _vk_screen_dtor(vk_object_t *object);
 
-static vk_desktop_t*
-_vk_desktop_create(SCREEN *term, int width, int height);
+static vk_surface_t*
+_vk_surface_create(SCREEN *term, int width, int height);
 
 static void
-_vk_desktop_destroy(vk_desktop_t *desktop);
+_vk_surface_destroy(vk_surface_t *surface);
 
 static pid_t
 _vk_screen_evict_pty(const char *pty);
@@ -51,78 +51,78 @@ vk_screen_create(void)
 }
 
 int
-vk_screen_add_desktop(vk_screen_t *screen)
+vk_screen_add_surface(vk_screen_t *screen)
 {
-    vk_desktop_t    *desktop;
-    vk_desktop_t    **new_array;
+    vk_surface_t    *surface;
+    vk_surface_t    **new_array;
     int             id;
 
     if(screen == NULL) return -1;
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    desktop = _vk_desktop_create(screen->term, screen->width, screen->height);
-    if(desktop == NULL) return -1;
+    surface = _vk_surface_create(screen->term, screen->width, screen->height);
+    if(surface == NULL) return -1;
 
-    id = screen->desktop_count;
+    id = screen->surface_count;
 
-    new_array = realloc(screen->desktops,
-        (id + 1) * sizeof(vk_desktop_t *));
+    new_array = realloc(screen->surfaces,
+        (id + 1) * sizeof(vk_surface_t *));
     if(new_array == NULL)
     {
-        _vk_desktop_destroy(desktop);
+        _vk_surface_destroy(surface);
         return -1;
     }
 
-    screen->desktops = new_array;
-    screen->desktops[id] = desktop;
-    screen->desktop_count++;
+    screen->surfaces = new_array;
+    screen->surfaces[id] = surface;
+    screen->surface_count++;
 
     return id;
 }
 
 int
-vk_screen_del_desktop(vk_screen_t *screen, int id)
+vk_screen_del_surface(vk_screen_t *screen, int id)
 {
-    vk_desktop_t    **new_array;
+    vk_surface_t    **new_array;
     int             i;
 
     if(screen == NULL) return -1;
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    if(id < 0 || id >= screen->desktop_count) return -1;
+    if(id < 0 || id >= screen->surface_count) return -1;
 
-    if(screen->desktop_count == 1) return -1;
+    if(screen->surface_count == 1) return -1;
 
-    _vk_desktop_destroy(screen->desktops[id]);
+    _vk_surface_destroy(screen->surfaces[id]);
 
-    for(i = id; i < screen->desktop_count - 1; i++)
-        screen->desktops[i] = screen->desktops[i + 1];
+    for(i = id; i < screen->surface_count - 1; i++)
+        screen->surfaces[i] = screen->surfaces[i + 1];
 
-    screen->desktop_count--;
+    screen->surface_count--;
 
-    new_array = realloc(screen->desktops,
-        screen->desktop_count * sizeof(vk_desktop_t *));
+    new_array = realloc(screen->surfaces,
+        screen->surface_count * sizeof(vk_surface_t *));
     if(new_array != NULL)
-        screen->desktops = new_array;
+        screen->surfaces = new_array;
 
-    if(screen->active_desktop >= screen->desktop_count)
-        screen->active_desktop = screen->desktop_count - 1;
+    if(screen->active_surface >= screen->surface_count)
+        screen->active_surface = screen->surface_count - 1;
 
     return 0;
 }
 
 int
-vk_screen_switch_desktop(vk_screen_t *screen, int id)
+vk_screen_switch_surface(vk_screen_t *screen, int id)
 {
     if(screen == NULL) return -1;
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    if(id < 0 || id >= screen->desktop_count) return -1;
+    if(id < 0 || id >= screen->surface_count) return -1;
 
-    screen->active_desktop = id;
+    screen->active_surface = id;
 
     return 0;
 }
@@ -130,61 +130,61 @@ vk_screen_switch_desktop(vk_screen_t *screen, int id)
 WINDOW*
 vk_screen_get_window(vk_screen_t *screen)
 {
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
 
     if(screen == NULL) return NULL;
 
     if(!vk_object_assert(screen, vk_screen_t)) return NULL;
 
-    if(screen->active_desktop < 0 ||
-        screen->active_desktop >= screen->desktop_count)
+    if(screen->active_surface < 0 ||
+        screen->active_surface >= screen->surface_count)
         return NULL;
 
-    desktop = screen->desktops[screen->active_desktop];
+    surface = screen->surfaces[screen->active_surface];
 
-    return desktop->canvas;
+    return surface->canvas;
 }
 
 int
-vk_screen_attach_widget(vk_screen_t *screen, int desktop_id,
+vk_screen_attach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t *widget)
 {
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
     vk_widget_t     **new_array;
 
     if(screen == NULL || widget == NULL) return -1;
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    if(desktop_id < 0 || desktop_id >= screen->desktop_count) return -1;
+    if(surface_id < 0 || surface_id >= screen->surface_count) return -1;
 
-    desktop = screen->desktops[desktop_id];
+    surface = screen->surfaces[surface_id];
 
-    if(desktop->widget_count >= desktop->widget_alloc)
+    if(surface->widget_count >= surface->widget_alloc)
     {
-        int new_alloc = desktop->widget_alloc == 0 ? 8 : desktop->widget_alloc * 2;
+        int new_alloc = surface->widget_alloc == 0 ? 8 : surface->widget_alloc * 2;
 
-        new_array = realloc(desktop->widgets,
+        new_array = realloc(surface->widgets,
             new_alloc * sizeof(vk_widget_t *));
         if(new_array == NULL) return -1;
 
-        desktop->widgets = new_array;
-        desktop->widget_alloc = new_alloc;
+        surface->widgets = new_array;
+        surface->widget_alloc = new_alloc;
     }
 
-    desktop->widgets[desktop->widget_count] = widget;
-    desktop->widget_count++;
+    surface->widgets[surface->widget_count] = widget;
+    surface->widget_count++;
 
-    vk_widget_set_surface(widget, desktop->canvas);
+    vk_widget_set_surface(widget, surface->canvas);
 
     return 0;
 }
 
 int
-vk_screen_detach_widget(vk_screen_t *screen, int desktop_id,
+vk_screen_detach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t *widget)
 {
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
     int             i;
     bool            found = false;
 
@@ -192,13 +192,13 @@ vk_screen_detach_widget(vk_screen_t *screen, int desktop_id,
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    if(desktop_id < 0 || desktop_id >= screen->desktop_count) return -1;
+    if(surface_id < 0 || surface_id >= screen->surface_count) return -1;
 
-    desktop = screen->desktops[desktop_id];
+    surface = screen->surfaces[surface_id];
 
-    for(i = 0; i < desktop->widget_count; i++)
+    for(i = 0; i < surface->widget_count; i++)
     {
-        if(desktop->widgets[i] == widget)
+        if(surface->widgets[i] == widget)
         {
             found = true;
             break;
@@ -207,10 +207,10 @@ vk_screen_detach_widget(vk_screen_t *screen, int desktop_id,
 
     if(!found) return -1;
 
-    for(; i < desktop->widget_count - 1; i++)
-        desktop->widgets[i] = desktop->widgets[i + 1];
+    for(; i < surface->widget_count - 1; i++)
+        surface->widgets[i] = surface->widgets[i + 1];
 
-    desktop->widget_count--;
+    surface->widget_count--;
 
     widget->surface = NULL;
 
@@ -220,7 +220,7 @@ vk_screen_detach_widget(vk_screen_t *screen, int desktop_id,
 int
 vk_screen_resize(vk_screen_t *screen)
 {
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
     struct winsize  ws;
     int             i;
 
@@ -236,11 +236,11 @@ vk_screen_resize(vk_screen_t *screen)
 
     getmaxyx(stdscr, screen->height, screen->width);
 
-    for(i = 0; i < screen->desktop_count; i++)
+    for(i = 0; i < screen->surface_count; i++)
     {
-        desktop = screen->desktops[i];
-        wresize(desktop->canvas, screen->height, screen->width);
-        werase(desktop->canvas);
+        surface = screen->surfaces[i];
+        wresize(surface->canvas, screen->height, screen->width);
+        werase(surface->canvas);
     }
 
     return 0;
@@ -270,19 +270,19 @@ vk_screen_poll_resize(vk_screen_t *screen)
 int
 vk_screen_refresh(vk_screen_t *screen)
 {
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
 
     if(screen == NULL) return -1;
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    if(screen->active_desktop < 0 ||
-        screen->active_desktop >= screen->desktop_count)
+    if(screen->active_surface < 0 ||
+        screen->active_surface >= screen->surface_count)
         return -1;
 
-    desktop = screen->desktops[screen->active_desktop];
+    surface = screen->surfaces[screen->active_surface];
 
-    overwrite(desktop->canvas, stdscr);
+    overwrite(surface->canvas, stdscr);
     wrefresh(stdscr);
 
     return 0;
@@ -297,7 +297,7 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     FILE            *new_in;
     FILE            *old_out;
     FILE            *old_in;
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
     int             i;
     int             j;
 
@@ -359,16 +359,16 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     screen->fd_in = new_in;
     screen->fd_out = new_out;
 
-    for(i = 0; i < screen->desktop_count; i++)
+    for(i = 0; i < screen->surface_count; i++)
     {
-        desktop = screen->desktops[i];
+        surface = screen->surfaces[i];
 
-        desktop->canvas = newwin(screen->height, screen->width, 0, 0);
+        surface->canvas = newwin(screen->height, screen->width, 0, 0);
 
-        for(j = 0; j < desktop->widget_count; j++)
+        for(j = 0; j < surface->widget_count; j++)
         {
-            vk_widget_recreate(desktop->widgets[j]);
-            desktop->widgets[j]->surface = desktop->canvas;
+            vk_widget_recreate(surface->widgets[j]);
+            surface->widgets[j]->surface = surface->canvas;
         }
     }
 
@@ -543,16 +543,16 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
 
     getmaxyx(stdscr, screen->height, screen->width);
 
-    screen->desktops = NULL;
-    screen->desktop_count = 0;
-    screen->active_desktop = 0;
+    screen->surfaces = NULL;
+    screen->surface_count = 0;
+    screen->active_surface = 0;
     screen->evicted_pid = -1;
     screen->has_saved_termios = false;
 
     screen->ctor = _vk_screen_ctor;
     screen->dtor = _vk_screen_dtor;
 
-    vk_screen_add_desktop(screen);
+    vk_screen_add_surface(screen);
 
     return 0;
 }
@@ -569,11 +569,11 @@ _vk_screen_dtor(vk_object_t *object)
 
     screen = VK_SCREEN(object);
 
-    for(i = 0; i < screen->desktop_count; i++)
-        _vk_desktop_destroy(screen->desktops[i]);
+    for(i = 0; i < screen->surface_count; i++)
+        _vk_surface_destroy(screen->surfaces[i]);
 
-    free(screen->desktops);
-    screen->desktops = NULL;
+    free(screen->surfaces);
+    screen->surfaces = NULL;
 
     if(screen->term != NULL)
     {
@@ -606,45 +606,45 @@ _vk_screen_dtor(vk_object_t *object)
     return 0;
 }
 
-static vk_desktop_t*
-_vk_desktop_create(SCREEN *term, int width, int height)
+static vk_surface_t*
+_vk_surface_create(SCREEN *term, int width, int height)
 {
-    vk_desktop_t    *desktop;
+    vk_surface_t    *surface;
     SCREEN          *prev;
 
     if(term == NULL) return NULL;
 
-    desktop = calloc(1, sizeof(vk_desktop_t));
-    if(desktop == NULL) return NULL;
+    surface = calloc(1, sizeof(vk_surface_t));
+    if(surface == NULL) return NULL;
 
     prev = set_term(term);
 
-    desktop->canvas = newwin(height, width, 0, 0);
-    if(desktop->canvas == NULL)
+    surface->canvas = newwin(height, width, 0, 0);
+    if(surface->canvas == NULL)
     {
         set_term(prev);
-        free(desktop);
+        free(surface);
         return NULL;
     }
 
     set_term(prev);
 
-    desktop->widgets = NULL;
-    desktop->widget_count = 0;
-    desktop->widget_alloc = 0;
+    surface->widgets = NULL;
+    surface->widget_count = 0;
+    surface->widget_alloc = 0;
 
-    return desktop;
+    return surface;
 }
 
 static void
-_vk_desktop_destroy(vk_desktop_t *desktop)
+_vk_surface_destroy(vk_surface_t *surface)
 {
-    if(desktop == NULL) return;
+    if(surface == NULL) return;
 
-    if(desktop->canvas != NULL)
-        delwin(desktop->canvas);
+    if(surface->canvas != NULL)
+        delwin(surface->canvas);
 
-    free(desktop->widgets);
-    free(desktop);
+    free(surface->widgets);
+    free(surface);
 }
 

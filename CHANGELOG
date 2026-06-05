@@ -1,3 +1,21 @@
+Version 4.0.0 (in progress)
+
+* [Bryan Christ] Add vk_screen_t for terminal migration and virtual surfaces.
+* [Bryan Christ] Add vk_frame_t, vk_scroller_t, vk_box_t, vk_label_t,
+  vk_marquee_t klasses.
+* [Bryan Christ] Add _on_recreate hook so widgets auto-repaint after teleport.
+* [Bryan Christ] Add vk_screen_evict_pty to SIGSTOP the session leader
+  before teleport.
+* [Bryan Christ] Add poll_resize for post-teleport terminal size detection.
+* [Bryan Christ] Redesign vk_scroller_t as an attachment widget (derives
+  from vk_widget_t instead of vk_frame_t). Add vk_window_t. Remove vk_menu_t.
+* [Bryan Christ] Add vk_textbox_t multi-line read-only text display with
+  word wrap, keyboard scrolling, and scroller attachment support.
+* [Bryan Christ] Fix scroller blank canvas overwriting host border when
+  content fits viewport (skip-draw semantics).
+* [Bryan Christ] Add scroller host support to vk_listbox_t and vk_textbox_t
+  (borderless host pattern).
+
 Version 3.1.1
 
 * [Sergei Trofimovich] User "%s" specifier for safety in a couple

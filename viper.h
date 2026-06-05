@@ -114,7 +114,7 @@ typedef struct _viper_event_s       viper_event_t;
 // vk klasses
 typedef struct  _vk_object_s        vk_object_t;
 typedef struct  _vk_screen_s        vk_screen_t;
-typedef struct  _vk_desktop_s       vk_desktop_t;
+typedef struct  _vk_surface_s       vk_surface_t;
 typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
@@ -123,6 +123,7 @@ typedef struct  _vk_scroller_s      vk_scroller_t;
 typedef struct  _vk_window_s        vk_window_t;
 typedef struct  _vk_box_s           vk_box_t;
 typedef struct  _vk_label_s         vk_label_t;
+typedef struct  _vk_textbox_s       vk_textbox_t;
 typedef struct  _vk_marquee_s       vk_marquee_t;
 
 /* callback definitions */
@@ -303,6 +304,7 @@ void*           viper_window_get_userptr(vwnd_t *wnd);
 #define VK_WINDOW(x)            ((vk_window_t *)x)
 #define VK_BOX(x)               ((vk_box_t *)x)
 #define VK_LABEL(x)             ((vk_label_t *)x)
+#define VK_TEXTBOX(x)           ((vk_textbox_t *)x)
 #define VK_MARQUEE(x)           ((vk_marquee_t *)x)
 
 #define VK_SCROLL_LEFT          0
@@ -315,14 +317,14 @@ int             vk_object_push_keystroke(vk_object_t *object,
 int             vk_object_destroy(vk_object_t *object);
 
 vk_screen_t*    vk_screen_create(void);
-int             vk_screen_add_desktop(vk_screen_t *screen);
-int             vk_screen_del_desktop(vk_screen_t *screen, int id);
-int             vk_screen_switch_desktop(vk_screen_t *screen, int id);
+int             vk_screen_add_surface(vk_screen_t *screen);
+int             vk_screen_del_surface(vk_screen_t *screen, int id);
+int             vk_screen_switch_surface(vk_screen_t *screen, int id);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
-                    int desktop_id, vk_widget_t *widget);
+                    int surface_id, vk_widget_t *widget);
 int             vk_screen_detach_widget(vk_screen_t *screen,
-                    int desktop_id, vk_widget_t *widget);
+                    int surface_id, vk_widget_t *widget);
 int             vk_screen_resize(vk_screen_t *screen);
 int             vk_screen_poll_resize(vk_screen_t *screen);
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
@@ -430,6 +432,14 @@ const char*     vk_label_get_text(vk_label_t *label);
 int             vk_label_set_justify(vk_label_t *label, int justify);
 int             vk_label_update(vk_label_t *label);
 void            vk_label_destroy(vk_label_t *label);
+
+vk_textbox_t*   vk_textbox_create(int width, int height);
+int             vk_textbox_set_text(vk_textbox_t *textbox, const char *text);
+const char*     vk_textbox_get_text(vk_textbox_t *textbox);
+int             vk_textbox_set_word_wrap(vk_textbox_t *textbox, bool enabled);
+int             vk_textbox_get_line_count(vk_textbox_t *textbox);
+int             vk_textbox_update(vk_textbox_t *textbox);
+void            vk_textbox_destroy(vk_textbox_t *textbox);
 
 vk_marquee_t*   vk_marquee_create(int width);
 int             vk_marquee_set_text(vk_marquee_t *marquee, const char *text);

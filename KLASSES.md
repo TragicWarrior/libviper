@@ -23,6 +23,8 @@ vk_object_t
    │  │
    │  └─ vk_marquee_t
    │
+   ├─ vk_textbox_t
+   │
    ├─ vk_button (todo)
    │
    ├─ vk_spinner (todo)
@@ -55,6 +57,7 @@ Cast macros are defined in `viper.h`:
 | `VK_MARQUEE(x)` | `vk_marquee_t *` |
 | `VK_LISTBOX(x)` | `vk_listbox_t *` |
 | `VK_WINDOW(x)` | `vk_window_t *` |
+| `VK_TEXTBOX(x)` | `vk_textbox_t *` |
 
 ## Klass Templates
 
@@ -67,7 +70,8 @@ require_klass(KLASS_NAME);    // extern reference from other files
 
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
-`VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`.
+`VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
+`VK_TEXTBOX_KLASS`.
 The template carries the type's size, name, constructor, destructor, and
 optional kmio handler. It serves as both the type descriptor and the vtable
 seed.
@@ -93,6 +97,7 @@ vk_label_create(width)
 vk_marquee_create(width)
 vk_listbox_create(width, height)
 vk_window_create(width, height)
+vk_textbox_create(width, height)
 ```
 
 ## Constructor Chaining
@@ -110,6 +115,7 @@ _vk_label_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_marquee_ctor    -> VK_LABEL_KLASS->ctor(object, argp)
 _vk_window_ctor     -> VK_FRAME_KLASS->ctor(object, argp)
 _vk_listbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_textbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -184,28 +190,29 @@ dispatch. Public APIs call through these pointers.
 | `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_update`, `_reset` |
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
+| `vk_textbox_t` | `ctor`, `dtor`, `_update` |
 
-## Screens and Desktops
+## Screens and Surfaces
 
 `vk_screen_t` manages the ncurses terminal (SCREEN) and provides virtual
-desktops. It derives directly from `vk_object_t`, not `vk_widget_t`.
+surfaces. It derives directly from `vk_object_t`, not `vk_widget_t`.
 
 `vk_screen_create()` calls `newterm()` on stdin/stdout, initializes colors,
-keypad, raw mode, and creates one default desktop. Each desktop holds its own
+keypad, raw mode, and creates one default surface. Each surface holds its own
 full-screen canvas (WINDOW) and an array of attached widgets.
 
 | Function | Purpose |
 |----------|---------|
-| `vk_screen_add_desktop` | Add a new virtual desktop, returns its id |
-| `vk_screen_del_desktop` | Remove a desktop by id (minimum one must remain) |
-| `vk_screen_switch_desktop` | Set the active desktop by id |
-| `vk_screen_get_window` | Return the active desktop's canvas |
-| `vk_screen_attach_widget` | Attach a widget to a desktop |
-| `vk_screen_detach_widget` | Detach a widget from a desktop |
-| `vk_screen_resize` | Handle terminal resize (updates all desktop canvases) |
+| `vk_screen_add_surface` | Add a new virtual surface, returns its id |
+| `vk_screen_del_surface` | Remove a surface by id (minimum one must remain) |
+| `vk_screen_switch_surface` | Set the active surface by id |
+| `vk_screen_get_window` | Return the active surface's canvas |
+| `vk_screen_attach_widget` | Attach a widget to a surface |
+| `vk_screen_detach_widget` | Detach a widget from a surface |
+| `vk_screen_resize` | Handle terminal resize (updates all surface canvases) |
 | `vk_screen_poll_resize` | Poll actual terminal size via ioctl; calls resize if changed |
 | `vk_screen_teleport` | Migrate the entire UI to a different PTY |
-| `vk_screen_refresh` | Blit the active desktop canvas to stdscr and refresh |
+| `vk_screen_refresh` | Blit the active surface canvas to stdscr and refresh |
 | `vk_screen_destroy` | Tear down screen, restore evicted terminal, free resources |
 
 ### Teleport
@@ -224,7 +231,7 @@ terminal. The sequence is:
    before ncurses changes them.
 4. **Create new SCREEN** -- open the PTY, call `newterm()`, initialize
    colors/keypad/raw mode.
-5. **Recreate widgets** -- rebuild all desktop canvases and widget trees
+5. **Recreate widgets** -- rebuild all surface canvases and widget trees
    on the new screen via `vk_widget_recreate()`.
 6. **Tear down old terminal** -- `endwin()` the old SCREEN, close old
    file handles.
@@ -263,6 +270,8 @@ are pushed to an object via `vk_object_push_keystroke()`.
 - **vk_window_t** -- forwards keystrokes to its child widget.
 - **vk_listbox_t** -- handles `KEY_UP`, `KEY_DOWN`, and `Enter` (execute item).
   Skips separators during navigation.
+- **vk_textbox_t** -- handles `KEY_UP`, `KEY_DOWN`, `KEY_PPAGE`, `KEY_NPAGE`,
+  `KEY_HOME`, `KEY_END` for scrolling.
 
 ## Frames and Scrollers
 
@@ -373,6 +382,8 @@ to children:
   resizes and repositions attached scrollers
 - **vk_box_t** -- recalculates slot dimensions and resizes each child
 - **vk_listbox_t** -- resizes and repositions attached scrollers, repaints
+- **vk_textbox_t** -- resizes and repositions attached scrollers, reflows
+  text, repaints
 
 Propagation is recursive: resizing a box triggers its `_on_resize`, which
 resizes each slot's widget, which in turn fires their `_on_resize` hooks
@@ -403,6 +414,8 @@ after canvas recreation. Widget types install it in their ctors:
 
 - **vk_listbox_t** -- updates attached scroller surfaces, recreates them,
   then calls its `_update` to repaint items and scrollers
+- **vk_textbox_t** -- updates attached scroller surfaces, recreates them,
+  then calls its `_update` to repaint text and scrollers
 
 Callers can also set `_on_recreate` directly on plain `vk_widget_t`
 instances for custom content (the same way `_on_resize` is set).
@@ -427,6 +440,37 @@ has a fixed height of 1.
 
 Text longer than the widget width is truncated. The label does not scroll;
 see `vk_marquee_t` for overflow scrolling.
+
+## Textboxes
+
+`vk_textbox_t` is a multi-line read-only text display derived from
+`vk_widget_t`. It supports word wrapping, vertical scrolling via keyboard,
+and attached scrollers.
+
+Text is set via `vk_textbox_set_text()`, which stores a copy and reflows
+it into a cached line array. The reflow engine honors hard newlines and
+breaks long lines at word boundaries (spaces/tabs) when word wrap is
+enabled. If no word boundary exists within the paint width, the line is
+hard-broken at the column limit.
+
+Scrolling is handled internally by `_vk_textbox_kmio`:
+
+| Key | Action |
+|-----|--------|
+| `KEY_UP` | Scroll up one line |
+| `KEY_DOWN` | Scroll down one line |
+| `KEY_PPAGE` | Scroll up one page |
+| `KEY_NPAGE` | Scroll down one page |
+| `KEY_HOME` | Jump to top |
+| `KEY_END` | Jump to bottom |
+
+The textbox supports attached scrollers the same way `vk_listbox_t` does
+(borderless host pattern). When a vertical scroller is attached, the
+textbox renders content 1 column narrower and the scrollbar draws on the
+vacated column. Resize and recreate hooks propagate to attached scrollers.
+
+Colors and attributes are set via the standard `vk_widget_set_colors()`
+and `vk_widget_set_attrs()` on the textbox widget.
 
 ## Marquees
 
