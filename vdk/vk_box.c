@@ -330,6 +330,7 @@ _vk_box_on_resize(vk_object_t *object, int event, void *data)
         {
             child = box->slot_widgets[i];
             if(child == NULL) continue;
+            if(!(child->state & VK_STATE_VISIBLE)) continue;
 
             if(child->state & VK_STATE_EXPAND)
                 expand_count++;
@@ -349,6 +350,7 @@ _vk_box_on_resize(vk_object_t *object, int event, void *data)
         {
             child = box->slot_widgets[i];
             if(child == NULL) continue;
+            if(!(child->state & VK_STATE_VISIBLE)) continue;
 
             if(child->state & VK_STATE_EXPAND)
             {
@@ -500,6 +502,7 @@ _vk_box_update(vk_box_t *box)
         {
             child = box->slot_widgets[i];
             if(child == NULL) continue;
+            if(!(child->state & VK_STATE_VISIBLE)) continue;
 
             if(child->state & VK_STATE_EXPAND)
                 expand_count++;
@@ -523,6 +526,7 @@ _vk_box_update(vk_box_t *box)
 
             child = box->slot_widgets[i];
             if(child == NULL) continue;
+            if(!(child->state & VK_STATE_VISIBLE)) continue;
 
             if(child->state & VK_STATE_EXPAND)
             {

@@ -199,6 +199,8 @@ int             vk_screen_resize(vk_screen_t *screen);
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
 int             vk_screen_set_wallpaper(vk_screen_t *screen,
                     VkSurfaceBkgdFunc func);
+int             vk_screen_set_overlay(vk_screen_t *screen,
+                    VkSurfaceBkgdFunc func);
 int             vk_screen_refresh(vk_screen_t *screen);
 void            vk_screen_destroy(vk_screen_t *screen);
 

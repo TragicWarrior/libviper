@@ -241,6 +241,16 @@ vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
 }
 
 inline int
+vk_screen_set_overlay(vk_screen_t *screen, VkSurfaceBkgdFunc func)
+{
+    if(screen == NULL) return -1;
+
+    screen->overlay_func = func;
+
+    return 0;
+}
+
+inline int
 vk_screen_refresh(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
@@ -264,6 +274,10 @@ vk_screen_refresh(vk_screen_t *screen)
         vk_widget_draw(surface->widgets[i]);
 
     overwrite(surface->canvas, stdscr);
+
+    if(screen->overlay_func != NULL)
+        screen->overlay_func(screen, screen->active_surface, stdscr);
+
     wrefresh(stdscr);
 
     return 0;

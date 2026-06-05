@@ -184,7 +184,7 @@ _vk_label_update(vk_label_t *label)
     }
 
     wattron(widget->canvas, colors);
-    mvwprintw(widget->canvas, 0, x, "%.*s", widget->width, label->text);
+    mvwprintw(widget->canvas, 0, x, "%s", label->text);
     wattroff(widget->canvas, colors);
 
     return 0;

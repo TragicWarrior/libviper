@@ -311,8 +311,9 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 | `vk_screen_poll_resize` | Poll actual terminal size via ioctl; calls resize if changed |
 | `vk_screen_teleport` | Migrate the entire UI to a different PTY |
 | `vk_screen_set_wallpaper` | Register a wallpaper callback (`VkSurfaceBkgdFunc`) |
+| `vk_screen_set_overlay` | Register an overlay callback (same signature as wallpaper) |
 | `vk_screen_paint_wallpaper` | Manually invoke the wallpaper callback on the active surface |
-| `vk_screen_refresh` | Composite the active surface: erase, wallpaper, widget blit, refresh |
+| `vk_screen_refresh` | Composite the active surface: erase, wallpaper, widget blit, overlay, refresh |
 | `vk_screen_destroy` | Tear down screen, restore evicted terminal, free resources |
 
 ### Wallpaper
@@ -331,7 +332,9 @@ part of its composite sequence:
 1. Erase the active surface canvas
 2. Fire the wallpaper callback (if set) — paints on the surface canvas
 3. Blit all attached widgets on top (opaque, fully covering wallpaper)
-4. Overwrite to stdscr and refresh
+4. Overwrite to stdscr
+5. Fire the overlay callback (if set) — paints on stdscr after compositing
+6. Refresh stdscr
 
 This means the caller only needs to update widget state and call
 `vk_screen_refresh()` — no manual erase, widget draw, or wallpaper
@@ -346,6 +349,16 @@ on the surface canvas — it sets the window's background color pair, which
 causes ncurses pair 0 to inherit that color instead of the terminal
 default (white-on-black). This breaks any rendering that relies on pair 0,
 such as deck drop shadows.
+
+### Overlay
+
+An overlay callback can be registered via `vk_screen_set_overlay()`. It
+uses the same `VkSurfaceBkgdFunc` signature as the wallpaper callback,
+but fires after widget compositing and the `overwrite()` to stdscr. The
+canvas parameter is stdscr itself, so the overlay paints on top of the
+final composited image. This is useful for elements that must appear above
+all widgets, such as a software cursor on terminals without hardware cursor
+support (e.g. GPM on the Linux console).
 
 ### Teleport
 
@@ -611,7 +624,9 @@ are centered.
 `vk_box_set_homogeneous(box, false)` switches to non-homogeneous layout.
 Each slot is sized to its child's natural dimension (width for horizontal,
 height for vertical). Children with `VK_STATE_EXPAND` absorb leftover
-space evenly, with the last expand child taking any remainder.
+space evenly, with the last expand child taking any remainder. Hidden
+children (without `VK_STATE_VISIBLE`) are skipped entirely during both
+sizing and drawing passes, so their space is reclaimed by expand children.
 
 The box's `_update` erases, then for each slot: positions, resizes (if
 expand), and draws the child widget. The box does not propagate resize to
@@ -789,8 +804,10 @@ has a fixed height of 1.
 | `VK_JUSTIFY_RIGHT` | Right-aligned |
 | `VK_JUSTIFY_CENTER` | Centered |
 
-Text longer than the widget width is truncated. The label does not scroll;
-see `vk_marquee_t` for overflow scrolling.
+Text longer than the widget width is clipped at the canvas boundary by
+ncursesw. Multi-byte UTF-8 text is safe — rendering relies on ncursesw
+window clipping rather than byte-count truncation. The label does not
+scroll; see `vk_marquee_t` for overflow scrolling.
 
 ## Buttons
 

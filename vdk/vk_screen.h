@@ -36,6 +36,7 @@ struct _vk_screen_s
     int                 height;
 
     VkSurfaceBkgdFunc   wallpaper_func;
+    VkSurfaceBkgdFunc   overlay_func;
 
     pid_t               evicted_pid;
     struct termios      saved_termios;
