@@ -4,7 +4,6 @@
 #include <fcntl.h>
 #include <time.h>
 #include <inttypes.h>
-
 #include "viper.h"
 #include "private.h"
 #include "viper_kmio.h"
@@ -47,7 +46,8 @@ viper_kmio_fetch(MEVENT *mouse_event)
     uint8_t         shift_op = 4;
 
 #if !defined(_NO_GPM) && defined(__linux)
-    viper_kmio_gpm(mouse_event, 0);
+    if(viper_kmio_gpm(mouse_event, 0) == 0)
+        return KEY_MOUSE;
 #endif
 
     key_code = getch();
@@ -348,7 +348,6 @@ viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     extern int          gpm_tried;
     extern int          gpm_fd;
     struct pollfd       mio_poll;
-    struct timespec     sleep_time = {.tv_sec = 0, .tv_nsec = 5000};
     static int          mio_fd = -1;
     Gpm_Connect         gpm_connect;
     Gpm_Event           g_event;
@@ -372,10 +371,13 @@ viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 
     if(mio_fd == -1)
     {
+        // tear down ncurses' GPM connection so our eventMask takes effect
+        if(gpm_fd >= 0) Gpm_Close();
+
         memset(&gpm_connect, 0, sizeof(gpm_connect));
-        gpm_connect.defaultMask = 0;    // do not propgate any GPM events
+        gpm_connect.defaultMask = 0;
         gpm_connect.eventMask = GPM_MOVE | GPM_UP | GPM_DOWN | GPM_DRAG;
-        gpm_connect.maxMod = ~0;        // allow modifiers ie. CTRL, SHFT, ALT
+        gpm_connect.maxMod = ~0;
         mio_fd = Gpm_Open(&gpm_connect, 0);
 
 		if(mio_fd > 0 && (viper_global_flags & VIPER_GPM_SIGIO))
@@ -394,7 +396,6 @@ viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 
     if(poll(&mio_poll, 1, 1) < 1) return -1;
     if(Gpm_GetEvent(&g_event) < 1) return -1;
-
 
     memset(mouse_event,0,sizeof(MEVENT));
     mouse_event->bstate=g_event.modifiers;
@@ -439,16 +440,20 @@ viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
         }
     }
 
-    if((g_event.type & GPM_DRAG) || (g_event.type & GPM_MOVE))
-        mouse_event->bstate = REPORT_MOUSE_POSITION;
-
-    if(mouse_event->bstate != 0)
+    if(g_event.buttons == GPM_B_UP || g_event.buttons == GPM_B_FOURTH)
     {
-        while(ungetmouse(mouse_event) == ERR)
-        {
-            nanosleep(&sleep_time, NULL);
-        }
+        mouse_event->bstate = BUTTON4_PRESSED;
     }
+    else if(g_event.buttons == GPM_B_DOWN)
+    {
+        mouse_event->bstate = BUTTON5_PRESSED;
+    }
+    else if((g_event.type & GPM_DRAG) || (g_event.type & GPM_MOVE))
+    {
+        mouse_event->bstate = REPORT_MOUSE_POSITION;
+    }
+
+    if(mouse_event->bstate == 0) return -1;
 
     return 0;
 }
