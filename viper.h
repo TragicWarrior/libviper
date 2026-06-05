@@ -173,8 +173,6 @@ const char*     viper_window_get_title(vwnd_t *wnd);
 int             viper_window_set_limits(vwnd_t *wnd,
                     int min_width, int min_height,
                     int max_width, int max_height);
-void            viper_window_modify_border(vwnd_t *wnd,
-                    int attrs, short colors);
 void            viper_window_close(vwnd_t *vwnd);
 
 /* window placement */
@@ -207,8 +205,6 @@ bool            viper_window_set_focus(vwnd_t *wnd);
                     viper_window_set_visible(wnd, TRUE);
 #define         viper_window_hide(wnd) \
                     viper_window_set_visible(wnd, FALSE);
-void            viper_window_set_border_agent(vwnd_t *wnd,
-                    ViperFunc agent, int id);
 void            viper_window_touch(vwnd_t *wnd);
 void            viper_window_redraw(vwnd_t *wnd);
 

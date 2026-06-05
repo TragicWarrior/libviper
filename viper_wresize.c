@@ -21,7 +21,6 @@
 
 #include "viper.h"
 #include "private.h"
-#include "viper_wdecorate.h"
 
 int
 viper_wresize(vwnd_t *vwnd, int width, int height)

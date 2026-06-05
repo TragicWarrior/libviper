@@ -23,7 +23,6 @@
 #include "viper.h"
 #include "private.h"
 #include "viper_events.h"
-#include "viper_wdecorate.h"
 #include "list.h"
 
 vwnd_t*

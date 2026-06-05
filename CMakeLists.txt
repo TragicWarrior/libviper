@@ -87,7 +87,6 @@ set(VIPER_SOURCES
     viper_userptr.c
     viper_wclose.c
     viper_wcreate.c
-    viper_wdecorate.c
     viper_wdestroy.c
     viper_wfind.c
     viper_wmove.c
