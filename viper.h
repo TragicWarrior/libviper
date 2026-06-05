@@ -167,13 +167,9 @@ vwnd_t*         viper_window_create(int screen_id, bool managed, char *title,
 WINDOW*         viper_window_get_frame(vwnd_t *wnd);
 #define         WINDOW_FRAME(wnd)       (viper_window_get_frame(wnd))
 
-void            viper_window_set_class(vwnd_t *wnd, void *classid);
-void            viper_window_set_title(vwnd_t *wnd, const char *title);
-const char*     viper_window_get_title(vwnd_t *wnd);
 int             viper_window_set_limits(vwnd_t *wnd,
                     int min_width, int min_height,
                     int max_width, int max_height);
-void            viper_window_close(vwnd_t *vwnd);
 
 /* window placement */
 vwnd_t*         viper_window_get_top(int screen_id, bool managed);
@@ -208,10 +204,6 @@ bool            viper_window_set_focus(vwnd_t *wnd);
 void            viper_window_touch(vwnd_t *wnd);
 void            viper_window_redraw(vwnd_t *wnd);
 
-/* kmio facilities (keyboard & mouse i/o) */
-void            viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event);
-void            viper_window_set_key_func(vwnd_t *wnd, ViperWkeyFunc func);
-
 /* backward compat — generic KMIO moved to vk_kmio.h */
 #define         viper_kmio_fetch            vk_kmio_fetch
 #define         viper_kmio_get_mouse_event  vk_kmio_get_mouse_event
@@ -231,9 +223,5 @@ void            viper_window_for_each(int screen_id, bool managed, int vector,
 void            viper_deck_cycle(int screen_id, bool managed, int vector);
 vwnd_t*         viper_deck_hit_test(int screen_id, bool managed, int x, int y);
 char**          viper_deck_get_wndlist(int screen_id, bool managed);
-
-/* miscellaneous functions */
-void            viper_window_set_userptr(vwnd_t *wnd, void *anything);
-void*           viper_window_get_userptr(vwnd_t *wnd);
 
 #endif

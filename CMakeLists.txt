@@ -80,17 +80,13 @@ set(VIPER_SOURCES
     viper_color.c
     viper_deck.c
     viper_events.c
-    viper_keyboard.c
     viper_screen.c
     viper_states.c
-    viper_userptr.c
-    viper_wclose.c
     viper_wcreate.c
     viper_wdestroy.c
     viper_wfind.c
     viper_wmove.c
     viper_wresize.c
-    viper_wtraits.c
     w_create.c
     w_decorate.c
     w_fill.c
