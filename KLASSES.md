@@ -4,7 +4,7 @@
 
 ```
 vk_object_t
-├── vk_screen (todo)
+├── vk_screen_t
 └── vk_widget_t
     ├── vk_container_t
     │   ├── vk_box_t
@@ -33,6 +33,7 @@ Cast macros are defined in `viper.h`:
 | Macro | Target Type |
 |-------|-------------|
 | `VK_OBJECT(x)` | `vk_object_t *` |
+| `VK_SCREEN(x)` | `vk_screen_t *` |
 | `VK_WIDGET(x)` | `vk_widget_t *` |
 | `VK_CONTAINER(x)` | `vk_container_t *` |
 | `VK_FRAME(x)` | `vk_frame_t *` |
@@ -52,7 +53,7 @@ declare_klass(KLASS_NAME) { .size = ..., .name = ..., .ctor = ..., ... };
 require_klass(KLASS_NAME);    // extern reference from other files
 ```
 
-These are: `VK_OBJECT_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
+These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_BOX_KLASS`, `VK_LABEL_KLASS`,
 `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`, `VK_MENU_KLASS`.
 The template carries the type's size, name, constructor, destructor, and
@@ -70,6 +71,7 @@ seed.
 Each derived type provides a convenience wrapper:
 
 ```c
+vk_screen_create(void)
 vk_widget_create(width, height)
 vk_container_create(width, height)
 vk_frame_create(width, height)
@@ -87,6 +89,7 @@ Each derived ctor explicitly calls its parent's ctor through the parent's
 klass singleton before installing its own methods:
 
 ```
+_vk_screen_ctor     -> vk_object_construct (no parent ctor call)
 _vk_container_ctor  -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_frame_ctor      -> VK_CONTAINER_KLASS->ctor(object, argp)
 _vk_scroller_ctor   -> VK_FRAME_KLASS->ctor(object, argp)
@@ -161,7 +164,8 @@ dispatch. Public APIs call through these pointers.
 | Klass | Slots |
 |-------|-------|
 | `vk_object_t` | `ctor`, `dtor`, `kmio` |
-| `vk_widget_t` | `ctor`, `dtor`, `_draw`, `_move`, `_resize`, `_on_resize`, `_erase` |
+| `vk_screen_t` | `ctor`, `dtor` |
+| `vk_widget_t` | `ctor`, `dtor`, `_draw`, `_move`, `_resize`, `_on_resize`, `_recreate`, `_on_recreate`, `_erase` |
 | `vk_container_t` | `ctor`, `dtor`, `add_widget`, `remove_widget`, `vacate`, `rotate` |
 | `vk_box_t` | `ctor`, `dtor`, `_update` |
 | `vk_frame_t` | `ctor`, `dtor`, `_set_border_style`, `_set_child`, `_draw_border`, `_update` |
@@ -170,6 +174,43 @@ dispatch. Public APIs call through these pointers.
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_menu_t` | `ctor`, `dtor`, `_set_frame`, `_add_separator`, `_update`, `_reset` |
+
+## Screens and Desktops
+
+`vk_screen_t` manages the ncurses terminal (SCREEN) and provides virtual
+desktops. It derives directly from `vk_object_t`, not `vk_widget_t`.
+
+`vk_screen_create()` calls `newterm()` on stdin/stdout, initializes colors,
+keypad, raw mode, and creates one default desktop. Each desktop holds its own
+full-screen canvas (WINDOW) and an array of attached widgets.
+
+| Function | Purpose |
+|----------|---------|
+| `vk_screen_add_desktop` | Add a new virtual desktop, returns its id |
+| `vk_screen_del_desktop` | Remove a desktop by id (minimum one must remain) |
+| `vk_screen_switch_desktop` | Set the active desktop by id |
+| `vk_screen_get_window` | Return the active desktop's canvas |
+| `vk_screen_attach_widget` | Attach a widget to a desktop |
+| `vk_screen_detach_widget` | Detach a widget from a desktop |
+| `vk_screen_resize` | Handle terminal resize (updates all desktop canvases) |
+| `vk_screen_teleport` | Migrate the entire UI to a different PTY |
+| `vk_screen_refresh` | Blit the active desktop canvas to stdscr and refresh |
+
+### Teleport
+
+`vk_screen_teleport(screen, pty_path)` migrates the UI to a different
+terminal. It opens the target PTY, creates a new ncurses SCREEN via
+`newterm()`, recreates all desktop canvases and widget trees on the new
+screen, then tears down the old terminal.
+
+Old ncurses WINDOWs are intentionally leaked during teleport because
+`delwin` on windows bound to a different SCREEN corrupts ncurses internal
+state. The old SCREEN is shut down with `endwin()` but not `delscreen()`
+for the same reason. This is bounded: teleport is a rare operation and
+each invocation leaks only the previous set of canvases.
+
+After recreation, stale terminal response bytes (from `newterm`/`keypad`
+initialization sequences) are drained from the input buffer.
 
 ## KMIO (Keyboard/Mouse I/O)
 
@@ -259,6 +300,33 @@ to children:
 Propagation is recursive: resizing a box triggers its `_on_resize`, which
 resizes each slot's widget, which in turn fires their `_on_resize` hooks
 (e.g. a frame inside a box will resize its own child).
+
+## Recreate Propagation
+
+`vk_widget_t` has `_recreate` and `_on_recreate` hook slots. Canvas
+recreation is triggered during `vk_screen_teleport()` when all widget
+canvases must be rebuilt on a new ncurses SCREEN.
+
+`vk_widget_recreate(widget)` calls `widget->_recreate(widget)` to create
+the new canvas, then fires `widget->_on_recreate(widget)` if non-NULL.
+
+The base `_recreate` creates a fresh `newwin`. Container klasses override
+it to propagate through the widget tree:
+
+- **vk_frame_t** -- creates its canvas, then recreates the child
+- **vk_box_t** -- creates its canvas, then recreates each slot's widget
+
+Both update child surface pointers before propagating so children blit to
+the correct parent canvas.
+
+The `_on_recreate` hook is for content-bearing widgets that need to repaint
+after canvas recreation. Widget types install it in their ctors:
+
+- **vk_listbox_t** -- calls its `_update` to repaint items
+- **vk_menu_t** -- calls its `_update` to repaint items and separators
+
+Callers can also set `_on_recreate` directly on plain `vk_widget_t`
+instances for custom content (the same way `_on_resize` is set).
 
 ## Widget Attributes
 

@@ -46,6 +46,9 @@ static int
 _vk_listbox_update(vk_listbox_t *listbox);
 
 static int
+_vk_listbox_on_recreate(vk_widget_t *widget);
+
+static int
 _vk_listbox_reset(vk_listbox_t *listbox);
 
 require_klass(VK_WIDGET_KLASS);
@@ -282,6 +285,8 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
     listbox->_update = _vk_listbox_update;
     listbox->_reset = _vk_listbox_reset;
 
+    VK_WIDGET(listbox)->_on_recreate = _vk_listbox_on_recreate;
+
     INIT_LIST_HEAD(&listbox->item_list);
 
     return 0;
@@ -483,6 +488,12 @@ _vk_listbox_exec_item(vk_listbox_t *listbox)
     retval = item->func(VK_WIDGET(listbox), item->anything);
 
     return retval;
+}
+
+static int
+_vk_listbox_on_recreate(vk_widget_t *widget)
+{
+    return _vk_listbox_update(VK_LISTBOX(widget));
 }
 
 static int

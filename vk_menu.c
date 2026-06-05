@@ -33,6 +33,9 @@ static int
 _vk_menu_update(vk_menu_t *menu);
 
 static int
+_vk_menu_on_recreate(vk_widget_t *widget);
+
+static int
 _vk_menu_reset(vk_menu_t *menu);
 
 require_klass(VK_LISTBOX_KLASS);
@@ -160,6 +163,8 @@ _vk_menu_ctor(vk_object_t *object, va_list *argp, ...)
 
     menu->_update = _vk_menu_update;
     menu->_reset = _vk_menu_reset;
+
+    VK_WIDGET(menu)->_on_recreate = _vk_menu_on_recreate;
 
     INIT_LIST_HEAD(&VK_LISTBOX(menu)->item_list);
 
@@ -327,6 +332,12 @@ _vk_menu_add_separator(vk_menu_t *menu, int style)
     listbox->item_count++;
 
     return 0;
+}
+
+static int
+_vk_menu_on_recreate(vk_widget_t *widget)
+{
+    return _vk_menu_update(VK_MENU(widget));
 }
 
 static int

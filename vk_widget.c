@@ -182,9 +182,16 @@ vk_widget_move(vk_widget_t *widget, int x, int y)
 int
 vk_widget_recreate(vk_widget_t *widget)
 {
+    int retval;
+
     if(widget == NULL) return -1;
 
-    return widget->_recreate(widget);
+    retval = widget->_recreate(widget);
+
+    if(retval == 0 && widget->_on_recreate != NULL)
+        widget->_on_recreate(widget);
+
+    return retval;
 }
 
 void

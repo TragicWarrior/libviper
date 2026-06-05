@@ -207,8 +207,8 @@ build_menu(int width, int height)
     return menu;
 }
 
-static void
-plain_widget_redraw(vk_widget_t *widget)
+static int
+plain_widget_on_recreate(vk_widget_t *widget)
 {
     int fill_attr;
 
@@ -224,6 +224,8 @@ plain_widget_redraw(vk_widget_t *widget)
     mvwprintw(widget->canvas, 9, 2, "no kmio handler,");
     mvwprintw(widget->canvas, 10, 2, "so arrow keys do");
     mvwprintw(widget->canvas, 11, 2, "nothing here.");
+
+    return 0;
 }
 
 static vk_widget_t*
@@ -235,7 +237,8 @@ build_plain_widget(int width, int height)
     if(widget == NULL) return NULL;
 
     vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLUE);
-    plain_widget_redraw(widget);
+    widget->_on_recreate = plain_widget_on_recreate;
+    plain_widget_on_recreate(widget);
 
     return widget;
 }
@@ -424,10 +427,6 @@ int main(void)
 
                 vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
                 vk_widget_resize(VK_WIDGET(box), max_x, box_h);
-
-                vk_listbox_update(listbox);
-                vk_menu_update(menu);
-                plain_widget_redraw(plain);
 
                 wtimeout(stdscr, 100);
             }
