@@ -171,10 +171,6 @@ vwnd_t*         viper_window_get_top(int screen_id, bool managed);
 bool            viper_window_set_top(vwnd_t *wnd);
 int             viper_mvwin_rel(vwnd_t *wnd, int vector_x, int vector_y);
 int             viper_mvwin_abs(vwnd_t *wnd, int x, int y);
-int             viper_wresize(vwnd_t *wnd, int width, int height);
-#define         viper_wresize_abs(wnd, width, height) \
-                    viper_wresize(wnd, width, height)
-int             viper_wresize_rel(vwnd_t *wind, int vector_x, int vector_y);
 
 #define         TOPMOST_MANAGED     (viper_window_get_top(-1, TRUE))
 #define         TOPMOST_UNMANAGED   (viper_window_get_top(-1, FALSE))

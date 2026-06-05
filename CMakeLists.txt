@@ -84,7 +84,6 @@ set(VIPER_SOURCES
     viper_states.c
     viper_wdestroy.c
     viper_wmove.c
-    viper_wresize.c
     w_create.c
     w_decorate.c
     w_fill.c
