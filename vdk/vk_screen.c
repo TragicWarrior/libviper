@@ -114,9 +114,29 @@ vk_screen_set_surface(vk_screen_t *screen, int id)
 
     if(id < 0 || id >= screen->surface_count) return -1;
 
+    if(id == screen->active_surface) return 0;
+
     screen->active_surface = id;
 
+    vk_object_emit(VK_OBJECT(screen), VK_EVENT_ON_SURFACE_CHANGE);
+
     return 0;
+}
+
+inline int
+vk_screen_get_active_surface(vk_screen_t *screen)
+{
+    if(screen == NULL) return -1;
+
+    return screen->active_surface;
+}
+
+inline int
+vk_screen_get_surface_count(vk_screen_t *screen)
+{
+    if(screen == NULL) return -1;
+
+    return screen->surface_count;
 }
 
 inline WINDOW*

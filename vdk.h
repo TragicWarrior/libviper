@@ -105,6 +105,9 @@ enum
     VK_EVENT_ON_FOCUS       = 20,
     VK_EVENT_ON_UNFOCUS     = 21,
     VK_EVENT_ON_SCROLL      = 22,
+
+    /* surface */
+    VK_EVENT_ON_SURFACE_CHANGE = 30,
 };
 
 /* keystroke definitions */
@@ -192,6 +195,8 @@ vk_screen_t*    vk_screen_create(void);
 int             vk_screen_add_surface(vk_screen_t *screen);
 int             vk_screen_del_surface(vk_screen_t *screen, int id);
 int             vk_screen_set_surface(vk_screen_t *screen, int id);
+int             vk_screen_get_active_surface(vk_screen_t *screen);
+int             vk_screen_get_surface_count(vk_screen_t *screen);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);

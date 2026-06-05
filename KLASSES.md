@@ -309,7 +309,9 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 |----------|---------|
 | `vk_screen_add_surface` | Add a new virtual surface, returns its id |
 | `vk_screen_del_surface` | Remove a surface by id (minimum one must remain) |
-| `vk_screen_set_surface` | Set the active surface by id |
+| `vk_screen_set_surface` | Set the active surface by id; emits `VK_EVENT_ON_SURFACE_CHANGE` |
+| `vk_screen_get_active_surface` | Return the active surface index |
+| `vk_screen_get_surface_count` | Return the total number of surfaces |
 | `vk_screen_get_window` | Return the active surface's canvas |
 | `vk_screen_attach_widget` | Attach a widget to a surface |
 | `vk_screen_detach_widget` | Detach a widget from a surface |
@@ -500,6 +502,7 @@ Events are grouped by purpose with spaced numeric ranges:
 | `VK_EVENT_ON_FOCUS` | 20 | `vk_box_set_subfocus()` on the newly focused slot widget |
 | `VK_EVENT_ON_UNFOCUS` | 21 | `vk_box_set_subfocus()` on the previously focused slot widget |
 | `VK_EVENT_ON_SCROLL` | 22 | textbox scroll functions |
+| `VK_EVENT_ON_SURFACE_CHANGE` | 30 | `vk_screen_set_surface()` when the active surface changes |
 
 ### Internal Use
 
