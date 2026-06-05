@@ -537,8 +537,10 @@ sets both the callback and a scroll source widget via
 drive scrolling -- the source widget manages its own scroll position.
 
 Both `vk_window_t` and `vk_frame_t` override `_update` to include scroller
-drawing. Since assert is only used in destructors, callers access inherited
-frame APIs on a window via `VK_FRAME(window)` — no wrapper functions needed.
+drawing. Convenience macros in `vdk.h` provide `vk_window_set_border_style`,
+`vk_window_set_border_colors`, `vk_window_set_child`, `vk_window_update`,
+etc. — these expand to `vk_frame_*` calls with a `VK_FRAME()` cast, so
+callers can use either the window or frame name.
 
 ## Windows
 
@@ -922,8 +924,9 @@ For `VK_SCROLL_LOOP`:
 - Uses wide character rendering (`mvwadd_wch`) for proper unicode support
 
 `vk_marquee_set_text()` is a marquee-specific function (not a pass-through)
-because it resets scroll state when text changes. To read the text, callers
-use `vk_label_get_text(VK_LABEL(marquee))`.
+because it resets scroll state when text changes. A convenience macro
+`vk_marquee_get_text()` is provided in `vdk.h`, expanding to
+`vk_label_get_text(VK_LABEL(m))`.
 
 ## Selectboxes
 
@@ -958,9 +961,10 @@ cannot be checked.
 
 The selectbox is IO-agnostic. The application installs a `kmio` handler that
 calls `vk_selectbox_toggle_item()` on Enter/Space and delegates navigation
-to the listbox API via `VK_LISTBOX()` cast (e.g. `vk_listbox_set_next()`,
-`vk_listbox_update()`). Item management (add, remove, wrap, highlight) also
-uses the listbox API with `VK_LISTBOX()` cast.
+to inherited listbox functions (e.g. `vk_selectbox_set_next()`,
+`vk_selectbox_update()`). Convenience macros in `vdk.h` provide all the
+inherited listbox operations under `vk_selectbox_*` names — these expand to
+`vk_listbox_*` calls with a `VK_LISTBOX()` cast.
 
 ### _update Override
 

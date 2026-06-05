@@ -272,6 +272,38 @@ int             vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_uncheck_all(vk_selectbox_t *selectbox);
 void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
+/* vk_selectbox convenience macros (inherited from vk_listbox) */
+#define vk_selectbox_set_wrap(sb, allowed) \
+            vk_listbox_set_wrap(VK_LISTBOX(sb), (allowed))
+#define vk_selectbox_set_highlight(sb, fg, bg) \
+            vk_listbox_set_highlight(VK_LISTBOX(sb), (fg), (bg))
+#define vk_selectbox_add_item(sb, item, func, anything) \
+            vk_listbox_add_item(VK_LISTBOX(sb), (item), (func), (anything))
+#define vk_selectbox_add_separator(sb, style) \
+            vk_listbox_add_separator(VK_LISTBOX(sb), (style))
+#define vk_selectbox_remove_item(sb, idx) \
+            vk_listbox_remove_item(VK_LISTBOX(sb), (idx))
+#define vk_selectbox_get_item_count(sb) \
+            vk_listbox_get_item_count(VK_LISTBOX(sb))
+#define vk_selectbox_get_curr(sb) \
+            vk_listbox_get_curr(VK_LISTBOX(sb))
+#define vk_selectbox_set_curr(sb, idx) \
+            vk_listbox_set_curr(VK_LISTBOX(sb), (idx))
+#define vk_selectbox_exec_curr(sb) \
+            vk_listbox_exec_curr(VK_LISTBOX(sb))
+#define vk_selectbox_set_next(sb) \
+            vk_listbox_set_next(VK_LISTBOX(sb))
+#define vk_selectbox_set_prev(sb) \
+            vk_listbox_set_prev(VK_LISTBOX(sb))
+#define vk_selectbox_get_item(sb, idx, buf, sz) \
+            vk_listbox_get_item(VK_LISTBOX(sb), (idx), (buf), (sz))
+#define vk_selectbox_set_item(sb, idx, item, func, anything) \
+            vk_listbox_set_item(VK_LISTBOX(sb), (idx), (item), (func), (anything))
+#define vk_selectbox_item_is_separator(sb, idx) \
+            vk_listbox_item_is_separator(VK_LISTBOX(sb), (idx))
+#define vk_selectbox_update(sb) \
+            vk_listbox_update(VK_LISTBOX(sb))
+
 /* vk_frame */
 vk_frame_t*     vk_frame_create(int width, int height);
 int             vk_frame_set_border_style(vk_frame_t *frame, int style);
@@ -311,6 +343,24 @@ int             vk_window_set_title_justify(vk_window_t *window, int justify);
 int             vk_window_set_decorate(vk_window_t *window,
                     VkWindowDecorateFunc func, void *data);
 void            vk_window_destroy(vk_window_t *window);
+
+/* vk_window convenience macros (inherited from vk_frame) */
+#define vk_window_set_border_style(w, s) \
+            vk_frame_set_border_style(VK_FRAME(w), (s))
+#define vk_window_get_border_style(w) \
+            vk_frame_get_border_style(VK_FRAME(w))
+#define vk_window_set_border_colors(w, fg, bg) \
+            vk_frame_set_border_colors(VK_FRAME(w), (fg), (bg))
+#define vk_window_get_border_fg(w) \
+            vk_frame_get_border_fg(VK_FRAME(w))
+#define vk_window_get_border_bg(w) \
+            vk_frame_get_border_bg(VK_FRAME(w))
+#define vk_window_set_child(w, child) \
+            vk_frame_set_child(VK_FRAME(w), (child))
+#define vk_window_get_child(w) \
+            vk_frame_get_child(VK_FRAME(w))
+#define vk_window_update(w) \
+            vk_frame_update(VK_FRAME(w))
 
 /* vk_box */
 vk_box_t*       vk_box_create(int width, int height,
@@ -358,6 +408,10 @@ int             vk_marquee_set_pause(vk_marquee_t *marquee, int duration);
 int             vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat);
 int             vk_marquee_run(vk_marquee_t *marquee);
 void            vk_marquee_destroy(vk_marquee_t *marquee);
+
+/* vk_marquee convenience macro (inherited from vk_label) */
+#define vk_marquee_get_text(m) \
+            vk_label_get_text(VK_LABEL(m))
 
 /* vk_deck */
 vk_deck_t*      vk_deck_create(void);

@@ -52,7 +52,7 @@ on_window_focus(vk_object_t *object, int event, void *data)
     (void)object;
     (void)event;
 
-    vk_frame_set_border_colors(VK_FRAME(ctx->window), ctx->active_fg, COLOR_BLACK);
+    vk_window_set_border_colors(ctx->window, ctx->active_fg, COLOR_BLACK);
 
     if(ctx->vscroller)
         vk_scroller_set_border_colors(ctx->vscroller,
@@ -72,7 +72,7 @@ on_window_unfocus(vk_object_t *object, int event, void *data)
     (void)object;
     (void)event;
 
-    vk_frame_set_border_colors(VK_FRAME(ctx->window), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_colors(ctx->window, COLOR_WHITE, COLOR_BLACK);
 
     if(ctx->vscroller)
         vk_scroller_set_border_colors(ctx->vscroller,
@@ -116,7 +116,7 @@ on_checkbox_change(vk_object_t *object, int event, void *data)
 
     (void)event;
 
-    count = vk_listbox_get_item_count(VK_LISTBOX(sb));
+    count = vk_selectbox_get_item_count(sb);
 
     for(i = 0; i < count; i++)
         if(vk_selectbox_item_is_checked(sb, i))
@@ -140,13 +140,13 @@ on_radio_change(vk_object_t *object, int event, void *data)
 
     (void)event;
 
-    count = vk_listbox_get_item_count(VK_LISTBOX(sb));
+    count = vk_selectbox_get_item_count(sb);
 
     for(i = 0; i < count; i++)
     {
         if(vk_selectbox_item_is_checked(sb, i))
         {
-            vk_listbox_get_item(VK_LISTBOX(sb), i, item, sizeof(item));
+            vk_selectbox_get_item(sb, i, item, sizeof(item));
             snprintf(title, sizeof(title), " Theme: %s ", item);
             vk_window_set_title(window, title);
             return 0;
@@ -360,8 +360,8 @@ deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
     getmaxyx(canvas, max_y, max_x);
     (void)max_y;
 
-    fg = vk_frame_get_border_fg(VK_FRAME(window));
-    bg = vk_frame_get_border_bg(VK_FRAME(window));
+    fg = vk_window_get_border_fg(window);
+    bg = vk_window_get_border_bg(window);
     if(fg == -1 || bg == -1)
     {
         short wfg, wbg;
@@ -371,7 +371,7 @@ deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
     }
     pair = vdk_color_pair(fg, bg);
 
-    style = vk_frame_get_border_style(VK_FRAME(window));
+    style = vk_window_get_border_style(window);
     if(style & VK_FRAME_DOUBLE)
     {
         wch_rtee[0] = 0x2563;  wch_rtee[1] = 0;
@@ -557,22 +557,22 @@ selectbox_kmio(vk_object_t *object, int32_t keystroke)
         case KEY_CRLF:
         case ' ':
             vk_selectbox_toggle_item(selectbox,
-                vk_listbox_get_curr(VK_LISTBOX(selectbox)));
+                vk_selectbox_get_curr(selectbox));
             break;
 
         case KEY_UP:
-            vk_listbox_set_prev(VK_LISTBOX(selectbox));
+            vk_selectbox_set_prev(selectbox);
             break;
 
         case KEY_DOWN:
-            vk_listbox_set_next(VK_LISTBOX(selectbox));
+            vk_selectbox_set_next(selectbox);
             break;
 
         default:
             return 0;
     }
 
-    vk_listbox_update(VK_LISTBOX(selectbox));
+    vk_selectbox_update(selectbox);
     vk_widget_draw(VK_WIDGET(object));
 
     return 0;
@@ -880,69 +880,69 @@ build_checkbox(int width, int height)
     if(selectbox == NULL) return NULL;
 
     vk_widget_set_colors(VK_WIDGET(selectbox), COLOR_WHITE, COLOR_MAGENTA);
-    vk_listbox_set_highlight(VK_LISTBOX(selectbox), COLOR_MAGENTA, COLOR_WHITE);
-    vk_listbox_set_wrap(VK_LISTBOX(selectbox), TRUE);
+    vk_selectbox_set_highlight(selectbox, COLOR_MAGENTA, COLOR_WHITE);
+    vk_selectbox_set_wrap(selectbox, TRUE);
 
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Write unit tests", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Update documentation", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Fix memory leaks", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Code review", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Profile performance", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Add CI pipeline", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Refactor widgets", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Fix warnings", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Add error handling", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Write examples", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Audit dependencies", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Set up linter", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Benchmark rendering", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Add man pages", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Valgrind clean run", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Fuzzer harness", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Thread safety audit", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "API versioning", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Pkg-config update", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Release checklist", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Changelog review", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "License headers", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Static analysis", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Coverage report", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Cross-compile test", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "BSD port test", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Locale testing", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Mouse support", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Color fallbacks", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Accessibility pass", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Drag-and-drop", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Undo/redo stack", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Clipboard support", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Tab completion", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Search in listbox", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Config file parser", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Hotkey bindings", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Theme engine", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Plugin loader", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Event bus", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Focus ring debug", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Z-order manager", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Tooltip widget", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Statusbar widget", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Progress bar", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Spinner widget", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Tree view", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Table widget", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Split pane", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Dialog builder", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Form validation", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Input masks", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Date picker", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Color picker", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "File browser", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Notification popups", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Animation engine", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Double buffering", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Memory pool alloc", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Signal handling", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Write unit tests", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Update documentation", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Fix memory leaks", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Code review", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Profile performance", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Add CI pipeline", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Refactor widgets", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Fix warnings", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Add error handling", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Write examples", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Audit dependencies", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Set up linter", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Benchmark rendering", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Add man pages", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Valgrind clean run", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Fuzzer harness", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Thread safety audit", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "API versioning", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Pkg-config update", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Release checklist", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Changelog review", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "License headers", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Static analysis", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Coverage report", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Cross-compile test", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "BSD port test", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Locale testing", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Mouse support", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Color fallbacks", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Accessibility pass", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Drag-and-drop", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Undo/redo stack", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Clipboard support", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Tab completion", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Search in listbox", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Config file parser", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Hotkey bindings", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Theme engine", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Plugin loader", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Event bus", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Focus ring debug", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Z-order manager", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Tooltip widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Statusbar widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Progress bar", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Spinner widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Tree view", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Table widget", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Split pane", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Dialog builder", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Form validation", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Input masks", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Date picker", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Color picker", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "File browser", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Notification popups", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Animation engine", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Double buffering", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Memory pool alloc", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Signal handling", NULL, NULL);
 
     vk_selectbox_check_item(selectbox, 1);
     vk_selectbox_check_item(selectbox, 3);
@@ -959,17 +959,17 @@ build_radio(int width, int height)
     if(selectbox == NULL) return NULL;
 
     vk_widget_set_colors(VK_WIDGET(selectbox), COLOR_BLACK, COLOR_CYAN);
-    vk_listbox_set_highlight(VK_LISTBOX(selectbox), COLOR_CYAN, COLOR_BLACK);
-    vk_listbox_set_wrap(VK_LISTBOX(selectbox), TRUE);
+    vk_selectbox_set_highlight(selectbox, COLOR_CYAN, COLOR_BLACK);
+    vk_selectbox_set_wrap(selectbox, TRUE);
 
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Default", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Dark", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Light", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Solarized", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Monokai", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Nord", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Dracula", NULL, NULL);
-    vk_listbox_add_item(VK_LISTBOX(selectbox), "Gruvbox", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Default", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Dark", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Light", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Solarized", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Monokai", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Nord", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Dracula", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "Gruvbox", NULL, NULL);
 
     vk_selectbox_check_item(selectbox, 0);
 
@@ -1090,12 +1090,12 @@ int main(void)
 
     vk_window_set_title(window1, " Listbox ");
     vk_window_set_title_justify(window1, VK_JUSTIFY_LEFT);
-    vk_frame_set_border_colors(VK_FRAME(window1), COLOR_CYAN, COLOR_BLACK);
+    vk_window_set_border_colors(window1, COLOR_CYAN, COLOR_BLACK);
 
     listbox = build_listbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(listbox), listbox_kmio);
     vk_widget_set_expand(VK_WIDGET(listbox));
-    vk_frame_set_child(VK_FRAME(window1), VK_WIDGET(listbox));
+    vk_window_set_child(window1, VK_WIDGET(listbox));
 
     vscroller1 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller1, VK_FRAME_SINGLE);
@@ -1116,12 +1116,12 @@ int main(void)
 
     vk_window_set_title(window2, " Menu ");
     vk_window_set_title_justify(window2, VK_JUSTIFY_CENTER);
-    vk_frame_set_border_colors(VK_FRAME(window2), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_colors(window2, COLOR_WHITE, COLOR_BLACK);
 
     menu = build_menu(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(menu), listbox_kmio);
     vk_widget_set_expand(VK_WIDGET(menu));
-    vk_frame_set_child(VK_FRAME(window2), VK_WIDGET(menu));
+    vk_window_set_child(window2, VK_WIDGET(menu));
 
     vscroller2 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller2, VK_FRAME_DOUBLE);
@@ -1142,12 +1142,12 @@ int main(void)
 
     vk_window_set_title(window3, " Textbox ");
     vk_window_set_title_justify(window3, VK_JUSTIFY_RIGHT);
-    vk_frame_set_border_colors(VK_FRAME(window3), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_colors(window3, COLOR_WHITE, COLOR_BLACK);
 
     textbox3 = build_textbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(textbox3), textbox_kmio);
     vk_widget_set_expand(VK_WIDGET(textbox3));
-    vk_frame_set_child(VK_FRAME(window3), VK_WIDGET(textbox3));
+    vk_window_set_child(window3, VK_WIDGET(textbox3));
 
     vscroller3 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller3, VK_FRAME_SINGLE);
@@ -1166,9 +1166,9 @@ int main(void)
     vk_listbox_update(listbox);
     vk_listbox_update(menu);
     vk_textbox_update(textbox3);
-    vk_frame_update(VK_FRAME(window1));
-    vk_frame_update(VK_FRAME(window2));
-    vk_frame_update(VK_FRAME(window3));
+    vk_window_update(window1);
+    vk_window_update(window2);
+    vk_window_update(window3);
 
     vk_box_update(box);
 
@@ -1245,12 +1245,12 @@ int main(void)
 
     vk_window_set_title(window4, " Checkbox ");
     vk_window_set_title_justify(window4, VK_JUSTIFY_LEFT);
-    vk_frame_set_border_colors(VK_FRAME(window4), COLOR_CYAN, COLOR_BLACK);
+    vk_window_set_border_colors(window4, COLOR_CYAN, COLOR_BLACK);
 
     checkbox = build_checkbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(checkbox), selectbox_kmio);
     vk_widget_set_expand(VK_WIDGET(checkbox));
-    vk_frame_set_child(VK_FRAME(window4), VK_WIDGET(checkbox));
+    vk_window_set_child(window4, VK_WIDGET(checkbox));
 
     vscroller4 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller4, VK_FRAME_SINGLE);
@@ -1264,12 +1264,12 @@ int main(void)
 
     vk_window_set_title(window5, " Radio ");
     vk_window_set_title_justify(window5, VK_JUSTIFY_CENTER);
-    vk_frame_set_border_colors(VK_FRAME(window5), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_colors(window5, COLOR_WHITE, COLOR_BLACK);
 
     radio = build_radio(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(radio), selectbox_kmio);
     vk_widget_set_expand(VK_WIDGET(radio));
-    vk_frame_set_child(VK_FRAME(window5), VK_WIDGET(radio));
+    vk_window_set_child(window5, VK_WIDGET(radio));
 
     vscroller5 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller5, VK_FRAME_SINGLE);
@@ -1281,14 +1281,14 @@ int main(void)
     // pane 3: about
     about_window = vk_window_create(slot_w, box_h);
 
-    vk_frame_set_border_style(VK_FRAME(about_window), VK_FRAME_SINGLE);
-    vk_frame_set_border_colors(VK_FRAME(about_window), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_style(about_window, VK_FRAME_SINGLE);
+    vk_window_set_border_colors(about_window, COLOR_WHITE, COLOR_BLACK);
     vk_window_set_title(about_window, " About ");
     vk_window_set_title_justify(about_window, VK_JUSTIFY_RIGHT);
 
     about = build_about_widget(inner_w, inner_h);
     vk_widget_set_expand(about);
-    vk_frame_set_child(VK_FRAME(about_window), about);
+    vk_window_set_child(about_window, about);
 
     vk_widget_set_expand(VK_WIDGET(window4));
     vk_widget_set_expand(VK_WIDGET(window5));
@@ -1297,11 +1297,11 @@ int main(void)
     vk_box_set_widget(box2, 1, VK_WIDGET(window5));
     vk_box_set_widget(box2, 2, VK_WIDGET(about_window));
 
-    vk_listbox_update(VK_LISTBOX(checkbox));
-    vk_listbox_update(VK_LISTBOX(radio));
-    vk_frame_update(VK_FRAME(window4));
-    vk_frame_update(VK_FRAME(window5));
-    vk_frame_update(VK_FRAME(about_window));
+    vk_selectbox_update(checkbox);
+    vk_selectbox_update(radio);
+    vk_window_update(window4);
+    vk_window_update(window5);
+    vk_window_update(about_window);
 
     vk_box_update(box2);
 
@@ -1346,42 +1346,42 @@ int main(void)
 
     deck_win1 = vk_window_create(35, 10);
     vk_window_set_title(deck_win1, " Notes ");
-    vk_frame_set_border_style(VK_FRAME(deck_win1), VK_FRAME_SINGLE);
-    vk_frame_set_border_colors(VK_FRAME(deck_win1), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_style(deck_win1, VK_FRAME_SINGLE);
+    vk_window_set_border_colors(deck_win1, COLOR_WHITE, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win1), COLOR_WHITE, COLOR_BLUE);
     vk_window_set_decorate(deck_win1, deck_notes_decorate, NULL);
-    vk_frame_update(VK_FRAME(deck_win1));
+    vk_window_update(deck_win1);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win1), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win1), 3, 2);
 
     deck_win2 = vk_window_create(35, 10);
     vk_window_set_title(deck_win2, " Tasks ");
-    vk_frame_set_border_style(VK_FRAME(deck_win2), VK_FRAME_DOUBLE);
-    vk_frame_set_border_colors(VK_FRAME(deck_win2), COLOR_RED, COLOR_BLACK);
+    vk_window_set_border_style(deck_win2, VK_FRAME_DOUBLE);
+    vk_window_set_border_colors(deck_win2, COLOR_RED, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win2), COLOR_WHITE, COLOR_GREEN);
     vk_window_set_decorate(deck_win2, deck_tasks_decorate, NULL);
-    vk_frame_update(VK_FRAME(deck_win2));
+    vk_window_update(deck_win2);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win2), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win2), 15, 5);
 
     deck_win3 = vk_window_create(35, 10);
     vk_window_set_title(deck_win3, " Help ");
-    vk_frame_set_border_style(VK_FRAME(deck_win3), VK_FRAME_SINGLE);
-    vk_frame_set_border_colors(VK_FRAME(deck_win3), COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_style(deck_win3, VK_FRAME_SINGLE);
+    vk_window_set_border_colors(deck_win3, COLOR_WHITE, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win3), COLOR_WHITE, COLOR_MAGENTA);
     vk_window_set_decorate(deck_win3, deck_help_decorate, NULL);
-    vk_frame_update(VK_FRAME(deck_win3));
+    vk_window_update(deck_win3);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win3), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win3), 27, 8);
 
     deck_win4 = vk_window_create(35, 10);
     vk_window_set_title(deck_win4, " Log ");
-    vk_frame_set_border_style(VK_FRAME(deck_win4),
+    vk_window_set_border_style(deck_win4,
         VK_FRAME_SINGLE | VK_FRAME_REVERSE);
-    vk_frame_set_border_colors(VK_FRAME(deck_win4), COLOR_YELLOW, COLOR_BLACK);
+    vk_window_set_border_colors(deck_win4, COLOR_YELLOW, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win4), COLOR_WHITE, COLOR_CYAN);
     vk_window_set_decorate(deck_win4, deck_log_decorate, NULL);
-    vk_frame_update(VK_FRAME(deck_win4));
+    vk_window_update(deck_win4);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win4), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win4), 39, 11);
 
@@ -1405,9 +1405,9 @@ int main(void)
 
         deck_win5 = vk_window_create(35, 10);
         vk_window_set_title(deck_win5, " Transport ");
-        vk_frame_set_border_style(VK_FRAME(deck_win5),
+        vk_window_set_border_style(deck_win5,
             VK_FRAME_DOUBLE | VK_FRAME_REVERSE);
-        vk_frame_set_border_colors(VK_FRAME(deck_win5), COLOR_MAGENTA, COLOR_BLACK);
+        vk_window_set_border_colors(deck_win5, COLOR_MAGENTA, COLOR_BLACK);
         vk_widget_set_colors(VK_WIDGET(deck_win5), COLOR_WHITE, COLOR_RED);
         vk_window_set_decorate(deck_win5, deck_transport_decorate, NULL);
 
@@ -1438,9 +1438,9 @@ int main(void)
 
         vk_widget_set_attrs(VK_WIDGET(deck_buttons[0]), A_BOLD);
 
-        vk_frame_set_child(VK_FRAME(deck_win5), VK_WIDGET(deck_box5));
+        vk_window_set_child(deck_win5, VK_WIDGET(deck_box5));
         vk_widget_move(VK_WIDGET(deck_box5), 1, 6);
-        vk_frame_update(VK_FRAME(deck_win5));
+        vk_window_update(deck_win5);
         vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
         vk_widget_move(VK_WIDGET(deck_win5), 51, 14);
     }
@@ -1449,8 +1449,8 @@ int main(void)
     {
         deck_win6 = vk_window_create(42, 20);
         vk_window_set_title(deck_win6, " Files ");
-        vk_frame_set_border_style(VK_FRAME(deck_win6), VK_FRAME_SINGLE);
-        vk_frame_set_border_colors(VK_FRAME(deck_win6), COLOR_WHITE, COLOR_BLACK);
+        vk_window_set_border_style(deck_win6, VK_FRAME_SINGLE);
+        vk_window_set_border_colors(deck_win6, COLOR_WHITE, COLOR_BLACK);
         vk_widget_set_colors(VK_WIDGET(deck_win6), COLOR_WHITE, COLOR_BLUE);
         vk_window_set_decorate(deck_win6, deck_files_decorate, NULL);
 
@@ -1460,10 +1460,10 @@ int main(void)
 
 
 
-        vk_frame_set_child(VK_FRAME(deck_win6), VK_WIDGET(filedialog));
+        vk_window_set_child(deck_win6, VK_WIDGET(filedialog));
         vk_widget_move(VK_WIDGET(filedialog), 1, 3);
         vk_filedialog_update(filedialog);
-        vk_frame_update(VK_FRAME(deck_win6));
+        vk_window_update(deck_win6);
         vk_deck_add_widget(deck, VK_WIDGET(deck_win6), VK_DECK_TOP);
         vk_widget_move(VK_WIDGET(deck_win6), 63, 17);
     }
@@ -1644,10 +1644,10 @@ int main(void)
 
         if(current_surface == 0)
         {
-            vk_frame_update(VK_FRAME(window1));
-            vk_frame_update(VK_FRAME(window2));
+            vk_window_update(window1);
+            vk_window_update(window2);
             vk_textbox_update(textbox3);
-            vk_frame_update(VK_FRAME(window3));
+            vk_window_update(window3);
             vk_box_update(box);
         }
         else if(current_surface == 1)
@@ -1657,11 +1657,11 @@ int main(void)
         }
         else if(current_surface == 2)
         {
-            vk_listbox_update(VK_LISTBOX(checkbox));
-            vk_frame_update(VK_FRAME(window4));
-            vk_listbox_update(VK_LISTBOX(radio));
-            vk_frame_update(VK_FRAME(window5));
-            vk_frame_update(VK_FRAME(about_window));
+            vk_selectbox_update(checkbox);
+            vk_window_update(window4);
+            vk_selectbox_update(radio);
+            vk_window_update(window5);
+            vk_window_update(about_window);
             vk_box_update(box2);
         }
         if(deck_surface == current_surface)
@@ -1677,17 +1677,17 @@ int main(void)
             else if(top == VK_WIDGET(deck_win5)) c5 = COLOR_WHITE;
             else if(top == VK_WIDGET(deck_win6)) c6 = COLOR_GREEN;
 
-            vk_frame_set_border_colors(VK_FRAME(deck_win1), c1, COLOR_BLACK);
-            vk_frame_set_border_colors(VK_FRAME(deck_win2), c2, COLOR_BLACK);
-            vk_frame_set_border_colors(VK_FRAME(deck_win3), c3, COLOR_BLACK);
-            vk_frame_set_border_colors(VK_FRAME(deck_win4), c4, COLOR_BLACK);
-            vk_frame_set_border_colors(VK_FRAME(deck_win5), c5, COLOR_BLACK);
-            vk_frame_set_border_colors(VK_FRAME(deck_win6), c6, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win1, c1, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win2, c2, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win3, c3, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win4, c4, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win5, c5, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win6, c6, COLOR_BLACK);
 
-            vk_frame_update(VK_FRAME(deck_win1));
-            vk_frame_update(VK_FRAME(deck_win2));
-            vk_frame_update(VK_FRAME(deck_win3));
-            vk_frame_update(VK_FRAME(deck_win4));
+            vk_window_update(deck_win1);
+            vk_window_update(deck_win2);
+            vk_window_update(deck_win3);
+            vk_window_update(deck_win4);
 
             {
                 int bi;
@@ -1700,10 +1700,10 @@ int main(void)
                 }
             }
             vk_box_update(deck_box5);
-            vk_frame_update(VK_FRAME(deck_win5));
+            vk_window_update(deck_win5);
 
             vk_filedialog_update(filedialog);
-            vk_frame_update(VK_FRAME(deck_win6));
+            vk_window_update(deck_win6);
         }
 
         vk_marquee_run(marquee);
