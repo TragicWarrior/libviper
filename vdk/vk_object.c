@@ -4,6 +4,7 @@
 #include <stdarg.h>
 
 #include "vk_object.h"
+#include "vk_event.h"
 
 
 /*
@@ -28,6 +29,7 @@ vk_object_construct(const void *klass, ...)
 
     // copy template to newly alloced object
     memcpy(object, klass, sizeof(vk_object_t));
+    INIT_LIST_HEAD(&object->event_handlers);
 
     if(object->ctor != NULL)
     {
@@ -68,16 +70,86 @@ vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
 }
 
 inline int
+vk_object_register_event(vk_object_t *object, int event,
+    VkEventFunc func, void *data)
+{
+    struct vk_event_handler *handler;
+
+    if(object == NULL || func == NULL) return -1;
+
+    handler = malloc(sizeof(struct vk_event_handler));
+    if(handler == NULL) return -1;
+
+    handler->event = event;
+    handler->func = func;
+    handler->data = data;
+
+    list_add_tail(&handler->list, &object->event_handlers);
+
+    return 0;
+}
+
+inline int
+vk_object_unregister_event(vk_object_t *object, int event,
+    VkEventFunc func)
+{
+    struct vk_event_handler *handler;
+    struct list_head        *pos;
+    struct list_head        *n;
+
+    if(object == NULL || func == NULL) return -1;
+
+    list_for_each_safe(pos, n, &object->event_handlers)
+    {
+        handler = list_entry(pos, struct vk_event_handler, list);
+
+        if(handler->event == event && handler->func == func)
+        {
+            list_del(pos);
+            free(handler);
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
+int
+vk_object_emit(vk_object_t *object, int event)
+{
+    struct vk_event_handler *handler;
+    struct list_head        *pos;
+
+    if(object == NULL) return -1;
+
+    list_for_each(pos, &object->event_handlers)
+    {
+        handler = list_entry(pos, struct vk_event_handler, list);
+
+        if(handler->event == event)
+            handler->func(object, event, handler->data);
+    }
+
+    return 0;
+}
+
+inline int
 vk_object_destroy(vk_object_t *object)
 {
-    /*
-        call the objects destructor.  if it was installed correctly, object
-        tear down should cascade from the topmost derivative until it hits
-        the bottom--which is _vk_object_dtor().
-    */
+    struct vk_event_handler *handler;
+    struct list_head        *pos;
+    struct list_head        *n;
+
     if(!vk_object_assert(object, vk_object_t))
     {
         object->dtor(object);
+    }
+
+    list_for_each_safe(pos, n, &object->event_handlers)
+    {
+        handler = list_entry(pos, struct vk_event_handler, list);
+        list_del(pos);
+        free(handler);
     }
 
     free(object);

@@ -13,6 +13,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_screen.h"
+#include "vk_event.h"
 
 static int
 _vk_screen_ctor(vk_object_t *object, va_list *argp, ...);
@@ -247,27 +248,6 @@ vk_screen_resize(vk_screen_t *screen)
 }
 
 inline int
-vk_screen_poll_resize(vk_screen_t *screen)
-{
-    struct winsize  ws;
-
-    if(screen == NULL) return 0;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return 0;
-
-    if(screen->fd_out == NULL) return 0;
-
-    if(ioctl(fileno(screen->fd_out), TIOCGWINSZ, &ws) < 0) return 0;
-
-    if(ws.ws_col == screen->width && ws.ws_row == screen->height)
-        return 0;
-
-    vk_screen_resize(screen);
-
-    return 1;
-}
-
-inline int
 vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
 {
     if(screen == NULL) return -1;
@@ -275,29 +255,6 @@ vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     screen->wallpaper_func = func;
-
-    return 0;
-}
-
-inline int
-vk_screen_paint_wallpaper(vk_screen_t *screen)
-{
-    vk_surface_t    *surface;
-
-    if(screen == NULL) return -1;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
-
-    if(screen->wallpaper_func == NULL) return 0;
-
-    if(screen->active_surface < 0 ||
-        screen->active_surface >= screen->surface_count)
-        return -1;
-
-    surface = screen->surfaces[screen->active_surface];
-
-    screen->wallpaper_func(screen, screen->active_surface,
-        surface->canvas);
 
     return 0;
 }
@@ -433,6 +390,8 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     while(wgetch(stdscr) != ERR)
         ;
     wtimeout(stdscr, -1);
+
+    vk_object_emit(VK_OBJECT(screen), VK_EVENT_ON_TELEPORT);
 
     return 0;
 }

@@ -4,24 +4,6 @@
 #include <langinfo.h>
 
 #include "vdk.h"
-#include "vk_object.h"
-#include "vk_widget.h"
-#include "vk_container.h"
-#include "vk_listbox.h"
-#include "vk_item.h"
-#include "vk_frame.h"
-#include "vk_scroller.h"
-#include "vk_box.h"
-#include "vk_label.h"
-#include "vk_marquee.h"
-#include "vk_window.h"
-#include "vk_textbox.h"
-#include "vk_selectbox.h"
-#include "vk_button.h"
-#include "vk_input.h"
-#include "vk_filedialog.h"
-#include "vk_deck.h"
-#include "vk_screen.h"
 
 #define NUM_SURFACES    5
 
@@ -43,24 +25,152 @@ on_item_activate(vk_widget_t *widget, void *anything)
 }
 
 static int
-listbox_max_item_width(vk_listbox_t *lb)
+on_teleport(vk_object_t *object, int event, void *data)
 {
-    struct list_head    *pos;
-    vk_item_t          *item;
-    int                 max_w = 0;
-    int                 len;
+    (void)object;
+    (void)event;
+    (void)data;
 
-    list_for_each(pos, &lb->item_list)
+    vdk_color_init();
+
+    return 0;
+}
+
+struct focus_ctx
+{
+    vk_window_t     *window;
+    vk_scroller_t   *vscroller;
+    vk_scroller_t   *hscroller;
+    short           active_fg;
+};
+
+static int
+on_window_focus(vk_object_t *object, int event, void *data)
+{
+    struct focus_ctx *ctx = data;
+
+    (void)object;
+    (void)event;
+
+    vk_window_set_border_colors(ctx->window, ctx->active_fg, COLOR_BLACK);
+
+    if(ctx->vscroller)
+        vk_scroller_set_border_colors(ctx->vscroller,
+            ctx->active_fg, COLOR_BLACK);
+    if(ctx->hscroller)
+        vk_scroller_set_border_colors(ctx->hscroller,
+            ctx->active_fg, COLOR_BLACK);
+
+    return 0;
+}
+
+static int
+on_window_unfocus(vk_object_t *object, int event, void *data)
+{
+    struct focus_ctx *ctx = data;
+
+    (void)object;
+    (void)event;
+
+    vk_window_set_border_colors(ctx->window, COLOR_WHITE, COLOR_BLACK);
+
+    if(ctx->vscroller)
+        vk_scroller_set_border_colors(ctx->vscroller,
+            COLOR_WHITE, COLOR_BLACK);
+    if(ctx->hscroller)
+        vk_scroller_set_border_colors(ctx->hscroller,
+            COLOR_WHITE, COLOR_BLACK);
+
+    return 0;
+}
+
+static int
+on_listbox_select(vk_object_t *object, int event, void *data)
+{
+    vk_listbox_t    *listbox = VK_LISTBOX(object);
+    vk_window_t     *window = data;
+    char            item[32];
+    char            title[48];
+
+    (void)event;
+
+    if(vk_listbox_get_item(listbox, vk_listbox_get_curr(listbox),
+        item, sizeof(item)) == 0)
     {
-        item = list_entry(pos, vk_item_t, list);
-        if(item->name != NULL)
+        snprintf(title, sizeof(title), " Listbox: %s ", item);
+        vk_window_set_title(window, title);
+    }
+
+    return 0;
+}
+
+static int
+on_checkbox_change(vk_object_t *object, int event, void *data)
+{
+    vk_selectbox_t  *sb = VK_SELECTBOX(object);
+    vk_window_t     *window = data;
+    char            title[48];
+    int             count;
+    int             checked = 0;
+    int             i;
+
+    (void)event;
+
+    count = vk_selectbox_get_item_count(sb);
+
+    for(i = 0; i < count; i++)
+        if(vk_selectbox_item_is_checked(sb, i))
+            checked++;
+
+    snprintf(title, sizeof(title), " Checkbox [%d/%d] ", checked, count);
+    vk_window_set_title(window, title);
+
+    return 0;
+}
+
+static int
+on_radio_change(vk_object_t *object, int event, void *data)
+{
+    vk_selectbox_t  *sb = VK_SELECTBOX(object);
+    vk_window_t     *window = data;
+    char            item[32];
+    char            title[48];
+    int             count;
+    int             i;
+
+    (void)event;
+
+    count = vk_selectbox_get_item_count(sb);
+
+    for(i = 0; i < count; i++)
+    {
+        if(vk_selectbox_item_is_checked(sb, i))
         {
-            len = strlen(item->name);
-            if(len > max_w) max_w = len;
+            vk_selectbox_get_item(sb, i, item, sizeof(item));
+            snprintf(title, sizeof(title), " Theme: %s ", item);
+            vk_window_set_title(window, title);
+            return 0;
         }
     }
 
-    return max_w;
+    return 0;
+}
+
+static int
+on_textbox_scroll(vk_object_t *object, int event, void *data)
+{
+    vk_textbox_t    *tb = VK_TEXTBOX(object);
+    vk_window_t     *window = data;
+    char            title[48];
+
+    (void)event;
+
+    snprintf(title, sizeof(title), " Textbox [line %d/%d] ",
+        vk_textbox_get_scroll_pos(tb) + 1,
+        vk_textbox_get_line_count(tb));
+    vk_window_set_title(window, title);
+
+    return 0;
 }
 
 static void
@@ -69,10 +179,13 @@ listbox_scroll_info(vk_widget_t *child,
     int *scroll_y, int *scroll_x)
 {
     vk_listbox_t *lb = VK_LISTBOX(child);
+    int metrics_w = 0;
 
-    if(content_h) *content_h = lb->item_count;
-    if(content_w) *content_w = listbox_max_item_width(lb);
-    if(scroll_y) *scroll_y = lb->scroll_top;
+    vk_listbox_get_metrics(lb, &metrics_w, NULL);
+
+    if(content_h) *content_h = vk_listbox_get_item_count(lb);
+    if(content_w) *content_w = metrics_w;
+    if(scroll_y) *scroll_y = vk_listbox_get_scroll_pos(lb);
     if(scroll_x) *scroll_x = 0;
 }
 
@@ -83,9 +196,9 @@ textbox_scroll_info(vk_widget_t *child,
 {
     vk_textbox_t *tb = VK_TEXTBOX(child);
 
-    if(content_h) *content_h = tb->line_count;
+    if(content_h) *content_h = vk_textbox_get_line_count(tb);
     if(content_w) *content_w = 0;
-    if(scroll_y) *scroll_y = tb->scroll_top;
+    if(scroll_y) *scroll_y = vk_textbox_get_scroll_pos(tb);
     if(scroll_x) *scroll_x = 0;
 }
 
@@ -241,18 +354,25 @@ deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
     wchar_t     wch_block[2] = {' ', 0};
     wchar_t     wch_rtee[2];
     wchar_t     wch_ltee[2];
-    vk_frame_t  *frame;
     short       fg, bg, pair;
+    int         style;
 
-    frame = VK_FRAME(window);
     getmaxyx(canvas, max_y, max_x);
     (void)max_y;
 
-    fg = (frame->border_fg == -1) ? VK_WIDGET(window)->fg : frame->border_fg;
-    bg = (frame->border_bg == -1) ? VK_WIDGET(window)->bg : frame->border_bg;
+    fg = vk_window_get_border_fg(window);
+    bg = vk_window_get_border_bg(window);
+    if(fg == -1 || bg == -1)
+    {
+        short wfg, wbg;
+        vk_widget_get_colors(VK_WIDGET(window), &wfg, &wbg);
+        if(fg == -1) fg = wfg;
+        if(bg == -1) bg = wbg;
+    }
     pair = vdk_color_pair(fg, bg);
 
-    if(frame->border_style == VK_FRAME_DOUBLE)
+    style = vk_window_get_border_style(window);
+    if(style & VK_FRAME_DOUBLE)
     {
         wch_rtee[0] = 0x2563;  wch_rtee[1] = 0;
         wch_ltee[0] = 0x2560;  wch_ltee[1] = 0;
@@ -378,108 +498,30 @@ deck_files_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 }
 
 static int
-item_is_separator(vk_listbox_t *listbox, int idx)
-{
-    vk_item_t           *item;
-    struct list_head    *pos;
-    int                 i = 0;
-
-    list_for_each(pos, &listbox->item_list)
-    {
-        if(i == idx)
-        {
-            item = list_entry(pos, vk_item_t, list);
-            return (item->separator_style > 0) ? 1 : 0;
-        }
-        i++;
-    }
-
-    return 0;
-}
-
-static int
 listbox_kmio(vk_object_t *object, int32_t keystroke)
 {
-    vk_listbox_t    *listbox;
-    int             saved_item;
-    int             direction = 0;
-    int             attempts;
-
-    listbox = VK_LISTBOX(object);
-
-    if(list_empty(&listbox->item_list)) return 0;
-
-    saved_item = listbox->curr_item;
+    vk_listbox_t *listbox = VK_LISTBOX(object);
 
     switch(keystroke)
     {
         case KEY_UP:
-            listbox->curr_item--;
-            direction = -1;
+            vk_listbox_set_prev(listbox);
             break;
 
         case KEY_DOWN:
-            listbox->curr_item++;
-            direction = 1;
+            vk_listbox_set_next(listbox);
             break;
 
         case KEY_CRLF:
-            return listbox->_exec_item(listbox);
+            vk_listbox_exec_curr(listbox);
+            break;
+
+        default:
+            return 0;
     }
 
-    if(listbox->curr_item < 0)
-    {
-        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-            listbox->curr_item = listbox->item_count - 1;
-        else
-            listbox->curr_item = 0;
-    }
-
-    if(listbox->curr_item > (listbox->item_count - 1))
-    {
-        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-            listbox->curr_item = 0;
-        else
-            listbox->curr_item--;
-    }
-
-    attempts = 0;
-    while(direction != 0
-        && item_is_separator(listbox, listbox->curr_item)
-        && attempts < listbox->item_count)
-    {
-        listbox->curr_item += direction;
-
-        if(listbox->curr_item < 0)
-        {
-            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-                listbox->curr_item = listbox->item_count - 1;
-            else
-            {
-                listbox->curr_item = saved_item;
-                break;
-            }
-        }
-
-        if(listbox->curr_item > (listbox->item_count - 1))
-        {
-            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-                listbox->curr_item = 0;
-            else
-            {
-                listbox->curr_item = saved_item;
-                break;
-            }
-        }
-
-        attempts++;
-    }
-
-    if(attempts >= listbox->item_count)
-        listbox->curr_item = saved_item;
-
-    listbox->_update(listbox);
-    VK_WIDGET(object)->_draw(VK_WIDGET(object));
+    vk_listbox_update(listbox);
+    vk_widget_draw(VK_WIDGET(object));
 
     return 0;
 }
@@ -487,53 +529,20 @@ listbox_kmio(vk_object_t *object, int32_t keystroke)
 static int
 textbox_kmio(vk_object_t *object, int32_t keystroke)
 {
-    vk_textbox_t    *textbox;
-    vk_widget_t     *widget;
-    int             paint_height;
-    int             max_top;
-
-    textbox = VK_TEXTBOX(object);
-    widget = VK_WIDGET(object);
-
-    paint_height = widget->height;
-    if(widget->hscroller != NULL) paint_height--;
-
-    max_top = textbox->line_count - paint_height;
-    if(max_top < 0) max_top = 0;
+    vk_textbox_t *textbox = VK_TEXTBOX(object);
 
     switch(keystroke)
     {
-        case KEY_UP:
-            if(textbox->scroll_top > 0) textbox->scroll_top--;
-            break;
-
-        case KEY_DOWN:
-            if(textbox->scroll_top < max_top) textbox->scroll_top++;
-            break;
-
-        case KEY_PPAGE:
-            textbox->scroll_top -= paint_height;
-            if(textbox->scroll_top < 0) textbox->scroll_top = 0;
-            break;
-
-        case KEY_NPAGE:
-            textbox->scroll_top += paint_height;
-            if(textbox->scroll_top > max_top) textbox->scroll_top = max_top;
-            break;
-
-        case KEY_HOME:
-            textbox->scroll_top = 0;
-            break;
-
-        case KEY_END:
-            textbox->scroll_top = max_top;
-            break;
-
-        default:
-            return 0;
+        case KEY_UP:        vk_textbox_scroll_up(textbox);      break;
+        case KEY_DOWN:      vk_textbox_scroll_down(textbox);    break;
+        case KEY_PPAGE:     vk_textbox_scroll_pgup(textbox);    break;
+        case KEY_NPAGE:     vk_textbox_scroll_pgdn(textbox);    break;
+        case KEY_HOME:      vk_textbox_scroll_home(textbox);    break;
+        case KEY_END:       vk_textbox_scroll_end(textbox);     break;
+        default:            return 0;
     }
 
-    textbox->_update(textbox);
+    vk_textbox_update(textbox);
 
     return 0;
 }
@@ -541,51 +550,53 @@ textbox_kmio(vk_object_t *object, int32_t keystroke)
 static int
 selectbox_kmio(vk_object_t *object, int32_t keystroke)
 {
-    vk_listbox_t    *listbox;
-
-    listbox = VK_LISTBOX(object);
+    vk_selectbox_t *selectbox = VK_SELECTBOX(object);
 
     switch(keystroke)
     {
         case KEY_CRLF:
         case ' ':
-            vk_selectbox_toggle_item(VK_SELECTBOX(object),
-                listbox->curr_item);
-            listbox->_update(listbox);
-            VK_WIDGET(object)->_draw(VK_WIDGET(object));
-            return 0;
+            vk_selectbox_toggle_item(selectbox,
+                vk_selectbox_get_curr(selectbox));
+            break;
+
+        case KEY_UP:
+            vk_selectbox_set_prev(selectbox);
+            break;
+
+        case KEY_DOWN:
+            vk_selectbox_set_next(selectbox);
+            break;
 
         default:
-            return listbox_kmio(object, keystroke);
+            return 0;
     }
-}
 
-static int
-frame_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_frame_t *frame = VK_FRAME(object);
+    vk_selectbox_update(selectbox);
+    vk_widget_draw(VK_WIDGET(object));
 
-    if(frame->child == NULL) return 0;
-
-    return vk_object_push_keystroke(VK_OBJECT(frame->child), keystroke);
+    return 0;
 }
 
 static int
 box_kmio(vk_object_t *object, int32_t keystroke)
 {
-    vk_box_t *box = VK_BOX(object);
+    vk_box_t    *box = VK_BOX(object);
+    int         slot;
+    int         count;
+    vk_widget_t *child;
 
     if(keystroke == KEY_TAB)
     {
-        box->focused_slot = (box->focused_slot + 1) % box->slots;
+        slot = vk_box_get_subfocus(box);
+        count = vk_box_get_slot_count(box);
+        vk_box_set_subfocus(box, (slot + 1) % count);
         return 0;
     }
 
-    if(box->slot_widgets[box->focused_slot] != NULL)
-    {
-        return vk_object_push_keystroke(
-            VK_OBJECT(box->slot_widgets[box->focused_slot]), keystroke);
-    }
+    child = vk_box_get_widget(box, vk_box_get_subfocus(box));
+    if(child != NULL)
+        return vk_object_push_keystroke(VK_OBJECT(child), keystroke);
 
     return 0;
 }
@@ -614,37 +625,36 @@ transport_kmio(vk_object_t *object, int32_t keystroke)
 {
     static int      active_slot = -1;
     vk_box_t        *box = VK_BOX(object);
+    int             slot;
+    int             count;
     vk_widget_t     *btn;
+
+    slot = vk_box_get_subfocus(box);
+    count = vk_box_get_slot_count(box);
 
     if(keystroke == KEY_LEFT)
     {
-        if(box->focused_slot > 0)
-            box->focused_slot--;
-        else
-            box->focused_slot = box->slots - 1;
+        vk_box_set_subfocus(box, (slot > 0) ? slot - 1 : count - 1);
         return 0;
     }
 
     if(keystroke == KEY_RIGHT)
     {
-        box->focused_slot = (box->focused_slot + 1) % box->slots;
+        vk_box_set_subfocus(box, (slot + 1) % count);
         return 0;
     }
 
     if(keystroke == ' ')
     {
-        if(active_slot >= 0 && active_slot < box->slots)
-        {
-            btn = box->slot_widgets[active_slot];
-            if(btn != NULL)
-                vk_button_release(VK_BUTTON(btn));
-        }
+        btn = vk_box_get_widget(box, active_slot);
+        if(btn != NULL)
+            vk_button_release(VK_BUTTON(btn));
 
-        btn = box->slot_widgets[box->focused_slot];
+        btn = vk_box_get_widget(box, slot);
         if(btn != NULL)
         {
             vk_button_press(VK_BUTTON(btn));
-            active_slot = box->focused_slot;
+            active_slot = slot;
         }
 
         return 0;
@@ -807,34 +817,40 @@ build_lang_listbox(int width, int height)
 }
 
 static int
-about_on_recreate(vk_widget_t *widget)
+about_on_recreate(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+    WINDOW *canvas = vk_widget_get_canvas(widget);
+
+    (void)event;
+    (void)data;
+
     vk_widget_fill(widget, ' ' | VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
 
-    wattron(widget->canvas, VDK_COLORS(COLOR_YELLOW, COLOR_BLUE) | A_BOLD);
-    mvwprintw(widget->canvas, 1, 2, "VK Widget Toolkit");
-    wattroff(widget->canvas, VDK_COLORS(COLOR_YELLOW, COLOR_BLUE) | A_BOLD);
+    wattron(canvas, VDK_COLORS(COLOR_YELLOW, COLOR_BLUE) | A_BOLD);
+    mvwprintw(canvas, 1, 2, "VK Widget Toolkit");
+    wattroff(canvas, VDK_COLORS(COLOR_YELLOW, COLOR_BLUE) | A_BOLD);
 
-    wattron(widget->canvas, VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
-    mvwprintw(widget->canvas, 3,  2, "Keyboard:");
-    mvwprintw(widget->canvas, 4,  4, "TAB ......... cycle focus");
-    mvwprintw(widget->canvas, 5,  4, "Up/Down ..... navigate items");
-    mvwprintw(widget->canvas, 6,  4, "Enter ....... select item");
-    mvwprintw(widget->canvas, 7,  4, "d ........... switch surface");
-    mvwprintw(widget->canvas, 8,  4, "f ........... freeze marquee");
-    mvwprintw(widget->canvas, 9,  4, "h ........... toggle marquee");
-    mvwprintw(widget->canvas, 10, 4, "t ........... teleport to PTY");
-    mvwprintw(widget->canvas, 11, 4, "w ........... toggle deck overlay");
-    mvwprintw(widget->canvas, 12, 4, "q ........... quit");
+    wattron(canvas, VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
+    mvwprintw(canvas, 3,  2, "Keyboard:");
+    mvwprintw(canvas, 4,  4, "TAB ......... cycle focus");
+    mvwprintw(canvas, 5,  4, "Up/Down ..... navigate items");
+    mvwprintw(canvas, 6,  4, "Enter ....... select item");
+    mvwprintw(canvas, 7,  4, "d ........... switch surface");
+    mvwprintw(canvas, 8,  4, "f ........... freeze marquee");
+    mvwprintw(canvas, 9,  4, "h ........... toggle marquee");
+    mvwprintw(canvas, 10, 4, "t ........... teleport to PTY");
+    mvwprintw(canvas, 11, 4, "w ........... toggle deck overlay");
+    mvwprintw(canvas, 12, 4, "q ........... quit");
 
-    mvwprintw(widget->canvas, 14, 2, "Features:");
-    mvwprintw(widget->canvas, 15, 4, "- Virtual surfaces");
-    mvwprintw(widget->canvas, 16, 4, "- Terminal migration (teleport)");
-    mvwprintw(widget->canvas, 17, 4, "- Scrollable containers");
-    mvwprintw(widget->canvas, 18, 4, "- Marquee text ticker");
-    mvwprintw(widget->canvas, 19, 4, "- Frame border styles");
-    mvwprintw(widget->canvas, 20, 4, "- Deck with shadows");
-    wattroff(widget->canvas, VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
+    mvwprintw(canvas, 14, 2, "Features:");
+    mvwprintw(canvas, 15, 4, "- Virtual surfaces");
+    mvwprintw(canvas, 16, 4, "- Terminal migration (teleport)");
+    mvwprintw(canvas, 17, 4, "- Scrollable containers");
+    mvwprintw(canvas, 18, 4, "- Marquee text ticker");
+    mvwprintw(canvas, 19, 4, "- Frame border styles");
+    mvwprintw(canvas, 20, 4, "- Deck with shadows");
+    wattroff(canvas, VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
 
     return 0;
 }
@@ -848,8 +864,9 @@ build_about_widget(int width, int height)
     if(widget == NULL) return NULL;
 
     vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLUE);
-    widget->_on_recreate = about_on_recreate;
-    about_on_recreate(widget);
+    vk_object_register_event(VK_OBJECT(widget),
+        VK_EVENT_ON_RECREATE, about_on_recreate, NULL);
+    about_on_recreate(VK_OBJECT(widget), VK_EVENT_ON_RECREATE, NULL);
 
     return widget;
 }
@@ -1013,6 +1030,10 @@ int main(void)
     vk_window_t     *deck_win6;
     vk_filedialog_t *filedialog;
 
+    // focus context for event-driven highlighting
+    struct focus_ctx fc_s0[3];
+    struct focus_ctx fc_s2[3];
+
     // shared
     vk_marquee_t    *marquee;
 
@@ -1024,6 +1045,8 @@ int main(void)
     }
 
     vdk_color_init();
+    vk_object_register_event(VK_OBJECT(vk_screen),
+        VK_EVENT_ON_TELEPORT, on_teleport, NULL);
 
     screen = vk_screen_get_window(vk_screen);
     getmaxyx(screen, max_y, max_x);
@@ -1064,7 +1087,7 @@ int main(void)
 
     // panel 1: window with listbox + scrollers
     window1 = vk_window_create(slot_w, box_h);
-    vk_object_set_kmio(VK_OBJECT(window1), frame_kmio);
+
     vk_window_set_title(window1, " Listbox ");
     vk_window_set_title_justify(window1, VK_JUSTIFY_LEFT);
     vk_window_set_border_colors(window1, COLOR_CYAN, COLOR_BLACK);
@@ -1090,7 +1113,7 @@ int main(void)
 
     // panel 2: window with menu + scrollers
     window2 = vk_window_create(slot_w, box_h);
-    vk_object_set_kmio(VK_OBJECT(window2), frame_kmio);
+
     vk_window_set_title(window2, " Menu ");
     vk_window_set_title_justify(window2, VK_JUSTIFY_CENTER);
     vk_window_set_border_colors(window2, COLOR_WHITE, COLOR_BLACK);
@@ -1116,7 +1139,7 @@ int main(void)
 
     // panel 3: window with textbox + scroller attached to textbox
     window3 = vk_window_create(slot_w, box_h);
-    vk_object_set_kmio(VK_OBJECT(window3), frame_kmio);
+
     vk_window_set_title(window3, " Textbox ");
     vk_window_set_title_justify(window3, VK_JUSTIFY_RIGHT);
     vk_window_set_border_colors(window3, COLOR_WHITE, COLOR_BLACK);
@@ -1149,12 +1172,37 @@ int main(void)
 
     vk_box_update(box);
 
+    // surface 0: event registrations
+    fc_s0[0] = (struct focus_ctx){ window1, vscroller1, hscroller1, COLOR_CYAN };
+    fc_s0[1] = (struct focus_ctx){ window2, vscroller2, hscroller2, COLOR_GREEN };
+    fc_s0[2] = (struct focus_ctx){ window3, vscroller3, NULL, COLOR_YELLOW };
+
+    vk_object_register_event(VK_OBJECT(window1),
+        VK_EVENT_ON_FOCUS, on_window_focus, &fc_s0[0]);
+    vk_object_register_event(VK_OBJECT(window1),
+        VK_EVENT_ON_UNFOCUS, on_window_unfocus, &fc_s0[0]);
+    vk_object_register_event(VK_OBJECT(window2),
+        VK_EVENT_ON_FOCUS, on_window_focus, &fc_s0[1]);
+    vk_object_register_event(VK_OBJECT(window2),
+        VK_EVENT_ON_UNFOCUS, on_window_unfocus, &fc_s0[1]);
+    vk_object_register_event(VK_OBJECT(window3),
+        VK_EVENT_ON_FOCUS, on_window_focus, &fc_s0[2]);
+    vk_object_register_event(VK_OBJECT(window3),
+        VK_EVENT_ON_UNFOCUS, on_window_unfocus, &fc_s0[2]);
+
+    vk_object_register_event(VK_OBJECT(listbox),
+        VK_EVENT_ON_SELECT, on_listbox_select, window1);
+    vk_object_register_event(VK_OBJECT(menu),
+        VK_EVENT_ON_SELECT, on_listbox_select, window2);
+    vk_object_register_event(VK_OBJECT(textbox3),
+        VK_EVENT_ON_SCROLL, on_textbox_scroll, window3);
+
     // --- surface 1: languages ---
 
     vk_screen_add_surface(vk_screen);
 
     lang_frame = vk_frame_create(max_x, box_h);
-    vk_object_set_kmio(VK_OBJECT(lang_frame), frame_kmio);
+
     vk_frame_set_border_style(lang_frame, VK_FRAME_DOUBLE);
     vk_frame_set_border_colors(lang_frame, COLOR_YELLOW, COLOR_BLACK);
 
@@ -1194,7 +1242,7 @@ int main(void)
 
     // pane 1: checkbox selectbox
     window4 = vk_window_create(slot_w, box_h);
-    vk_object_set_kmio(VK_OBJECT(window4), frame_kmio);
+
     vk_window_set_title(window4, " Checkbox ");
     vk_window_set_title_justify(window4, VK_JUSTIFY_LEFT);
     vk_window_set_border_colors(window4, COLOR_CYAN, COLOR_BLACK);
@@ -1213,7 +1261,7 @@ int main(void)
 
     // pane 2: radio selectbox
     window5 = vk_window_create(slot_w, box_h);
-    vk_object_set_kmio(VK_OBJECT(window5), frame_kmio);
+
     vk_window_set_title(window5, " Radio ");
     vk_window_set_title_justify(window5, VK_JUSTIFY_CENTER);
     vk_window_set_border_colors(window5, COLOR_WHITE, COLOR_BLACK);
@@ -1232,7 +1280,7 @@ int main(void)
 
     // pane 3: about
     about_window = vk_window_create(slot_w, box_h);
-    vk_object_set_kmio(VK_OBJECT(about_window), frame_kmio);
+
     vk_window_set_border_style(about_window, VK_FRAME_SINGLE);
     vk_window_set_border_colors(about_window, COLOR_WHITE, COLOR_BLACK);
     vk_window_set_title(about_window, " About ");
@@ -1256,6 +1304,31 @@ int main(void)
     vk_window_update(about_window);
 
     vk_box_update(box2);
+
+    // surface 2: event registrations
+    fc_s2[0] = (struct focus_ctx){ window4, vscroller4, NULL, COLOR_CYAN };
+    fc_s2[1] = (struct focus_ctx){ window5, vscroller5, NULL, COLOR_GREEN };
+    fc_s2[2] = (struct focus_ctx){ about_window, NULL, NULL, COLOR_YELLOW };
+
+    vk_object_register_event(VK_OBJECT(window4),
+        VK_EVENT_ON_FOCUS, on_window_focus, &fc_s2[0]);
+    vk_object_register_event(VK_OBJECT(window4),
+        VK_EVENT_ON_UNFOCUS, on_window_unfocus, &fc_s2[0]);
+    vk_object_register_event(VK_OBJECT(window5),
+        VK_EVENT_ON_FOCUS, on_window_focus, &fc_s2[1]);
+    vk_object_register_event(VK_OBJECT(window5),
+        VK_EVENT_ON_UNFOCUS, on_window_unfocus, &fc_s2[1]);
+    vk_object_register_event(VK_OBJECT(about_window),
+        VK_EVENT_ON_FOCUS, on_window_focus, &fc_s2[2]);
+    vk_object_register_event(VK_OBJECT(about_window),
+        VK_EVENT_ON_UNFOCUS, on_window_unfocus, &fc_s2[2]);
+
+    vk_object_register_event(VK_OBJECT(checkbox),
+        VK_EVENT_ON_SELECT, on_checkbox_change, window4);
+    vk_object_register_event(VK_OBJECT(checkbox),
+        VK_EVENT_ON_UNSELECT, on_checkbox_change, window4);
+    vk_object_register_event(VK_OBJECT(radio),
+        VK_EVENT_ON_SELECT, on_radio_change, window5);
 
     // --- surface 3: dotfield wallpaper ---
 
@@ -1361,9 +1434,9 @@ int main(void)
             vk_box_set_widget(deck_box5, bi, VK_WIDGET(deck_buttons[bi]));
 
         vk_object_set_kmio(VK_OBJECT(deck_box5), transport_kmio);
-        vk_object_set_kmio(VK_OBJECT(deck_win5), frame_kmio);
 
-        VK_WIDGET(deck_buttons[0])->attrs = A_BOLD;
+
+        vk_widget_set_attrs(VK_WIDGET(deck_buttons[0]), A_BOLD);
 
         vk_window_set_child(deck_win5, VK_WIDGET(deck_box5));
         vk_widget_move(VK_WIDGET(deck_box5), 1, 6);
@@ -1385,7 +1458,7 @@ int main(void)
         vk_filedialog_set_colors(filedialog, COLOR_WHITE, COLOR_BLUE);
         vk_filedialog_set_highlight(filedialog, COLOR_BLUE, COLOR_WHITE);
 
-        vk_object_set_kmio(VK_OBJECT(deck_win6), frame_kmio);
+
 
         vk_window_set_child(deck_win6, VK_WIDGET(filedialog));
         vk_widget_move(VK_WIDGET(filedialog), 1, 3);
@@ -1405,9 +1478,9 @@ int main(void)
 
     while((key = wgetch(stdscr)) != 'q')
     {
-        if(key == KEY_RESIZE || vk_screen_poll_resize(vk_screen))
+        if(key == KEY_RESIZE)
         {
-            if(key == KEY_RESIZE) vk_screen_resize(vk_screen);
+            vk_screen_resize(vk_screen);
 
             screen = vk_screen_get_window(vk_screen);
             getmaxyx(screen, max_y, max_x);
@@ -1544,18 +1617,17 @@ int main(void)
 
             if(target != NULL)
             {
+                int tw, th;
+                vk_widget_get_metrics(target, &tw, &th);
+
                 if(key == KEY_SRIGHT)
-                    vk_widget_resize(target,
-                        target->width + 1, WSIZE_UNCHANGED);
-                else if(key == KEY_SLEFT && target->width > 12)
-                    vk_widget_resize(target,
-                        target->width - 1, WSIZE_UNCHANGED);
+                    vk_widget_resize(target, tw + 1, WSIZE_UNCHANGED);
+                else if(key == KEY_SLEFT && tw > 12)
+                    vk_widget_resize(target, tw - 1, WSIZE_UNCHANGED);
                 else if(key == '+')
-                    vk_widget_resize(target,
-                        WSIZE_UNCHANGED, target->height + 1);
-                else if(key == '-' && target->height > 6)
-                    vk_widget_resize(target,
-                        WSIZE_UNCHANGED, target->height - 1);
+                    vk_widget_resize(target, WSIZE_UNCHANGED, th + 1);
+                else if(key == '-' && th > 6)
+                    vk_widget_resize(target, WSIZE_UNCHANGED, th - 1);
             }
         }
         else if(key != ERR)
@@ -1572,25 +1644,10 @@ int main(void)
 
         if(current_surface == 0)
         {
-            short w1_fg = (box->focused_slot == 0) ? COLOR_CYAN : COLOR_WHITE;
-            short w2_fg = (box->focused_slot == 1) ? COLOR_GREEN : COLOR_WHITE;
-            short w3_fg = (box->focused_slot == 2) ? COLOR_YELLOW : COLOR_WHITE;
-
-            vk_window_set_border_colors(window1, w1_fg, COLOR_BLACK);
-            vk_scroller_set_border_colors(vscroller1, w1_fg, COLOR_BLACK);
-            vk_scroller_set_border_colors(hscroller1, w1_fg, COLOR_BLACK);
             vk_window_update(window1);
-
-            vk_window_set_border_colors(window2, w2_fg, COLOR_BLACK);
-            vk_scroller_set_border_colors(vscroller2, w2_fg, COLOR_BLACK);
-            vk_scroller_set_border_colors(hscroller2, w2_fg, COLOR_BLACK);
             vk_window_update(window2);
-
-            vk_window_set_border_colors(window3, w3_fg, COLOR_BLACK);
-            vk_scroller_set_border_colors(vscroller3, w3_fg, COLOR_BLACK);
             vk_textbox_update(textbox3);
             vk_window_update(window3);
-
             vk_box_update(box);
         }
         else if(current_surface == 1)
@@ -1600,21 +1657,11 @@ int main(void)
         }
         else if(current_surface == 2)
         {
-            short w4_fg = (box2->focused_slot == 0) ? COLOR_CYAN : COLOR_WHITE;
-            short w5_fg = (box2->focused_slot == 1) ? COLOR_GREEN : COLOR_WHITE;
-            short wa_fg = (box2->focused_slot == 2) ? COLOR_YELLOW : COLOR_WHITE;
-
-            vk_window_set_border_colors(window4, w4_fg, COLOR_BLACK);
             vk_selectbox_update(checkbox);
             vk_window_update(window4);
-
-            vk_window_set_border_colors(window5, w5_fg, COLOR_BLACK);
             vk_selectbox_update(radio);
             vk_window_update(window5);
-
-            vk_window_set_border_colors(about_window, wa_fg, COLOR_BLACK);
             vk_window_update(about_window);
-
             vk_box_update(box2);
         }
         if(deck_surface == current_surface)
@@ -1644,10 +1691,11 @@ int main(void)
 
             {
                 int bi;
+                int bf = vk_box_get_subfocus(deck_box5);
                 for(bi = 0; bi < 5; bi++)
                 {
-                    VK_WIDGET(deck_buttons[bi])->attrs =
-                        (bi == deck_box5->focused_slot) ? A_BOLD : 0;
+                    vk_widget_set_attrs(VK_WIDGET(deck_buttons[bi]),
+                        (bi == bf) ? A_BOLD : 0);
                     vk_button_update(deck_buttons[bi]);
                 }
             }

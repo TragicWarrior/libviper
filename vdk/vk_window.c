@@ -112,6 +112,16 @@ vk_window_set_border_style(vk_window_t *window, int style)
 }
 
 inline int
+vk_window_get_border_style(vk_window_t *window)
+{
+    if(window == NULL) return -1;
+
+    if(!vk_object_assert(window, vk_window_t)) return -1;
+
+    return VK_FRAME(window)->border_style;
+}
+
+inline int
 vk_window_set_border_colors(vk_window_t *window, short fg, short bg)
 {
     if(window == NULL) return -1;
@@ -122,6 +132,26 @@ vk_window_set_border_colors(vk_window_t *window, short fg, short bg)
     VK_FRAME(window)->border_bg = bg;
 
     return 0;
+}
+
+inline short
+vk_window_get_border_fg(vk_window_t *window)
+{
+    if(window == NULL) return -1;
+
+    if(!vk_object_assert(window, vk_window_t)) return -1;
+
+    return VK_FRAME(window)->border_fg;
+}
+
+inline short
+vk_window_get_border_bg(vk_window_t *window)
+{
+    if(window == NULL) return -1;
+
+    if(!vk_object_assert(window, vk_window_t)) return -1;
+
+    return VK_FRAME(window)->border_bg;
 }
 
 inline int
@@ -337,6 +367,8 @@ _vk_window_recreate(vk_widget_t *widget)
     vk_frame_t  *frame;
 
     widget->canvas = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state &= ~VK_STATE_FROZEN;
 
     frame = VK_FRAME(widget);
 

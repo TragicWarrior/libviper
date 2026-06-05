@@ -6,6 +6,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_button.h"
+#include "vk_event.h"
 
 static int
 _vk_button_ctor(vk_object_t *object, va_list *argp, ...);
@@ -159,6 +160,8 @@ vk_button_press(vk_button_t *button)
     if(!vk_object_assert(button, vk_button_t)) return -1;
 
     button->pressed = true;
+
+    vk_object_emit(VK_OBJECT(button), VK_EVENT_ON_CLICK);
 
     if(button->on_press != NULL)
         return button->on_press(VK_WIDGET(button), button->anything);

@@ -6,6 +6,7 @@
 
 #include "vk_object.h"
 #include "vk_widget.h"
+#include "vk_event.h"
 
 static int
 _vk_widget_ctor(vk_object_t *object, va_list *argp, ...);
@@ -140,20 +141,15 @@ vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
     widget->attrs = attrs;
 }
 
-inline short
-vk_widget_get_fg(vk_widget_t *widget)
+inline int
+vk_widget_get_colors(vk_widget_t *widget, short *fg, short *bg)
 {
     if(widget == NULL) return -1;
 
-    return widget->fg;
-}
+    if(fg != NULL) *fg = widget->fg;
+    if(bg != NULL) *bg = widget->bg;
 
-inline short
-vk_widget_get_bg(vk_widget_t *widget)
-{
-    if(widget == NULL) return -1;
-
-    return widget->bg;
+    return 0;
 }
 
 inline attr_t
@@ -198,8 +194,8 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
 
     retval = widget->_resize(widget, width, height);
 
-    if(retval == 0 && widget->_on_resize != NULL)
-        widget->_on_resize(widget);
+    if(retval == 0)
+        vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RESIZE);
 
     return retval;
 }
@@ -258,8 +254,8 @@ vk_widget_recreate(vk_widget_t *widget)
 
     retval = widget->_recreate(widget);
 
-    if(retval == 0 && widget->_on_recreate != NULL)
-        widget->_on_recreate(widget);
+    if(retval == 0)
+        vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RECREATE);
 
     return retval;
 }

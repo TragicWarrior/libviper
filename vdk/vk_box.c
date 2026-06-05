@@ -6,6 +6,7 @@
 #include "vk_widget.h"
 #include "vk_container.h"
 #include "vk_box.h"
+#include "vk_event.h"
 
 static int
 _vk_box_ctor(vk_object_t *object, va_list *argp, ...);
@@ -14,7 +15,7 @@ static int
 _vk_box_dtor(vk_object_t *object);
 
 static int
-_vk_box_on_resize(vk_widget_t *widget);
+_vk_box_on_resize(vk_object_t *object, int event, void *data);
 
 static int
 _vk_box_recreate(vk_widget_t *widget);
@@ -124,6 +125,16 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
     return 0;
 }
 
+inline int
+vk_box_get_slot_count(vk_box_t *box)
+{
+    if(box == NULL) return -1;
+
+    if(!vk_object_assert(box, vk_box_t)) return -1;
+
+    return box->slots;
+}
+
 inline vk_widget_t*
 vk_box_get_widget(vk_box_t *box, int slot)
 {
@@ -139,13 +150,25 @@ vk_box_get_widget(vk_box_t *box, int slot)
 inline int
 vk_box_set_subfocus(vk_box_t *box, int slot)
 {
+    int old_slot;
+
     if(box == NULL) return -1;
 
     if(!vk_object_assert(box, vk_box_t)) return -1;
 
     if(slot < 0 || slot >= box->slots) return -1;
+    if(slot == box->focused_slot) return 0;
 
+    old_slot = box->focused_slot;
     box->focused_slot = slot;
+
+    if(box->slot_widgets[old_slot] != NULL)
+        vk_object_emit(VK_OBJECT(box->slot_widgets[old_slot]),
+            VK_EVENT_ON_UNFOCUS);
+
+    if(box->slot_widgets[slot] != NULL)
+        vk_object_emit(VK_OBJECT(box->slot_widgets[slot]),
+            VK_EVENT_ON_FOCUS);
 
     return 0;
 }
@@ -218,7 +241,8 @@ _vk_box_ctor(vk_object_t *object, va_list *argp, ...)
     box->dtor = _vk_box_dtor;
     box->_update = _vk_box_update;
 
-    VK_WIDGET(box)->_on_resize = _vk_box_on_resize;
+    vk_object_register_event(VK_OBJECT(box),
+        VK_EVENT_ON_RESIZE, _vk_box_on_resize, NULL);
     VK_WIDGET(box)->_recreate = _vk_box_recreate;
 
     object->kmio = _vk_box_kmio;
@@ -259,12 +283,16 @@ _vk_box_dtor(vk_object_t *object)
 }
 
 static int
-_vk_box_on_resize(vk_widget_t *widget)
+_vk_box_on_resize(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t     *widget = VK_WIDGET(object);
     vk_box_t        *box;
     vk_widget_t     *child;
     int             i;
     bool            horiz;
+
+    (void)event;
+    (void)data;
 
     box = VK_BOX(widget);
     horiz = (box->orientation == VK_BOX_HORIZONTAL);
@@ -364,6 +392,8 @@ _vk_box_recreate(vk_widget_t *widget)
     int         i;
 
     widget->canvas = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state &= ~VK_STATE_FROZEN;
 
     box = VK_BOX(widget);
 

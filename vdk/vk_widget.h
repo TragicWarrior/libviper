@@ -43,9 +43,7 @@ struct _vk_widget_s
     int                 (*_draw)            (vk_widget_t *);
     int                 (*_move)            (vk_widget_t *, int, int);
     int                 (*_resize)          (vk_widget_t *, int, int);
-    int                 (*_on_resize)       (vk_widget_t *);
     int                 (*_recreate)        (vk_widget_t *);
-    int                 (*_on_recreate)     (vk_widget_t *);
     int                 (*_erase)           (vk_widget_t *);
 
 };

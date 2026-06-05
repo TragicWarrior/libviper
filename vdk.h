@@ -78,6 +78,27 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_DECK_TOP                 0
 #define VK_DECK_BOTTOM              1
 
+/* event types */
+enum
+{
+    /* lifecycle */
+    VK_EVENT_ON_RESIZE      = 1,
+    VK_EVENT_ON_RECREATE    = 2,
+    VK_EVENT_ON_TELEPORT    = 3,
+
+    /* interaction */
+    VK_EVENT_ON_CLICK       = 10,
+    VK_EVENT_ON_SELECT      = 11,
+    VK_EVENT_ON_UNSELECT    = 12,
+    VK_EVENT_ON_ACTIVATE    = 13,
+    VK_EVENT_ON_SUBMIT      = 14,
+
+    /* state */
+    VK_EVENT_ON_FOCUS       = 20,
+    VK_EVENT_ON_UNFOCUS     = 21,
+    VK_EVENT_ON_SCROLL      = 22,
+};
+
 /* keystroke definitions */
 #ifndef KEY_TAB
 #define KEY_TAB                     9
@@ -108,6 +129,8 @@ typedef struct  _vk_input_s         vk_input_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 
 /* callback typedefs */
+typedef int         (*VkEventFunc)(vk_object_t *object, int event,
+                        void *data);
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
 typedef int         (*VkKmioFunc)(vk_object_t *object, int32_t keystroke);
 typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
@@ -143,6 +166,10 @@ const char*     vk_object_get_klass_name(vk_object_t *object);
 int             vk_object_set_kmio(vk_object_t *object, VkKmioFunc func);
 int             vk_object_push_keystroke(vk_object_t *object,
                     int32_t keystroke);
+int             vk_object_register_event(vk_object_t *object,
+                    int event, VkEventFunc func, void *data);
+int             vk_object_unregister_event(vk_object_t *object,
+                    int event, VkEventFunc func);
 int             vk_object_destroy(vk_object_t *object);
 
 /* vk_screen */
@@ -156,11 +183,9 @@ int             vk_screen_attach_widget(vk_screen_t *screen,
 int             vk_screen_detach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_resize(vk_screen_t *screen);
-int             vk_screen_poll_resize(vk_screen_t *screen);
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
 int             vk_screen_set_wallpaper(vk_screen_t *screen,
                     VkSurfaceBkgdFunc func);
-int             vk_screen_paint_wallpaper(vk_screen_t *screen);
 int             vk_screen_refresh(vk_screen_t *screen);
 void            vk_screen_destroy(vk_screen_t *screen);
 
@@ -170,8 +195,8 @@ int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
 WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
 WINDOW*         vk_widget_get_canvas(vk_widget_t *widget);
 void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
-short           vk_widget_get_fg(vk_widget_t *widget);
-short           vk_widget_get_bg(vk_widget_t *widget);
+int             vk_widget_get_colors(vk_widget_t *widget,
+                    short *fg, short *bg);
 void            vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs);
 attr_t          vk_widget_get_attrs(vk_widget_t *widget);
 int             vk_widget_get_metrics(vk_widget_t *widget,
@@ -222,9 +247,12 @@ int             vk_listbox_remove_item(vk_listbox_t *listbox, int idx);
 int             vk_listbox_get_item(vk_listbox_t *listbox, int idx,
                     char *buf, int buf_sz);
 int             vk_listbox_get_item_count(vk_listbox_t *listbox);
-int             vk_listbox_get_selected(vk_listbox_t *listbox);
-int             vk_listbox_set_selected(vk_listbox_t *listbox, int idx);
-int             vk_listbox_exec_selected(vk_listbox_t *listbox);
+int             vk_listbox_get_scroll_pos(vk_listbox_t *listbox);
+int             vk_listbox_get_curr(vk_listbox_t *listbox);
+int             vk_listbox_set_curr(vk_listbox_t *listbox, int idx);
+int             vk_listbox_exec_curr(vk_listbox_t *listbox);
+int             vk_listbox_set_next(vk_listbox_t *listbox);
+int             vk_listbox_set_prev(vk_listbox_t *listbox);
 bool            vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx);
 int             vk_listbox_get_metrics(vk_listbox_t *listbox,
                     int *width, int *height);
@@ -245,9 +273,11 @@ int             vk_selectbox_add_separator(vk_selectbox_t *selectbox,
                     int style);
 int             vk_selectbox_remove_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_get_item_count(vk_selectbox_t *selectbox);
-int             vk_selectbox_get_selected(vk_selectbox_t *selectbox);
-int             vk_selectbox_set_selected(vk_selectbox_t *selectbox, int idx);
-int             vk_selectbox_exec_selected(vk_selectbox_t *selectbox);
+int             vk_selectbox_get_curr(vk_selectbox_t *selectbox);
+int             vk_selectbox_set_curr(vk_selectbox_t *selectbox, int idx);
+int             vk_selectbox_exec_curr(vk_selectbox_t *selectbox);
+int             vk_selectbox_set_next(vk_selectbox_t *selectbox);
+int             vk_selectbox_set_prev(vk_selectbox_t *selectbox);
 int             vk_selectbox_get_item(vk_selectbox_t *selectbox, int idx,
                     char *buf, int buf_sz);
 int             vk_selectbox_set_item(vk_selectbox_t *selectbox, int idx,
@@ -268,6 +298,8 @@ vk_frame_t*     vk_frame_create(int width, int height);
 int             vk_frame_set_border_style(vk_frame_t *frame, int style);
 int             vk_frame_set_border_colors(vk_frame_t *frame,
                     short fg, short bg);
+short           vk_frame_get_border_fg(vk_frame_t *frame);
+short           vk_frame_get_border_bg(vk_frame_t *frame);
 int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child);
 vk_widget_t*    vk_frame_get_child(vk_frame_t *frame);
 int             vk_frame_update(vk_frame_t *frame);
@@ -299,8 +331,11 @@ int             vk_window_set_title_justify(vk_window_t *window, int justify);
 int             vk_window_set_decorate(vk_window_t *window,
                     VkWindowDecorateFunc func, void *data);
 int             vk_window_set_border_style(vk_window_t *window, int style);
+int             vk_window_get_border_style(vk_window_t *window);
 int             vk_window_set_border_colors(vk_window_t *window,
                     short fg, short bg);
+short           vk_window_get_border_fg(vk_window_t *window);
+short           vk_window_get_border_bg(vk_window_t *window);
 int             vk_window_set_child(vk_window_t *window, vk_widget_t *child);
 vk_widget_t*    vk_window_get_child(vk_window_t *window);
 int             vk_window_update(vk_window_t *window);
@@ -313,6 +348,7 @@ int             vk_box_set_homogeneous(vk_box_t *box, bool homogeneous);
 int             vk_box_set_widget(vk_box_t *box, int slot,
                     vk_widget_t *widget);
 vk_widget_t*    vk_box_get_widget(vk_box_t *box, int slot);
+int             vk_box_get_slot_count(vk_box_t *box);
 int             vk_box_set_subfocus(vk_box_t *box, int slot);
 int             vk_box_get_subfocus(vk_box_t *box);
 int             vk_box_update(vk_box_t *box);
@@ -332,6 +368,13 @@ int             vk_textbox_set_text(vk_textbox_t *textbox, const char *text);
 const char*     vk_textbox_get_text(vk_textbox_t *textbox);
 int             vk_textbox_set_word_wrap(vk_textbox_t *textbox, bool enabled);
 int             vk_textbox_get_line_count(vk_textbox_t *textbox);
+int             vk_textbox_get_scroll_pos(vk_textbox_t *textbox);
+int             vk_textbox_scroll_up(vk_textbox_t *textbox);
+int             vk_textbox_scroll_down(vk_textbox_t *textbox);
+int             vk_textbox_scroll_pgup(vk_textbox_t *textbox);
+int             vk_textbox_scroll_pgdn(vk_textbox_t *textbox);
+int             vk_textbox_scroll_home(vk_textbox_t *textbox);
+int             vk_textbox_scroll_end(vk_textbox_t *textbox);
 int             vk_textbox_update(vk_textbox_t *textbox);
 void            vk_textbox_destroy(vk_textbox_t *textbox);
 

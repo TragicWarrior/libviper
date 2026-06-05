@@ -7,6 +7,7 @@
 #include "vk_listbox.h"
 #include "vk_item.h"
 #include "vk_scroller.h"
+#include "vk_event.h"
 
 // base klass methods
 static int
@@ -31,7 +32,7 @@ static int
 _vk_listbox_get_item_count(vk_listbox_t *listbox);
 
 static int
-_vk_listbox_get_selected(vk_listbox_t *listbox);
+_vk_listbox_get_curr(vk_listbox_t *listbox);
 
 static int
 _vk_listbox_remove_item(vk_listbox_t *listbox, int idx);
@@ -46,10 +47,10 @@ static int
 _vk_listbox_update(vk_listbox_t *listbox);
 
 static int
-_vk_listbox_on_recreate(vk_widget_t *widget);
+_vk_listbox_on_recreate(vk_object_t *object, int event, void *data);
 
 static int
-_vk_listbox_on_resize(vk_widget_t *widget);
+_vk_listbox_on_resize(vk_object_t *object, int event, void *data);
 
 static int
 _vk_listbox_reset(vk_listbox_t *listbox);
@@ -185,7 +186,15 @@ vk_listbox_get_item_count(vk_listbox_t *listbox)
 }
 
 inline int
-vk_listbox_get_selected(vk_listbox_t *listbox)
+vk_listbox_get_scroll_pos(vk_listbox_t *listbox)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->scroll_top;
+}
+
+inline int
+vk_listbox_get_curr(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return -1;
 
@@ -210,22 +219,92 @@ vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *name,
 }
 
 inline int
-vk_listbox_set_selected(vk_listbox_t *listbox, int idx)
+vk_listbox_set_curr(vk_listbox_t *listbox, int idx)
 {
     if(listbox == NULL) return -1;
     if(idx < 0 || idx >= listbox->item_count) return -1;
 
     listbox->curr_item = idx;
 
+    vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SELECT);
+
     return 0;
 }
 
 inline int
-vk_listbox_exec_selected(vk_listbox_t *listbox)
+vk_listbox_exec_curr(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return -1;
 
+    vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_ACTIVATE);
+
     return listbox->_exec_item(listbox);
+}
+
+inline int
+vk_listbox_set_next(vk_listbox_t *listbox)
+{
+    int idx;
+
+    if(listbox == NULL) return -1;
+    if(listbox->item_count == 0) return -1;
+
+    idx = listbox->curr_item;
+
+    do
+    {
+        idx++;
+
+        if(idx >= listbox->item_count)
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                idx = 0;
+            else
+                return 0;
+        }
+
+        if(idx == listbox->curr_item) return 0;
+    }
+    while(vk_listbox_item_is_separator(listbox, idx));
+
+    listbox->curr_item = idx;
+
+    vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SELECT);
+
+    return 0;
+}
+
+inline int
+vk_listbox_set_prev(vk_listbox_t *listbox)
+{
+    int idx;
+
+    if(listbox == NULL) return -1;
+    if(listbox->item_count == 0) return -1;
+
+    idx = listbox->curr_item;
+
+    do
+    {
+        idx--;
+
+        if(idx < 0)
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                idx = listbox->item_count - 1;
+            else
+                return 0;
+        }
+
+        if(idx == listbox->curr_item) return 0;
+    }
+    while(vk_listbox_item_is_separator(listbox, idx));
+
+    listbox->curr_item = idx;
+
+    vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SELECT);
+
+    return 0;
 }
 
 inline bool
@@ -364,15 +443,17 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
     listbox->_get_item = _vk_listbox_get_item;
     listbox->_set_item = _vk_listbox_set_item;
     listbox->_get_item_count = _vk_listbox_get_item_count;
-    listbox->_get_selected = _vk_listbox_get_selected;
+    listbox->_get_selected = _vk_listbox_get_curr;
     listbox->_remove_item = _vk_listbox_remove_item;
     listbox->_exec_item = _vk_listbox_exec_item;
     listbox->_add_separator = _vk_listbox_add_separator;
     listbox->_update = _vk_listbox_update;
     listbox->_reset = _vk_listbox_reset;
 
-    VK_WIDGET(listbox)->_on_recreate = _vk_listbox_on_recreate;
-    VK_WIDGET(listbox)->_on_resize = _vk_listbox_on_resize;
+    vk_object_register_event(VK_OBJECT(listbox),
+        VK_EVENT_ON_RECREATE, _vk_listbox_on_recreate, NULL);
+    vk_object_register_event(VK_OBJECT(listbox),
+        VK_EVENT_ON_RESIZE, _vk_listbox_on_resize, NULL);
 
     INIT_LIST_HEAD(&listbox->item_list);
 
@@ -504,7 +585,7 @@ _vk_listbox_get_item_count(vk_listbox_t *listbox)
 }
 
 static int
-_vk_listbox_get_selected(vk_listbox_t *listbox)
+_vk_listbox_get_curr(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return -1;
 
@@ -551,8 +632,13 @@ _vk_listbox_exec_item(vk_listbox_t *listbox)
 }
 
 static int
-_vk_listbox_on_recreate(vk_widget_t *widget)
+_vk_listbox_on_recreate(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
     if(widget->vscroller != NULL)
     {
         VK_WIDGET(widget->vscroller)->surface = widget->canvas;
@@ -569,8 +655,13 @@ _vk_listbox_on_recreate(vk_widget_t *widget)
 }
 
 static int
-_vk_listbox_on_resize(vk_widget_t *widget)
+_vk_listbox_on_resize(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
     if(widget->vscroller != NULL)
     {
         vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);

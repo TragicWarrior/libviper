@@ -8,6 +8,7 @@
 #include "vk_selectbox.h"
 #include "vk_item.h"
 #include "vk_scroller.h"
+#include "vk_event.h"
 
 static int
 _vk_selectbox_ctor(vk_object_t *object, va_list *argp, ...);
@@ -19,10 +20,10 @@ static int
 _vk_selectbox_update(vk_listbox_t *listbox);
 
 static int
-_vk_selectbox_on_resize(vk_widget_t *widget);
+_vk_selectbox_on_resize(vk_object_t *object, int event, void *data);
 
 static int
-_vk_selectbox_on_recreate(vk_widget_t *widget);
+_vk_selectbox_on_recreate(vk_object_t *object, int event, void *data);
 
 static vk_item_t*
 _vk_selectbox_get_item_at(vk_selectbox_t *sb, int idx);
@@ -124,10 +125,16 @@ vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx)
     {
         vk_selectbox_uncheck_all(selectbox);
         item->flags |= VK_ITEM_CHECKED;
+        vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_SELECT);
     }
     else
     {
         item->flags ^= VK_ITEM_CHECKED;
+
+        if(item->flags & VK_ITEM_CHECKED)
+            vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_SELECT);
+        else
+            vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_UNSELECT);
     }
 
     return 0;
@@ -166,6 +173,8 @@ vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx)
 
     item->flags |= VK_ITEM_CHECKED;
 
+    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_SELECT);
+
     return 0;
 }
 
@@ -182,6 +191,8 @@ vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx)
     if(item == NULL) return -1;
 
     item->flags &= ~VK_ITEM_CHECKED;
+
+    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_UNSELECT);
 
     return 0;
 }
@@ -204,6 +215,8 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
         item = list_entry(pos, vk_item_t, list);
         item->flags &= ~VK_ITEM_CHECKED;
     }
+
+    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_UNSELECT);
 
     return 0;
 }
@@ -239,7 +252,7 @@ vk_selectbox_get_item_count(vk_selectbox_t *selectbox)
 }
 
 inline int
-vk_selectbox_get_selected(vk_selectbox_t *selectbox)
+vk_selectbox_get_curr(vk_selectbox_t *selectbox)
 {
     if(selectbox == NULL) return -1;
 
@@ -249,7 +262,7 @@ vk_selectbox_get_selected(vk_selectbox_t *selectbox)
 }
 
 inline int
-vk_selectbox_set_selected(vk_selectbox_t *selectbox, int idx)
+vk_selectbox_set_curr(vk_selectbox_t *selectbox, int idx)
 {
     if(selectbox == NULL) return -1;
 
@@ -259,17 +272,41 @@ vk_selectbox_set_selected(vk_selectbox_t *selectbox, int idx)
 
     VK_LISTBOX(selectbox)->curr_item = idx;
 
+    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_SELECT);
+
     return 0;
 }
 
 inline int
-vk_selectbox_exec_selected(vk_selectbox_t *selectbox)
+vk_selectbox_exec_curr(vk_selectbox_t *selectbox)
 {
     if(selectbox == NULL) return -1;
 
     if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
 
+    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_ACTIVATE);
+
     return VK_LISTBOX(selectbox)->_exec_item(VK_LISTBOX(selectbox));
+}
+
+inline int
+vk_selectbox_set_next(vk_selectbox_t *selectbox)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return vk_listbox_set_next(VK_LISTBOX(selectbox));
+}
+
+inline int
+vk_selectbox_set_prev(vk_selectbox_t *selectbox)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return vk_listbox_set_prev(VK_LISTBOX(selectbox));
 }
 
 inline int
@@ -360,8 +397,10 @@ _vk_selectbox_ctor(vk_object_t *object, va_list *argp, ...)
 
     VK_LISTBOX(selectbox)->_update = _vk_selectbox_update;
 
-    VK_WIDGET(selectbox)->_on_resize = _vk_selectbox_on_resize;
-    VK_WIDGET(selectbox)->_on_recreate = _vk_selectbox_on_recreate;
+    vk_object_register_event(VK_OBJECT(selectbox),
+        VK_EVENT_ON_RESIZE, _vk_selectbox_on_resize, NULL);
+    vk_object_register_event(VK_OBJECT(selectbox),
+        VK_EVENT_ON_RECREATE, _vk_selectbox_on_recreate, NULL);
 
     return 0;
 }
@@ -516,8 +555,13 @@ _vk_selectbox_update(vk_listbox_t *listbox)
 }
 
 static int
-_vk_selectbox_on_resize(vk_widget_t *widget)
+_vk_selectbox_on_resize(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
     if(widget->vscroller != NULL)
     {
         vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);
@@ -534,8 +578,13 @@ _vk_selectbox_on_resize(vk_widget_t *widget)
 }
 
 static int
-_vk_selectbox_on_recreate(vk_widget_t *widget)
+_vk_selectbox_on_recreate(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
     if(widget->vscroller != NULL)
     {
         VK_WIDGET(widget->vscroller)->surface = widget->canvas;

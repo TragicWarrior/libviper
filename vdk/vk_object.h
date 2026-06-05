@@ -3,6 +3,7 @@
 
 #include "vdk.h"
 #include "stdarg.h"
+#include "list.h"
 
 #define KLASS_SIZE(klass_size)  sizeof(klass_size)
 #define KLASS_NAME(klass_name)  #klass_name
@@ -29,11 +30,12 @@ vk_object_t*    vk_object_construct(const void *klass, ...);
 
 struct _vk_object_s
 {
-    size_t          size;
-    const char      *name;
-    int             (*ctor)         (vk_object_t *, va_list *, ...);
-    int             (*dtor)         (vk_object_t *);
-    int             (*kmio)         (vk_object_t *, int32_t);
+    size_t              size;
+    const char          *name;
+    struct list_head    event_handlers;
+    int                 (*ctor)         (vk_object_t *, va_list *, ...);
+    int                 (*dtor)         (vk_object_t *);
+    int                 (*kmio)         (vk_object_t *, int32_t);
 };
 
 static inline int

@@ -210,14 +210,14 @@ dispatch. Public APIs call through these pointers.
 |-------|-------|
 | `vk_object_t` | `ctor`, `dtor`, `kmio` |
 | `vk_screen_t` | `ctor`, `dtor` |
-| `vk_widget_t` | `ctor`, `dtor`, `_draw`, `_move`, `_resize`, `_on_resize`, `_recreate`, `_on_recreate`, `_erase` |
+| `vk_widget_t` | `ctor`, `dtor`, `_draw`, `_move`, `_resize`, `_recreate`, `_erase` |
 | `vk_container_t` | `ctor`, `dtor`, `add_widget`, `remove_widget`, `vacate`, `rotate` |
 | `vk_box_t` | `ctor`, `dtor`, `_update` |
 | `vk_frame_t` | `ctor`, `dtor`, `_set_border_style`, `_set_child`, `_draw_border`, `_update` |
 | `vk_scroller_t` | `ctor`, `dtor`, `_update`, `_draw_scrollbar` |
 | `vk_window_t` | `ctor`, `dtor`, `_draw_title` |
 | `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_update`, `_reset` |
-| `vk_selectbox_t` | `ctor`, `dtor`, `_update` (overrides listbox's `_update`, `_on_resize`, `_on_recreate`) |
+| `vk_selectbox_t` | `ctor`, `dtor`, `_update` (overrides listbox's `_update`) |
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_textbox_t` | `ctor`, `dtor`, `_update` |
@@ -346,6 +346,8 @@ terminal. The sequence is:
    file handles.
 7. **Drain input** -- flush stale terminal response bytes from the
    `newterm`/`keypad` initialization sequences.
+8. **Emit `VK_EVENT_ON_TELEPORT`** -- fires all handlers registered on
+   the screen object (e.g. to reinitialize colors via `vdk_color_init()`).
 
 Old ncurses WINDOWs are intentionally leaked during teleport because
 `delwin` on windows bound to a different SCREEN corrupts ncurses internal
@@ -422,6 +424,53 @@ where the default forwarding is insufficient. Typical patterns include:
   `focused_slot`, overriding the default forwarding.
 - **Stack cycling** — a deck handler that calls `vk_deck_cycle()` on
   `KEY_TAB` and forwards other keys to the topmost widget.
+
+## Event System
+
+`vk_object_t` carries a linked list of event handlers. Any object (widget
+or screen) can register handlers for named events and emit events to notify
+all registered listeners.
+
+| API | Description |
+|-----|-------------|
+| `vk_object_register_event(object, event, func, data)` | Add a handler for an event type |
+| `vk_object_unregister_event(object, event, func)` | Remove a handler by event + function pointer |
+| `vk_object_emit(object, event)` | Fire all handlers registered for the event |
+
+The handler signature is `int (*VkEventFunc)(vk_object_t *object, int event, void *data)`.
+The `data` pointer is the value passed at registration time, enabling per-handler
+context (e.g. a struct with pointers to related widgets).
+
+### Event Types
+
+Events are grouped by purpose with spaced numeric ranges:
+
+| Event | Value | Emitted by |
+|-------|-------|------------|
+| `VK_EVENT_ON_RESIZE` | 1 | `vk_widget_resize()` after canvas resize succeeds |
+| `VK_EVENT_ON_RECREATE` | 2 | `vk_widget_recreate()` after `_recreate` succeeds |
+| `VK_EVENT_ON_TELEPORT` | 3 | `vk_screen_teleport()` after terminal migration completes |
+| `VK_EVENT_ON_CLICK` | 10 | `vk_button_press()` |
+| `VK_EVENT_ON_SELECT` | 11 | listbox/selectbox navigation and check/radio selection |
+| `VK_EVENT_ON_UNSELECT` | 12 | selectbox uncheck |
+| `VK_EVENT_ON_ACTIVATE` | 13 | listbox/selectbox `exec_curr` |
+| `VK_EVENT_ON_SUBMIT` | 14 | reserved for input submission |
+| `VK_EVENT_ON_FOCUS` | 20 | `vk_box_set_subfocus()` on the newly focused slot widget |
+| `VK_EVENT_ON_UNFOCUS` | 21 | `vk_box_set_subfocus()` on the previously focused slot widget |
+| `VK_EVENT_ON_SCROLL` | 22 | textbox scroll functions |
+
+### Internal Use
+
+Widget klasses register their own event handlers in their constructors for
+resize and recreate propagation. For example, `vk_box_t` registers an
+`ON_RESIZE` handler that recalculates slot dimensions, and `vk_listbox_t`
+registers `ON_RESIZE` and `ON_RECREATE` handlers that propagate to attached
+scrollers and repaint. These internal handlers coexist with any application
+handlers on the same event — `vk_object_emit` fires all of them.
+
+### Cleanup
+
+Event handlers are freed automatically during `vk_object_destroy()`.
 
 ## Frames and Scrollers
 
@@ -599,36 +648,33 @@ to recreate.
 
 ## Resize Propagation
 
-`vk_widget_t` has an `_on_resize` hook slot. When `vk_widget_resize()` 
-successfully resizes the canvas, it fires `widget->_on_resize(widget)` if
-non-NULL. Container klasses install their own handlers to propagate resize
-to children:
+When `vk_widget_resize()` successfully resizes the canvas, it emits
+`VK_EVENT_ON_RESIZE`. Container klasses register their own `ON_RESIZE`
+handlers in their constructors to propagate resize to children:
 
 - **vk_frame_t** -- resizes child to `(width - 2, height - 2)`;
   resizes and repositions attached scrollers
 - **vk_box_t** -- recalculates slot dimensions and resizes each child
 - **vk_listbox_t** -- resizes and repositions attached scrollers, repaints
 - **vk_selectbox_t** -- resizes and repositions attached scrollers, repaints
-  (overrides listbox's `_on_resize` because listbox calls its static `_update`
-  directly rather than through the function pointer)
 - **vk_textbox_t** -- resizes and repositions attached scrollers, reflows
   text, repaints
 
-Propagation is recursive: resizing a box triggers its `_on_resize`, which
-resizes each slot's widget, which in turn fires their `_on_resize` hooks
-(e.g. a frame inside a box will resize its own child).
+Propagation is recursive: resizing a box emits `ON_RESIZE`, which fires
+the box's handler to resize each slot's widget, which in turn emits their
+own `ON_RESIZE` events (e.g. a frame inside a box will resize its own child).
 
 ## Recreate Propagation
 
-`vk_widget_t` has `_recreate` and `_on_recreate` hook slots. Canvas
-recreation is triggered during `vk_screen_teleport()` when all widget
-canvases must be rebuilt on a new ncurses SCREEN.
+Canvas recreation is triggered during `vk_screen_teleport()` when all
+widget canvases must be rebuilt on a new ncurses SCREEN.
 
 `vk_widget_recreate(widget)` calls `widget->_recreate(widget)` to create
-the new canvas, then fires `widget->_on_recreate(widget)` if non-NULL.
+the new canvas, then emits `VK_EVENT_ON_RECREATE`.
 
-The base `_recreate` creates a fresh `newwin`. Container klasses override
-it to propagate through the widget tree:
+The base `_recreate` creates a fresh `newwin` and resets `composer` to
+the new canvas (clearing `VK_STATE_FROZEN`). Container klasses override
+`_recreate` to propagate through the widget tree:
 
 - **vk_frame_t** -- creates its canvas, updates scroller surfaces, recreates
   scrollers, then recreates the child
@@ -637,20 +683,21 @@ it to propagate through the widget tree:
 - **vk_deck_t** -- propagates recreate to children (deck has no canvas to recreate)
 
 All update child and scroller surface pointers before propagating so
-widgets blit to the correct parent canvas.
+widgets blit to the correct parent canvas. All custom `_recreate` methods
+reset `composer = canvas` and clear `VK_STATE_FROZEN`, matching the base
+behavior.
 
-The `_on_recreate` hook is for content-bearing widgets that need to repaint
-after canvas recreation. Widget types install it in their ctors:
+Content-bearing widgets register `ON_RECREATE` event handlers in their
+constructors to repaint after canvas recreation:
 
 - **vk_listbox_t** -- updates attached scroller surfaces, recreates them,
   then calls its `_update` to repaint items and scrollers
-- **vk_selectbox_t** -- same as listbox (overrides `_on_recreate` for the
-  same dispatch reason as `_on_resize`)
+- **vk_selectbox_t** -- same as listbox
 - **vk_textbox_t** -- updates attached scroller surfaces, recreates them,
   then calls its `_update` to repaint text and scrollers
 
-Callers can also set `_on_recreate` directly on plain `vk_widget_t`
-instances for custom content (the same way `_on_resize` is set).
+Application code can register additional `ON_RECREATE` handlers on any
+object via `vk_object_register_event()`.
 
 ## Widget State Flags
 
@@ -922,10 +969,10 @@ own rendering function. This ensures that internal listbox navigation
 (which calls `listbox->_update(listbox)` through the function pointer)
 dispatches to the selectbox's renderer, which prepends indicator glyphs.
 
-The selectbox also overrides `_on_resize` and `_on_recreate` because the
-listbox's versions call `_vk_listbox_update` directly (static function,
-not through the function pointer). The selectbox's overrides follow the
-same scroller-propagation pattern as the listbox's.
+The selectbox registers its own `ON_RESIZE` and `ON_RECREATE` event
+handlers because the listbox's handlers call `_vk_listbox_update` directly
+(static function, not through the function pointer). The selectbox's
+handlers follow the same scroller-propagation pattern as the listbox's.
 
 ## Fillers
 

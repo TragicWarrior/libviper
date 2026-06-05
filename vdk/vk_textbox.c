@@ -6,6 +6,7 @@
 #include "vk_widget.h"
 #include "vk_scroller.h"
 #include "vk_textbox.h"
+#include "vk_event.h"
 
 static int
 _vk_textbox_ctor(vk_object_t *object, va_list *argp, ...);
@@ -17,10 +18,10 @@ static int
 _vk_textbox_update(vk_textbox_t *textbox);
 
 static int
-_vk_textbox_on_resize(vk_widget_t *widget);
+_vk_textbox_on_resize(vk_object_t *object, int event, void *data);
 
 static int
-_vk_textbox_on_recreate(vk_widget_t *widget);
+_vk_textbox_on_recreate(vk_object_t *object, int event, void *data);
 
 static void
 _vk_textbox_reflow(vk_textbox_t *textbox);
@@ -108,6 +109,133 @@ vk_textbox_get_line_count(vk_textbox_t *textbox)
 }
 
 inline int
+vk_textbox_get_scroll_pos(vk_textbox_t *textbox)
+{
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    return textbox->scroll_top;
+}
+
+inline int
+vk_textbox_scroll_up(vk_textbox_t *textbox)
+{
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    if(textbox->scroll_top > 0)
+    {
+        textbox->scroll_top--;
+        vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+    }
+
+    return 0;
+}
+
+inline int
+vk_textbox_scroll_down(vk_textbox_t *textbox)
+{
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    textbox->scroll_top++;
+
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+
+    return 0;
+}
+
+inline int
+vk_textbox_scroll_pgup(vk_textbox_t *textbox)
+{
+    vk_widget_t *widget;
+    int         paint_height;
+
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    widget = VK_WIDGET(textbox);
+    paint_height = widget->height;
+    if(widget->hscroller != NULL) paint_height--;
+
+    textbox->scroll_top -= paint_height;
+    if(textbox->scroll_top < 0) textbox->scroll_top = 0;
+
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+
+    return 0;
+}
+
+inline int
+vk_textbox_scroll_pgdn(vk_textbox_t *textbox)
+{
+    vk_widget_t *widget;
+    int         paint_height;
+    int         max_top;
+
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    widget = VK_WIDGET(textbox);
+    paint_height = widget->height;
+    if(widget->hscroller != NULL) paint_height--;
+
+    max_top = textbox->line_count - paint_height;
+    if(max_top < 0) max_top = 0;
+
+    textbox->scroll_top += paint_height;
+    if(textbox->scroll_top > max_top) textbox->scroll_top = max_top;
+
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+
+    return 0;
+}
+
+inline int
+vk_textbox_scroll_home(vk_textbox_t *textbox)
+{
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    textbox->scroll_top = 0;
+
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+
+    return 0;
+}
+
+inline int
+vk_textbox_scroll_end(vk_textbox_t *textbox)
+{
+    vk_widget_t *widget;
+    int         paint_height;
+    int         max_top;
+
+    if(textbox == NULL) return -1;
+
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    widget = VK_WIDGET(textbox);
+    paint_height = widget->height;
+    if(widget->hscroller != NULL) paint_height--;
+
+    max_top = textbox->line_count - paint_height;
+    if(max_top < 0) max_top = 0;
+
+    textbox->scroll_top = max_top;
+
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+
+    return 0;
+}
+
+inline int
 vk_textbox_update(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
@@ -159,8 +287,10 @@ _vk_textbox_ctor(vk_object_t *object, va_list *argp, ...)
     textbox->dtor = _vk_textbox_dtor;
     textbox->_update = _vk_textbox_update;
 
-    VK_WIDGET(textbox)->_on_resize = _vk_textbox_on_resize;
-    VK_WIDGET(textbox)->_on_recreate = _vk_textbox_on_recreate;
+    vk_object_register_event(VK_OBJECT(textbox),
+        VK_EVENT_ON_RESIZE, _vk_textbox_on_resize, NULL);
+    vk_object_register_event(VK_OBJECT(textbox),
+        VK_EVENT_ON_RECREATE, _vk_textbox_on_recreate, NULL);
 
     return 0;
 }
@@ -257,8 +387,13 @@ _vk_textbox_update(vk_textbox_t *textbox)
 }
 
 static int
-_vk_textbox_on_resize(vk_widget_t *widget)
+_vk_textbox_on_resize(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
     if(widget->vscroller != NULL)
     {
         vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);
@@ -277,8 +412,13 @@ _vk_textbox_on_resize(vk_widget_t *widget)
 }
 
 static int
-_vk_textbox_on_recreate(vk_widget_t *widget)
+_vk_textbox_on_recreate(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
     if(widget->vscroller != NULL)
     {
         VK_WIDGET(widget->vscroller)->surface = widget->canvas;

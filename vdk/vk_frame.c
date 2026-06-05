@@ -24,7 +24,7 @@ static int
 _vk_frame_draw_border(vk_frame_t *frame);
 
 static int
-_vk_frame_on_resize(vk_widget_t *widget);
+_vk_frame_on_resize(vk_object_t *object, int event, void *data);
 
 static int
 _vk_frame_recreate(vk_widget_t *widget);
@@ -84,6 +84,26 @@ vk_frame_set_border_colors(vk_frame_t *frame, short fg, short bg)
     frame->border_bg = bg;
 
     return 0;
+}
+
+inline short
+vk_frame_get_border_fg(vk_frame_t *frame)
+{
+    if(frame == NULL) return -1;
+
+    if(!vk_object_assert(frame, vk_frame_t)) return -1;
+
+    return frame->border_fg;
+}
+
+inline short
+vk_frame_get_border_bg(vk_frame_t *frame)
+{
+    if(frame == NULL) return -1;
+
+    if(!vk_object_assert(frame, vk_frame_t)) return -1;
+
+    return frame->border_bg;
 }
 
 inline int
@@ -165,7 +185,8 @@ _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
     frame->_draw_border = _vk_frame_draw_border;
     frame->_update = _vk_frame_update;
 
-    VK_WIDGET(frame)->_on_resize = _vk_frame_on_resize;
+    vk_object_register_event(VK_OBJECT(frame),
+        VK_EVENT_ON_RESIZE, _vk_frame_on_resize, NULL);
     VK_WIDGET(frame)->_recreate = _vk_frame_recreate;
 
     object->kmio = _vk_frame_kmio;
@@ -335,9 +356,13 @@ _vk_frame_draw_border(vk_frame_t *frame)
 }
 
 static int
-_vk_frame_on_resize(vk_widget_t *widget)
+_vk_frame_on_resize(vk_object_t *object, int event, void *data)
 {
+    vk_widget_t *widget = VK_WIDGET(object);
     vk_frame_t  *frame;
+
+    (void)event;
+    (void)data;
 
     frame = VK_FRAME(widget);
 
@@ -365,6 +390,8 @@ _vk_frame_recreate(vk_widget_t *widget)
     vk_frame_t  *frame;
 
     widget->canvas = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state &= ~VK_STATE_FROZEN;
 
     frame = VK_FRAME(widget);
 
