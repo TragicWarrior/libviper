@@ -39,6 +39,8 @@ vk_object_t
    │
    ├─ vk_menubar_t
    │
+   ├─ vk_calendar_t
+   │
    └─ vk_listbox_t
       │
       └─ vk_selectbox_t
@@ -77,6 +79,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_FILLER(x)` | `vk_filler_t *` |
 | `VK_MENUBAR(x)` | `vk_menubar_t *` |
 | `VK_FILEDIALOG(x)` | `vk_filedialog_t *` |
+| `VK_CALENDAR(x)` | `vk_calendar_t *` |
 
 ## Klass Templates
 
@@ -92,7 +95,7 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
 `VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
 `VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
-`VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`.
+`VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -124,6 +127,7 @@ vk_button_create(text)
 vk_input_create(width)
 vk_filler_create(void)
 vk_menubar_create(width)
+vk_calendar_create(void)
 vk_filedialog_create(width, height, style, multiselect)
 ```
 
@@ -149,6 +153,7 @@ _vk_button_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_input_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filler_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_menubar_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_calendar_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filedialog_ctor -> VK_BOX_KLASS->ctor(object, argp)
 ```
 
@@ -239,6 +244,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_input_t` | `ctor`, `dtor`, `_update` |
 | `vk_filler_t` | `ctor`, `dtor` |
 | `vk_menubar_t` | `ctor`, `dtor`, `_add_item`, `_get_item_count`, `_exec_item`, `_update`, `_reset` |
+| `vk_calendar_t` | `ctor`, `dtor`, `_update` |
 | `vk_filedialog_t` | `ctor`, `dtor` |
 
 ## Public API Convention
@@ -1182,6 +1188,47 @@ child widget individually (scroller, button bar, buttons, file list, input).
 | `vk_filedialog_set_highlight(dialog, fg, bg)` | Set highlight colors on file list |
 | `vk_filedialog_update(dialog)` | Update all children and composite |
 | `vk_filedialog_destroy(dialog)` | Destroy dialog and all children |
+
+## Calendars
+
+`vk_calendar_t` is a date display widget derived from `vk_widget_t`. It
+renders an XFCE4-style month view: a header row with `< Month Year >`
+navigation arrows, a day-of-week row (Su Mo Tu We Th Fr Sa), and a 7x6
+grid of day numbers. The widget size is fixed at 22 columns by 8 rows.
+
+Days from the current month use the widget's base colors (set via
+`vk_widget_set_colors()`). Today's date uses the highlight colors. Days
+from adjacent months use the dimmed colors. The month name and day-of-week
+labels use the header colors. Each color region has an independent `attr_t`
+field (set via the `_attrs` variant of each setter) so the caller controls
+bold, dim, reverse, etc. without any hardcoded attributes in the widget.
+
+`vk_calendar_create()` initializes the calendar to the current month and
+records today's date for highlight rendering.
+
+| API | Description |
+|-----|-------------|
+| `vk_calendar_create()` | Create a calendar showing the current month |
+| `vk_calendar_set_month(cal, month, year)` | Set displayed month (0-11) and year |
+| `vk_calendar_get_month(cal, &month, &year)` | Get displayed month and year |
+| `vk_calendar_prev_month(cal)` | Navigate to previous month (wraps year) |
+| `vk_calendar_next_month(cal)` | Navigate to next month (wraps year) |
+| `vk_calendar_set_highlight(cal, fg, bg)` | Set today highlight colors |
+| `vk_calendar_set_highlight_attrs(cal, attrs)` | Set today highlight attributes |
+| `vk_calendar_set_dimmed(cal, fg, bg)` | Set adjacent month day colors |
+| `vk_calendar_set_dimmed_attrs(cal, attrs)` | Set adjacent month day attributes |
+| `vk_calendar_set_header_colors(cal, fg, bg)` | Set month name / day-of-week colors |
+| `vk_calendar_set_header_attrs(cal, attrs)` | Set month name / day-of-week attributes |
+| `vk_calendar_update(cal)` | Repaint the calendar |
+| `vk_calendar_destroy(cal)` | Destroy the calendar |
+
+## Listbox Highlight Attributes
+
+`vk_listbox_set_highlight_attrs(listbox, attrs)` sets the ncurses
+attributes applied to the highlighted (current) item. The default is
+`A_NORMAL`. This supplements `vk_listbox_set_highlight()` which sets
+only the color pair. The attrs are applied via `mvwchgat` alongside
+the highlight color.
 
 ## Linked Lists
 

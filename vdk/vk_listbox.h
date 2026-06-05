@@ -27,6 +27,7 @@ struct _vk_listbox_s
 
     int                 highlight_fg;       // fg color of selected item
     int                 highlight_bg;       // bg color of selected item
+    attr_t              highlight_attrs;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

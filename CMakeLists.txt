@@ -61,6 +61,7 @@ set(VDK_SOURCES
     vdk/vk_input.c
     vdk/vk_filedialog.c
     vdk/vk_menubar.c
+    vdk/vk_calendar.c
     )
 
 set(VKMIO_SOURCES

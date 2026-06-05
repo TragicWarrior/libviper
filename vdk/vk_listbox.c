@@ -136,6 +136,16 @@ vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg)
 }
 
 inline int
+vk_listbox_set_highlight_attrs(vk_listbox_t *listbox, attr_t attrs)
+{
+    if(listbox == NULL) return -1;
+
+    listbox->highlight_attrs = attrs;
+
+    return 0;
+}
+
+inline int
 vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything)
 {
@@ -757,7 +767,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
         if(idx > listbox->scroll_bottom) break;
 
-        highlight_attr = A_NORMAL;
+        highlight_attr = listbox->highlight_attrs;
 
         if(item->separator_style > 0)
         {

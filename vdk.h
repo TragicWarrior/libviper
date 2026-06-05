@@ -137,6 +137,7 @@ typedef struct  _vk_input_s         vk_input_t;
 typedef struct  _vk_activity_s      vk_activity_t;
 typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
+typedef struct  _vk_calendar_s      vk_calendar_t;
 
 /* callback typedefs */
 typedef int         (*VkEventFunc)(vk_object_t *object, int event,
@@ -172,6 +173,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_ACTIVITY(x)          ((vk_activity_t *)x)
 #define VK_MENUBAR(x)           ((vk_menubar_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
+#define VK_CALENDAR(x)          ((vk_calendar_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -258,6 +260,8 @@ int             vk_listbox_set_title(vk_listbox_t *listbox, char *title);
 int             vk_listbox_get_title(vk_listbox_t *listbox,
                     char *buf, int buf_sz);
 int             vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg);
+int             vk_listbox_set_highlight_attrs(vk_listbox_t *listbox,
+                    attr_t attrs);
 int             vk_listbox_add_item(vk_listbox_t *listbox,
                     char *item, VkWidgetFunc func, void *anything);
 int             vk_listbox_set_item(vk_listbox_t *listbox, int idx,
@@ -521,5 +525,28 @@ int             vk_filedialog_set_highlight(vk_filedialog_t *dialog,
                     short fg, short bg);
 int             vk_filedialog_update(vk_filedialog_t *dialog);
 void            vk_filedialog_destroy(vk_filedialog_t *dialog);
+
+/* vk_calendar */
+vk_calendar_t*  vk_calendar_create(void);
+int             vk_calendar_set_month(vk_calendar_t *calendar,
+                    int month, int year);
+int             vk_calendar_get_month(vk_calendar_t *calendar,
+                    int *month, int *year);
+int             vk_calendar_prev_month(vk_calendar_t *calendar);
+int             vk_calendar_next_month(vk_calendar_t *calendar);
+int             vk_calendar_set_highlight(vk_calendar_t *calendar,
+                    short fg, short bg);
+int             vk_calendar_set_highlight_attrs(vk_calendar_t *calendar,
+                    attr_t attrs);
+int             vk_calendar_set_dimmed(vk_calendar_t *calendar,
+                    short fg, short bg);
+int             vk_calendar_set_dimmed_attrs(vk_calendar_t *calendar,
+                    attr_t attrs);
+int             vk_calendar_set_header_colors(vk_calendar_t *calendar,
+                    short fg, short bg);
+int             vk_calendar_set_header_attrs(vk_calendar_t *calendar,
+                    attr_t attrs);
+int             vk_calendar_update(vk_calendar_t *calendar);
+void            vk_calendar_destroy(vk_calendar_t *calendar);
 
 #endif
