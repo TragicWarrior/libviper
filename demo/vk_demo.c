@@ -372,7 +372,7 @@ deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
     pair = vdk_color_pair(fg, bg);
 
     style = vk_window_get_border_style(window);
-    if(style & VK_FRAME_DOUBLE)
+    if(style & VK_BORDER_DOUBLE)
     {
         wch_rtee[0] = 0x2563;  wch_rtee[1] = 0;
         wch_ltee[0] = 0x2560;  wch_ltee[1] = 0;
@@ -1131,14 +1131,14 @@ int main(void)
     vk_window_set_child(window1, VK_WIDGET(listbox));
 
     vscroller1 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
-    vk_scroller_set_border_style(vscroller1, VK_FRAME_SINGLE);
+    vk_scroller_set_border_style(vscroller1, VK_BORDER_SINGLE);
     vk_scroller_set_border_colors(vscroller1, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller1, VK_WIDGET(listbox));
     vk_scroller_set_scroll_info(vscroller1, listbox_scroll_info);
     vk_widget_attach_scroller(VK_WIDGET(listbox), vscroller1);
 
     hscroller1 = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
-    vk_scroller_set_border_style(hscroller1, VK_FRAME_SINGLE);
+    vk_scroller_set_border_style(hscroller1, VK_BORDER_SINGLE);
     vk_scroller_set_border_colors(hscroller1, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(hscroller1, VK_WIDGET(listbox));
     vk_scroller_set_scroll_info(hscroller1, listbox_scroll_info);
@@ -1157,14 +1157,14 @@ int main(void)
     vk_window_set_child(window2, VK_WIDGET(menu));
 
     vscroller2 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
-    vk_scroller_set_border_style(vscroller2, VK_FRAME_DOUBLE);
+    vk_scroller_set_border_style(vscroller2, VK_BORDER_DOUBLE);
     vk_scroller_set_border_colors(vscroller2, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller2, VK_WIDGET(menu));
     vk_scroller_set_scroll_info(vscroller2, listbox_scroll_info);
     vk_widget_attach_scroller(VK_WIDGET(window2), vscroller2);
 
     hscroller2 = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
-    vk_scroller_set_border_style(hscroller2, VK_FRAME_DOUBLE);
+    vk_scroller_set_border_style(hscroller2, VK_BORDER_DOUBLE);
     vk_scroller_set_border_colors(hscroller2, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(hscroller2, VK_WIDGET(menu));
     vk_scroller_set_scroll_info(hscroller2, listbox_scroll_info);
@@ -1183,7 +1183,7 @@ int main(void)
     vk_window_set_child(window3, VK_WIDGET(textbox3));
 
     vscroller3 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
-    vk_scroller_set_border_style(vscroller3, VK_FRAME_SINGLE);
+    vk_scroller_set_border_style(vscroller3, VK_BORDER_SINGLE);
     vk_scroller_set_border_colors(vscroller3, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller3, VK_WIDGET(textbox3));
     vk_scroller_set_scroll_info(vscroller3, textbox_scroll_info);
@@ -1236,7 +1236,7 @@ int main(void)
 
     lang_frame = vk_frame_create(max_x, box_h);
 
-    vk_frame_set_border_style(lang_frame, VK_FRAME_DOUBLE);
+    vk_frame_set_border_style(lang_frame, VK_BORDER_DOUBLE);
     vk_frame_set_border_colors(lang_frame, COLOR_YELLOW, COLOR_BLACK);
 
     lang_listbox = build_lang_listbox(max_x - 2, box_h - 2);
@@ -1245,14 +1245,14 @@ int main(void)
     vk_frame_set_child(lang_frame, VK_WIDGET(lang_listbox));
 
     lang_vscroller = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
-    vk_scroller_set_border_style(lang_vscroller, VK_FRAME_DOUBLE);
+    vk_scroller_set_border_style(lang_vscroller, VK_BORDER_DOUBLE);
     vk_scroller_set_border_colors(lang_vscroller, COLOR_YELLOW, COLOR_BLACK);
     vk_scroller_set_scroll_source(lang_vscroller, VK_WIDGET(lang_listbox));
     vk_scroller_set_scroll_info(lang_vscroller, listbox_scroll_info);
     vk_widget_attach_scroller(VK_WIDGET(lang_frame), lang_vscroller);
 
     lang_hscroller = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
-    vk_scroller_set_border_style(lang_hscroller, VK_FRAME_DOUBLE);
+    vk_scroller_set_border_style(lang_hscroller, VK_BORDER_DOUBLE);
     vk_scroller_set_border_colors(lang_hscroller, COLOR_YELLOW, COLOR_BLACK);
     vk_scroller_set_scroll_source(lang_hscroller, VK_WIDGET(lang_listbox));
     vk_scroller_set_scroll_info(lang_hscroller, listbox_scroll_info);
@@ -1286,7 +1286,7 @@ int main(void)
     vk_window_set_child(window4, VK_WIDGET(checkbox));
 
     vscroller4 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
-    vk_scroller_set_border_style(vscroller4, VK_FRAME_SINGLE);
+    vk_scroller_set_border_style(vscroller4, VK_BORDER_SINGLE);
     vk_scroller_set_border_colors(vscroller4, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller4, VK_WIDGET(checkbox));
     vk_scroller_set_scroll_info(vscroller4, listbox_scroll_info);
@@ -1305,7 +1305,7 @@ int main(void)
     vk_window_set_child(window5, VK_WIDGET(radio));
 
     vscroller5 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
-    vk_scroller_set_border_style(vscroller5, VK_FRAME_SINGLE);
+    vk_scroller_set_border_style(vscroller5, VK_BORDER_SINGLE);
     vk_scroller_set_border_colors(vscroller5, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller5, VK_WIDGET(radio));
     vk_scroller_set_scroll_info(vscroller5, listbox_scroll_info);
@@ -1314,7 +1314,7 @@ int main(void)
     // pane 3: about
     about_window = vk_window_create(slot_w, box_h);
 
-    vk_window_set_border_style(about_window, VK_FRAME_SINGLE);
+    vk_window_set_border_style(about_window, VK_BORDER_SINGLE);
     vk_window_set_border_colors(about_window, COLOR_WHITE, COLOR_BLACK);
     vk_window_set_title(about_window, " About ");
     vk_window_set_title_justify(about_window, VK_JUSTIFY_RIGHT);
@@ -1379,7 +1379,7 @@ int main(void)
 
     deck_win1 = vk_window_create(35, 10);
     vk_window_set_title(deck_win1, " Notes ");
-    vk_window_set_border_style(deck_win1, VK_FRAME_SINGLE);
+    vk_window_set_border_style(deck_win1, VK_BORDER_SINGLE);
     vk_window_set_border_colors(deck_win1, COLOR_WHITE, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win1), COLOR_WHITE, COLOR_BLUE);
     vk_window_set_decorate(deck_win1, deck_notes_decorate, NULL);
@@ -1389,7 +1389,7 @@ int main(void)
 
     deck_win2 = vk_window_create(35, 10);
     vk_window_set_title(deck_win2, " Tasks ");
-    vk_window_set_border_style(deck_win2, VK_FRAME_DOUBLE);
+    vk_window_set_border_style(deck_win2, VK_BORDER_DOUBLE);
     vk_window_set_border_colors(deck_win2, COLOR_RED, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win2), COLOR_WHITE, COLOR_GREEN);
     vk_window_set_decorate(deck_win2, deck_tasks_decorate, NULL);
@@ -1399,7 +1399,7 @@ int main(void)
 
     deck_win3 = vk_window_create(35, 10);
     vk_window_set_title(deck_win3, " Help ");
-    vk_window_set_border_style(deck_win3, VK_FRAME_SINGLE);
+    vk_window_set_border_style(deck_win3, VK_BORDER_SINGLE);
     vk_window_set_border_colors(deck_win3, COLOR_WHITE, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win3), COLOR_WHITE, COLOR_MAGENTA);
     vk_window_set_decorate(deck_win3, deck_help_decorate, NULL);
@@ -1410,7 +1410,7 @@ int main(void)
     deck_win4 = vk_window_create(35, 10);
     vk_window_set_title(deck_win4, " Log ");
     vk_window_set_border_style(deck_win4,
-        VK_FRAME_SINGLE | VK_FRAME_REVERSE);
+        VK_BORDER_SINGLE | VK_BORDER_REVERSE);
     vk_window_set_border_colors(deck_win4, COLOR_YELLOW, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win4), COLOR_WHITE, COLOR_CYAN);
     vk_window_set_decorate(deck_win4, deck_log_decorate, NULL);
@@ -1439,7 +1439,7 @@ int main(void)
         deck_win5 = vk_window_create(35, 10);
         vk_window_set_title(deck_win5, " Transport ");
         vk_window_set_border_style(deck_win5,
-            VK_FRAME_DOUBLE | VK_FRAME_REVERSE);
+            VK_BORDER_DOUBLE | VK_BORDER_REVERSE);
         vk_window_set_border_colors(deck_win5, COLOR_MAGENTA, COLOR_BLACK);
         vk_widget_set_colors(VK_WIDGET(deck_win5), COLOR_WHITE, COLOR_RED);
         vk_window_set_decorate(deck_win5, deck_transport_decorate, NULL);
@@ -1456,7 +1456,7 @@ int main(void)
                 COLOR_BLACK, COLOR_WHITE);
             if(bi == 3)
                 vk_button_set_relief_style(deck_buttons[bi],
-                    VK_FRAME_ASCII);
+                    VK_BORDER_ASCII);
             vk_button_update(deck_buttons[bi]);
         }
 
@@ -1482,12 +1482,12 @@ int main(void)
     {
         deck_win6 = vk_window_create(42, 20);
         vk_window_set_title(deck_win6, " Files ");
-        vk_window_set_border_style(deck_win6, VK_FRAME_SINGLE);
+        vk_window_set_border_style(deck_win6, VK_BORDER_SINGLE);
         vk_window_set_border_colors(deck_win6, COLOR_WHITE, COLOR_BLACK);
         vk_widget_set_colors(VK_WIDGET(deck_win6), COLOR_WHITE, COLOR_BLUE);
         vk_window_set_decorate(deck_win6, deck_files_decorate, NULL);
 
-        filedialog = vk_filedialog_create(40, 15, VK_FRAME_SINGLE, true);
+        filedialog = vk_filedialog_create(40, 15, VK_BORDER_SINGLE, true);
         vk_filedialog_set_colors(filedialog, COLOR_WHITE, COLOR_BLUE);
         vk_filedialog_set_highlight(filedialog, COLOR_BLUE, COLOR_WHITE);
 

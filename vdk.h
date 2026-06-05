@@ -27,13 +27,13 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_STATE_EXPAND             (1UL << 8)
 
 /* frame / border styles */
-#define VK_FRAME_NONE               0
-#define VK_FRAME_SINGLE             1
-#define VK_FRAME_DOUBLE             2
-#define VK_FRAME_ASCII              3
-#define VK_FRAME_REVERSE            (1 << 4)
+#define VK_BORDER_NONE               0
+#define VK_BORDER_SINGLE             1
+#define VK_BORDER_DOUBLE             2
+#define VK_BORDER_ASCII              3
+#define VK_BORDER_REVERSE            (1 << 4)
 
-/* button relief styles (in addition to VK_FRAME_SINGLE / VK_FRAME_ASCII) */
+/* button relief styles (in addition to VK_BORDER_SINGLE / VK_BORDER_ASCII) */
 #define VK_BUTTON_BASIC             4
 
 /* activity indicator styles */

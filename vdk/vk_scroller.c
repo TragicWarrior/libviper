@@ -64,8 +64,8 @@ vk_scroller_set_border_style(vk_scroller_t *scroller, int style)
 {
     if(scroller == NULL) return -1;
 
-    int base = style & ~VK_FRAME_REVERSE;
-    if(base < VK_FRAME_NONE || base > VK_FRAME_ASCII) return -1;
+    int base = style & ~VK_BORDER_REVERSE;
+    if(base < VK_BORDER_NONE || base > VK_BORDER_ASCII) return -1;
 
     scroller->border_style = style;
 
@@ -212,7 +212,7 @@ _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
     scroller->scroll_x = 0;
     scroller->scrollbar_flags = flags;
 
-    scroller->border_style = VK_FRAME_SINGLE;
+    scroller->border_style = VK_BORDER_SINGLE;
     scroller->border_fg = -1;
     scroller->border_bg = -1;
 
@@ -269,7 +269,7 @@ _vk_scroller_update(vk_scroller_t *scroller)
 
     sw = VK_WIDGET(scroller);
 
-    if((scroller->border_style & ~VK_FRAME_REVERSE) == VK_FRAME_NONE)
+    if((scroller->border_style & ~VK_BORDER_REVERSE) == VK_BORDER_NONE)
         return 0;
 
     if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
@@ -306,7 +306,7 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
 
     sw = VK_WIDGET(scroller);
 
-    if(scroller->border_style == VK_FRAME_NONE) return 0;
+    if(scroller->border_style == VK_BORDER_NONE) return 0;
 
     fg = (scroller->border_fg == -1) ? sw->fg : scroller->border_fg;
     bg = (scroller->border_bg == -1) ? sw->bg : scroller->border_bg;
@@ -335,7 +335,7 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
         if(thumb_pos >= track_len) thumb_pos = track_len - 1;
         if(thumb_pos < 0) thumb_pos = 0;
 
-        if((scroller->border_style & ~VK_FRAME_REVERSE) == VK_FRAME_ASCII)
+        if((scroller->border_style & ~VK_BORDER_REVERSE) == VK_BORDER_ASCII)
         {
             _vk_scroller_draw_vscroll_ascii(scroller,
                 1, track_len, thumb_pos, border_colors);
@@ -365,7 +365,7 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
         if(thumb_pos >= track_len) thumb_pos = track_len - 1;
         if(thumb_pos < 0) thumb_pos = 0;
 
-        if((scroller->border_style & ~VK_FRAME_REVERSE) == VK_FRAME_ASCII)
+        if((scroller->border_style & ~VK_BORDER_REVERSE) == VK_BORDER_ASCII)
         {
             _vk_scroller_draw_hscroll_ascii(scroller,
                 1, track_len, thumb_pos, border_colors);

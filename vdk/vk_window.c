@@ -232,7 +232,7 @@ _vk_window_draw_title(vk_window_t *window)
     widget = VK_WIDGET(window);
 
     if(window->title == NULL) return 0;
-    if(frame->border_style == VK_FRAME_NONE) return 0;
+    if(frame->border_style == VK_BORDER_NONE) return 0;
 
     title_len = strlen(window->title);
     avail = widget->width - 4;

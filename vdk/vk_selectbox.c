@@ -196,7 +196,7 @@ _vk_selectbox_ctor(vk_object_t *object, va_list *argp, ...)
     selectbox = VK_SELECTBOX(object);
 
     selectbox->mode = va_arg(*argp, int);
-    selectbox->style = VK_FRAME_SINGLE;
+    selectbox->style = VK_BORDER_SINGLE;
 
     va_end(args);
 
@@ -438,14 +438,14 @@ _vk_selectbox_glyph(vk_selectbox_t *sb, bool checked, int *col_width)
     {
         *col_width = 4;
 
-        if(sb->style == VK_FRAME_ASCII)
+        if(sb->style == VK_BORDER_ASCII)
             return checked ? "[x] " : "[ ] ";
         else
             return checked ? "[\xe2\x9c\x93] " : "[ ] ";
     }
     else
     {
-        if(sb->style == VK_FRAME_ASCII)
+        if(sb->style == VK_BORDER_ASCII)
         {
             *col_width = 4;
             return checked ? "(*) " : "( ) ";

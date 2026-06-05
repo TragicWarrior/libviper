@@ -173,7 +173,7 @@ _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
 
     frame = VK_FRAME(object);
 
-    frame->border_style = VK_FRAME_SINGLE;
+    frame->border_style = VK_BORDER_SINGLE;
     frame->border_fg = -1;
     frame->border_bg = -1;
     frame->border_attrs = 0;
@@ -228,8 +228,8 @@ _vk_frame_set_border_style(vk_frame_t *frame, int style)
 
     if(frame == NULL) return -1;
 
-    base = style & ~VK_FRAME_REVERSE;
-    if(base < VK_FRAME_NONE || base > VK_FRAME_ASCII) return -1;
+    base = style & ~VK_BORDER_REVERSE;
+    if(base < VK_BORDER_NONE || base > VK_BORDER_ASCII) return -1;
 
     frame->border_style = style;
 
@@ -291,10 +291,10 @@ _vk_frame_draw_border(vk_frame_t *frame)
 
     if(frame == NULL) return -1;
 
-    base_style = frame->border_style & ~VK_FRAME_REVERSE;
-    rev = (frame->border_style & VK_FRAME_REVERSE) ? A_REVERSE : 0;
+    base_style = frame->border_style & ~VK_BORDER_REVERSE;
+    rev = (frame->border_style & VK_BORDER_REVERSE) ? A_REVERSE : 0;
 
-    if(base_style == VK_FRAME_NONE) return 0;
+    if(base_style == VK_BORDER_NONE) return 0;
 
     widget = VK_WIDGET(frame);
 
@@ -306,14 +306,14 @@ _vk_frame_draw_border(vk_frame_t *frame)
 
     switch(base_style)
     {
-        case VK_FRAME_ASCII:
+        case VK_BORDER_ASCII:
         {
             wborder(widget->canvas,
                 '|', '|', '-', '-', '+', '+', '+', '+');
             break;
         }
 
-        case VK_FRAME_SINGLE:
+        case VK_BORDER_SINGLE:
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
             short   pair = vdk_color_pair(fg, bg);
@@ -333,7 +333,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
             break;
         }
 
-        case VK_FRAME_DOUBLE:
+        case VK_BORDER_DOUBLE:
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
             short   pair = vdk_color_pair(fg, bg);

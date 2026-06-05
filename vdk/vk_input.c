@@ -129,7 +129,7 @@ vk_input_set_relief_style(vk_input_t *input, int style)
 
     if(input == NULL) return -1;
 
-    if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
+    if(style != VK_BORDER_SINGLE && style != VK_BORDER_ASCII
         && style != VK_BUTTON_BASIC)
         return -1;
 
@@ -323,7 +323,7 @@ _vk_input_ctor(vk_object_t *object, va_list *argp, ...)
     input->max_len = 0;
     input->cursor = 0;
     input->scroll = 0;
-    input->relief_style = VK_FRAME_SINGLE;
+    input->relief_style = VK_BORDER_SINGLE;
     input->show_cursor = false;
 
     input->ctor = _vk_input_ctor;
@@ -412,7 +412,7 @@ _vk_input_update(vk_input_t *input)
             break;
         }
 
-        case VK_FRAME_ASCII:
+        case VK_BORDER_ASCII:
         {
             short tl_pair = vdk_color_pair(widget->relief_lo, bg);
             short br_pair = vdk_color_pair(widget->relief_hi, bg);

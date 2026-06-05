@@ -59,7 +59,7 @@ vk_dropdown_set_relief_style(vk_dropdown_t *dropdown, int style)
 
     widget = VK_WIDGET(dropdown);
 
-    if(style == VK_FRAME_SINGLE || style == VK_FRAME_ASCII)
+    if(style == VK_BORDER_SINGLE || style == VK_BORDER_ASCII)
         dropdown->collapsed_height = 3;
     else
         dropdown->collapsed_height = 1;
@@ -105,7 +105,7 @@ vk_dropdown_set_expanded(vk_dropdown_t *dropdown, bool expanded)
         if(list_h < 1) list_h = 1;
 
         dropdown->popup = vk_window_create(w, list_h + 2);
-        vk_window_set_border_style(dropdown->popup, VK_FRAME_SINGLE);
+        vk_window_set_border_style(dropdown->popup, VK_BORDER_SINGLE);
         vk_window_set_border_colors(dropdown->popup,
             widget->fg, widget->bg);
 
@@ -301,7 +301,7 @@ _vk_dropdown_update(vk_listbox_t *listbox)
         idx++;
     }
 
-    if(dropdown->relief_style == VK_FRAME_SINGLE)
+    if(dropdown->relief_style == VK_BORDER_SINGLE)
     {
         short hi_pair = vdk_color_pair(widget->relief_hi, widget->bg);
         short sh_pair = vdk_color_pair(widget->relief_lo, widget->bg);

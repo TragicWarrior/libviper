@@ -40,8 +40,8 @@ _popup_init_button(vk_popup_t *popup, int idx, const char *text)
 
     if(popup->style == VK_BUTTON_BASIC)
         vk_button_set_relief_style(btn, VK_BUTTON_BASIC);
-    else if(popup->style == VK_FRAME_ASCII)
-        vk_button_set_relief_style(btn, VK_FRAME_ASCII);
+    else if(popup->style == VK_BORDER_ASCII)
+        vk_button_set_relief_style(btn, VK_BORDER_ASCII);
 
     popup->btn_ctx[idx].popup = popup;
     popup->btn_ctx[idx].index = idx;
@@ -65,9 +65,9 @@ vk_popup_create(int width, int height, int style, ...)
 
     if(width < 5 || height < 3) return NULL;
 
-    if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
+    if(style != VK_BORDER_SINGLE && style != VK_BORDER_ASCII
         && style != VK_BUTTON_BASIC)
-        style = VK_FRAME_SINGLE;
+        style = VK_BORDER_SINGLE;
 
     va_start(ap, style);
     while((label = va_arg(ap, const char *)) != NULL)

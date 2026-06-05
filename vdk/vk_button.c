@@ -103,7 +103,7 @@ vk_button_set_relief_style(vk_button_t *button, int style)
 
     if(button == NULL) return -1;
 
-    if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
+    if(style != VK_BORDER_SINGLE && style != VK_BORDER_ASCII
         && style != VK_BUTTON_BASIC)
         return -1;
 
@@ -204,7 +204,7 @@ _vk_button_ctor(vk_object_t *object, va_list *argp, ...)
     button = VK_BUTTON(object);
 
     button->text = NULL;
-    button->relief_style = VK_FRAME_SINGLE;
+    button->relief_style = VK_BORDER_SINGLE;
     button->pressed = false;
     button->pressed_fg = COLOR_WHITE;
     button->pressed_bg = COLOR_BLACK;
@@ -311,7 +311,7 @@ _vk_button_update(vk_button_t *button)
             break;
         }
 
-        case VK_FRAME_ASCII:
+        case VK_BORDER_ASCII:
         {
             int hi_colors = COLOR_PAIR(hi_pair) | widget->attrs;
             int sh_colors = COLOR_PAIR(sh_pair) | widget->attrs;

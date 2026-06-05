@@ -87,7 +87,7 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
 
     if(width < 10 || height < 5) return NULL;
 
-    if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
+    if(style != VK_BORDER_SINGLE && style != VK_BORDER_ASCII
         && style != VK_BUTTON_BASIC)
         style = VK_BUTTON_BASIC;
 
@@ -101,7 +101,7 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
     btn_h = (style == VK_BUTTON_BASIC) ? 1 : 3;
 
     dialog->path_input = vk_input_create(width);
-    if(style != VK_FRAME_SINGLE)
+    if(style != VK_BORDER_SINGLE)
         vk_input_set_relief_style(dialog->path_input, style);
 
     if(multiselect)
@@ -118,7 +118,7 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
 
     dialog->scroller = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(dialog->scroller,
-        (style == VK_FRAME_ASCII) ? VK_FRAME_ASCII : VK_FRAME_SINGLE);
+        (style == VK_BORDER_ASCII) ? VK_BORDER_ASCII : VK_BORDER_SINGLE);
     vk_scroller_set_scroll_source(dialog->scroller,
         VK_WIDGET(dialog->file_list));
     vk_scroller_set_scroll_info(dialog->scroller,
@@ -134,10 +134,10 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
         vk_button_set_relief_style(dialog->btn_ok, VK_BUTTON_BASIC);
         vk_button_set_relief_style(dialog->btn_cancel, VK_BUTTON_BASIC);
     }
-    else if(style == VK_FRAME_ASCII)
+    else if(style == VK_BORDER_ASCII)
     {
-        vk_button_set_relief_style(dialog->btn_ok, VK_FRAME_ASCII);
-        vk_button_set_relief_style(dialog->btn_cancel, VK_FRAME_ASCII);
+        vk_button_set_relief_style(dialog->btn_ok, VK_BORDER_ASCII);
+        vk_button_set_relief_style(dialog->btn_cancel, VK_BORDER_ASCII);
     }
 
     dialog->button_bar = vk_box_create(width, btn_h, VK_BOX_HORIZONTAL, 2);
