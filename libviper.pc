@@ -5,5 +5,5 @@ Requires:
 prefix=/usr/local
 includedir=
 libdir=
-Libs: -lviper
+Libs: -lvdk
 Cflags: 

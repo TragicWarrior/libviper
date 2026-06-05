@@ -73,26 +73,8 @@ set(VKMIO_SOURCES
     vkmio/vk_drag.c
     )
 
-set(VIPER_SOURCES
-    strings.c
-    viper_private.c
-    viper_callbacks.c
-    viper_color.c
-    viper_deck.c
-    viper_events.c
-    viper_screen.c
-    viper_states.c
-    viper_wdestroy.c
-    viper_wmove.c
-    w_create.c
-    w_decorate.c
-    w_fill.c
-    w_metrics.c
-    w_move.c
-    w_shadow.c
-    )
-
-# --- libvdk (standalone VDK widget toolkit) ---
+# --- libvdk (the VDK widget toolkit, the only library this project ships
+#     now that the legacy viper_* layer has been retired) ---
 
 add_library(vdk.o OBJECT ${VDK_SOURCES} ${VKMIO_SOURCES})
 
@@ -108,26 +90,8 @@ endif()
 SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
 SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${VDK_VERSION} SOVERSION 1)
 
-# --- libviper (legacy + VDK) ---
-
-add_library(viper-static STATIC ${VIPER_SOURCES} ${VDK_SOURCES} ${VKMIO_SOURCES})
-
-add_library(viper.o OBJECT ${VIPER_SOURCES} ${VDK_SOURCES} ${VKMIO_SOURCES})
-
-add_library(viper-shared SHARED $<TARGET_OBJECTS:viper.o>)
-
-if (GPM_FOUND)
-target_link_libraries(viper-shared viper-static -lutil ${GPM_LIBRARIES} ${CURSES_LIBRARIES} )
-else()
-target_link_libraries(viper-shared viper-static -lutil ${CURSES_LIBRARIES} )
-endif()
-
-# CMake doesn't allow targets with the same name.  This renames them properly afterward.
-SET_TARGET_PROPERTIES(viper-static PROPERTIES OUTPUT_NAME viper CLEAN_DIRECT_OUTPUT 1)
-SET_TARGET_PROPERTIES(viper-shared PROPERTIES OUTPUT_NAME viper CLEAN_DIRECT_OUTPUT 1)
-
 set(PKG_CONFIG_LIBS
-    "-lviper"
+    "-lvdk"
 )
 
 configure_file(
@@ -135,8 +99,8 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
 )
 
-install (TARGETS vdk-static vdk-shared viper-static viper-shared DESTINATION lib)
-install (FILES viper.h vdk.h vkmio.h DESTINATION include)
+install (TARGETS vdk-static vdk-shared DESTINATION lib)
+install (FILES vdk.h vkmio.h DESTINATION include)
 
 # Install pkgconfig files to libdata on BSD, otherwise lib
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")

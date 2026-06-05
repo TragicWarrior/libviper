@@ -1,0 +1,1 @@
+/usr/bin/cc  -Wall -fPIC -DNCURSES_OPAQUE=0 -Wextra  -Wl,--no-as-needed -rdynamic CMakeFiles/vk_demo.dir/vk_demo.c.o -o vk_demo  ../libvdk.a -lutil -lgpm -lncursesw -lformw 
