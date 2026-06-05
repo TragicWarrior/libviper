@@ -151,14 +151,24 @@ vk_screen_get_surface_count(vk_screen_t *screen)
 }
 
 /*
-    Persist a wbkgdset value on the given surface's canvas.  The value is
-    stored on the surface and reapplied automatically after teleport,
-    where vk_screen_teleport otherwise creates a fresh canvas with the
-    ncurses default (black) background.  Consumers call this at surface
-    setup and whenever the per-surface color changes; libviper handles
-    keeping it in force, including pushing the value down to stdscr
-    whenever the changed surface is the active one (see
-    vk_screen_apply_stdscr_bkgd).
+    Persist a wbkgdset value for the given surface.  The value lives on
+    the surface so it can be reapplied to stdscr on active-surface
+    change, on live color change, and after teleport (where stdscr is
+    recreated by newterm() and would otherwise come up with the default
+    bkgd).  stdscr is where the flicker fix actually matters --
+    wrefresh's hardware-scroll / insert-delete-line optimizations on
+    the outer terminal expose cells whose color is taken from stdscr's
+    bkgd.  vk_screen_apply_stdscr_bkgd pushes the value down.
+
+    The bkgd is intentionally NOT applied to surface->canvas itself.
+    The surface canvas is fully overpainted every refresh
+    (werase -> wallpaper_func paints every cell -> widgets composite),
+    so its bkgd is never visible.  Worse, the deck's shadow code
+    writes pair-0 cells (vdk_color_init maps white-on-black to pair 0
+    for ncurses default-pair compatibility) and ncurses fills pair-0
+    cells with the canvas bkgd's pair on write -- which would tint the
+    shadow with the surface color.  Keeping wbkgdset off the surface
+    canvas avoids that without losing the flicker fix.
 */
 int
 vk_screen_set_surface_bkgd(vk_screen_t *screen, int surface_id, chtype bkgd)
@@ -172,9 +182,6 @@ vk_screen_set_surface_bkgd(vk_screen_t *screen, int surface_id, chtype bkgd)
     if(surface == NULL) return -1;
 
     surface->bkgd = bkgd;
-
-    if(surface->canvas != NULL)
-        wbkgdset(surface->canvas, bkgd);
 
     if(surface_id == screen->active_surface)
         vk_screen_apply_stdscr_bkgd(screen);
@@ -454,10 +461,6 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
         surface = screen->surfaces[i];
 
         surface->canvas = newwin(screen->height, screen->width, 0, 0);
-
-        /* restore wbkgdset value across the new (post-teleport) canvas */
-        if(surface->bkgd != 0)
-            wbkgdset(surface->canvas, surface->bkgd);
 
         for(j = 0; j < surface->widget_count; j++)
         {

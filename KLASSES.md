@@ -397,20 +397,16 @@ such as deck drop shadows.
 ### Surface bkgd
 
 Each surface stores a `chtype bkgd` value via
-`vk_screen_set_surface_bkgd(screen, surface_id, bkgd)`. Two `WINDOW`s
-need this in force for flicker-free repaints:
+`vk_screen_set_surface_bkgd(screen, surface_id, bkgd)`. The value is
+**applied to `stdscr`**, not to the surface canvas:
 
-- **The surface's canvas** -- `wbkgdset` is applied immediately to the
-  surface canvas; the stored value is also reapplied automatically by
-  `vk_screen_teleport` after `newwin()` creates a fresh canvas, so the
-  setting survives terminal migrations.
-- **`stdscr`** -- `vk_screen_apply_stdscr_bkgd(screen)` pushes the
-  active surface's stored bkgd onto `stdscr`. This is invoked
-  automatically from `vk_screen_set_surface` (active surface change),
-  from `vk_screen_set_surface_bkgd` when the changed surface is the
-  active one (live color change), and from `vk_screen_teleport` after
-  the new SCREEN is established (the new `stdscr` would otherwise come
-  up with the ncurses default bkgd).
+- `vk_screen_apply_stdscr_bkgd(screen)` pushes the active surface's
+  stored bkgd onto `stdscr`. This is invoked automatically from
+  `vk_screen_set_surface` (active surface change), from
+  `vk_screen_set_surface_bkgd` when the changed surface is the active
+  one (live color change), and from `vk_screen_teleport` after the
+  new SCREEN is established (the new `stdscr` would otherwise come up
+  with the ncurses default bkgd).
 
 The `stdscr` propagation matters because `stdscr` is the only `WINDOW`
 ncurses converts into the byte stream the outer terminal renders.
@@ -420,6 +416,19 @@ terminal exposes during those operations takes `stdscr`'s bkgd value.
 Without this, those exposed cells flash as the terminal's default
 background (typically black) before the next composite paints over
 them. With it, the exposed cells come up in the desktop's color.
+
+Why not the surface canvas?  The surface canvas is fully overpainted
+every `vk_screen_refresh` (`werase` -> wallpaper_func paints every
+cell -> widgets composite -> `overwrite` to `stdscr`), so its bkgd is
+never visible.  Worse, applying a non-default bkgd there interacts
+badly with the deck shadow code (`_vk_deck_draw_shadow`), which writes
+pair-0 cells -- `vdk_color_init` maps white-on-black to pair 0 for
+ncurses default-pair compatibility, and ncurses fills pair-0 cells
+with the destination window's bkgd's pair on write.  A non-zero bkgd
+on the surface canvas would tint shadows with the surface color.
+`stdscr` doesn't have this problem: cells reach `stdscr` only via
+`overwrite` from the (fully-painted) canvas, which preserves cell pair
+values verbatim and doesn't go through the pair-0 substitution.
 
 Consumers should set bkgd attribute bits to zero (e.g. just
 `' ' | COLOR_PAIR(N)`), since ncurses ORs the bkgd's attribute bits
