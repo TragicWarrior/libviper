@@ -706,6 +706,8 @@ Because the deck has no canvas, `_erase` and `_resize` are no-ops, and
 | `vk_deck_set_top(deck, widget)` | Move a widget already in the deck to the top |
 | `vk_deck_get_top(deck)` | Return the topmost widget (or NULL) |
 | `vk_deck_cycle(deck, vector)` | Rotate the stack (`VK_VECTOR_LEFT` / `VK_VECTOR_RIGHT`) |
+| `vk_deck_count(deck)` | Number of widgets in the stack (0 if NULL or empty) |
+| `vk_deck_get_widget(deck, index)` | Widget at the given index (0 == top); NULL on bounds violation |
 | `vk_deck_set_shadow(deck, enabled)` | Enable or disable drop shadows on all children |
 | `vk_deck_set_shadow_colors(deck, fg, bg)` | Set shadow color pair (default white-on-black) |
 | `vk_deck_update(deck)` | Manually composite children (delegates to `_draw`) |
