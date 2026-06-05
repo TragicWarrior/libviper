@@ -102,6 +102,15 @@ Version 4.0.0 (in progress)
   field width.
 * [Bryan Christ] Add Input deck window to demo showcasing both 3D and
   basic input styles with a keyboard handler for text editing.
+* [Bryan Christ] Add vk_filedialog_t composite widget derived from
+  vk_box_t. File browser with path input, scrollable file/directory
+  list (listbox or checkbox selectbox for multiselect), vertical
+  scrollbar, OK/Cancel button bar, and built-in keyboard navigation.
+  Supports VK_FRAME_SINGLE, VK_FRAME_ASCII, and VK_BUTTON_BASIC styles.
+* [Bryan Christ] Add vk_filedialog_set_wrap() API for enabling
+  wrap-around navigation on scrollable list widgets.
+* [Bryan Christ] Replace Dialog and Input deck windows in demo with
+  a single Files window showcasing the filedialog widget.
 
 Version 3.1.1
 

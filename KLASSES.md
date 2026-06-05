@@ -14,6 +14,8 @@ vk_object_t
    ├─ vk_container_t
    │  │
    │  ├─ vk_box_t
+   │  │  │
+   │  │  └─ vk_filedialog_t
    │  │
    │  └─ vk_frame_t
    │     │
@@ -71,6 +73,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_BUTTON(x)` | `vk_button_t *` |
 | `VK_INPUT(x)` | `vk_input_t *` |
 | `VK_FILLER(x)` | `vk_filler_t *` |
+| `VK_FILEDIALOG(x)` | `vk_filedialog_t *` |
 
 ## Klass Templates
 
@@ -85,7 +88,8 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
 `VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
-`VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`.
+`VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
+`VK_FILEDIALOG_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -116,6 +120,7 @@ vk_deck_create(void)
 vk_button_create(text)
 vk_input_create(width)
 vk_filler_create(void)
+vk_filedialog_create(width, height, style, multiselect)
 ```
 
 ## Constructor Chaining
@@ -139,6 +144,7 @@ _vk_deck_ctor       -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_button_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_input_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filler_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_filedialog_ctor -> VK_BOX_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -219,6 +225,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_button_t` | `ctor`, `dtor`, `_update` |
 | `vk_input_t` | `ctor`, `dtor`, `_update` |
 | `vk_filler_t` | `ctor`, `dtor` |
+| `vk_filedialog_t` | `ctor`, `dtor` |
 
 ## Public API Inline Convention
 
@@ -361,7 +368,8 @@ of their event loop (the demo does this alongside `KEY_RESIZE` checks).
 
 ## KMIO (Keyboard/Mouse I/O)
 
-VDK widgets are IO-agnostic. No klass ships with a built-in `kmio` handler.
+VDK widgets are IO-agnostic. No klass ships with a built-in `kmio` handler
+(except `vk_filedialog_t`, which installs one at creation — see File Dialogs).
 The `kmio` function pointer on `vk_object_t` is a slot that the application
 fills at runtime via `vk_object_set_kmio(object, func)`. Keystrokes are
 dispatched through it via `vk_object_push_keystroke()`, which calls
@@ -900,6 +908,93 @@ boxes to push other widgets apart.
 |-----|-------------|
 | `vk_filler_create()` | Create a 1x1 filler with expand enabled |
 | `vk_filler_destroy(filler)` | Destroy the filler |
+
+## File Dialogs
+
+`vk_filedialog_t` is a composite widget derived from `vk_box_t`. It provides
+a file browser with a path input, scrollable file list, and OK/Cancel buttons
+arranged in a 3-slot vertical box with non-homogeneous layout.
+
+### Construction
+
+```c
+vk_filedialog_t *dialog = vk_filedialog_create(width, height, style, multiselect);
+```
+
+- `style`: `VK_FRAME_SINGLE`, `VK_FRAME_ASCII`, or `VK_BUTTON_BASIC` —
+  controls the relief style of buttons and the path input
+- `multiselect`: when true, the file list is a `vk_selectbox_t` (checkbox
+  mode) instead of a plain `vk_listbox_t`
+- Minimum size: 10 columns, 5 rows
+
+The create function builds the internal widget tree:
+
+| Slot | Widget | Flags |
+|------|--------|-------|
+| 0 | `vk_input_t` (path) | natural height |
+| 1 | `vk_listbox_t` or `vk_selectbox_t` (file list) | `VK_STATE_EXPAND` |
+| 2 | `vk_box_t` (button bar with OK + Cancel) | natural height |
+
+A `vk_scroller_t` (vertical) is attached to the file list. The box uses
+non-homogeneous layout so the path input and button bar keep their natural
+heights while the file list absorbs remaining space.
+
+Default path is `$HOME` (falls back to `.` if unset).
+
+### Assert Bypass Pattern
+
+Because `vk_object_assert` uses exact type matching, public `vk_box_*` API
+calls fail on a `vk_filedialog_t` (the name string is `"vk_filedialog_t"`,
+not `"vk_box_t"`). The filedialog works around this by:
+
+- Direct struct access: `VK_BOX(dialog)->homogeneous = false`
+- Internal helper: `_vk_filedialog_set_child()` writes `slot_widgets[]`
+  and calls `container->add_widget()` directly
+- Virtual dispatch: `VK_BOX(dialog)->_update(VK_BOX(dialog))` for box layout
+
+### KMIO
+
+Unlike other VDK widgets, the filedialog installs a built-in `kmio` handler
+at creation time. This is a deliberate exception to the IO-agnostic pattern
+because the filedialog's internal navigation (switching between path input
+and file list, directory traversal) requires coordinated keyboard handling
+across multiple child widgets.
+
+| Key | File list mode | Path input mode |
+|-----|---------------|-----------------|
+| `/` | Switch to path input | — |
+| Escape | — | Cancel edit, return to file list |
+| Enter | Activate (open directory or select file) | Navigate to typed path |
+| Up/Down | Move selection | — |
+| Space | Toggle checkbox (multiselect only) | Insert space |
+| Backspace | Go to parent directory | Delete character |
+| Left/Right | — | Move cursor |
+
+### Wrap-Around
+
+`vk_filedialog_set_wrap(dialog, true)` enables wrap-around navigation on
+the file list. When enabled, pressing Up on the first item wraps to the
+last, and Down on the last wraps to the first. Disabled by default.
+
+### Destructor
+
+The filedialog dtor saves pointers to all children, removes them from the
+container, demotes to `vk_box_t`, destroys the box, then destroys each
+child widget individually (scroller, button bar, buttons, file list, input).
+
+### API
+
+| API | Description |
+|-----|-------------|
+| `vk_filedialog_create(w, h, style, multi)` | Create a file dialog |
+| `vk_filedialog_set_path(dialog, path)` | Set directory (resolves via `realpath`) |
+| `vk_filedialog_get_path(dialog)` | Return current directory path |
+| `vk_filedialog_get_selected(dialog)` | Return name of highlighted item |
+| `vk_filedialog_set_wrap(dialog, bool)` | Enable/disable wrap-around navigation |
+| `vk_filedialog_set_colors(dialog, fg, bg)` | Set colors on all child widgets |
+| `vk_filedialog_set_highlight(dialog, fg, bg)` | Set highlight colors on file list |
+| `vk_filedialog_update(dialog)` | Update all children and composite |
+| `vk_filedialog_destroy(dialog)` | Destroy dialog and all children |
 
 ## Linked Lists
 

@@ -81,6 +81,7 @@ add_library(viper-static STATIC
     vdk/vk_deck.c
     vdk/vk_filler.c
     vdk/vk_input.c
+    vdk/vk_filedialog.c
     )
 
 add_library(viper.o OBJECT
@@ -128,6 +129,7 @@ add_library(viper.o OBJECT
     vdk/vk_deck.c
     vdk/vk_filler.c
     vdk/vk_input.c
+    vdk/vk_filedialog.c
     )
 
 add_library(viper-shared SHARED

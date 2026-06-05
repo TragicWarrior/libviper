@@ -105,6 +105,7 @@ typedef struct  _vk_deck_s          vk_deck_t;
 typedef struct  _vk_button_s        vk_button_t;
 typedef struct  _vk_filler_s        vk_filler_t;
 typedef struct  _vk_input_s         vk_input_t;
+typedef struct  _vk_filedialog_s    vk_filedialog_t;
 
 /* callback typedefs */
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
@@ -135,6 +136,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_BUTTON(x)            ((vk_button_t *)x)
 #define VK_FILLER(x)            ((vk_filler_t *)x)
 #define VK_INPUT(x)             ((vk_input_t *)x)
+#define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -370,5 +372,21 @@ int             vk_input_end(vk_input_t *input);
 int             vk_input_clear(vk_input_t *input);
 int             vk_input_update(vk_input_t *input);
 void            vk_input_destroy(vk_input_t *input);
+
+/* vk_filedialog */
+vk_filedialog_t* vk_filedialog_create(int width, int height,
+                    int style, bool multiselect);
+int             vk_filedialog_set_path(vk_filedialog_t *dialog,
+                    const char *path);
+const char*     vk_filedialog_get_path(vk_filedialog_t *dialog);
+const char*     vk_filedialog_get_selected(vk_filedialog_t *dialog);
+int             vk_filedialog_set_wrap(vk_filedialog_t *dialog,
+                    bool allowed);
+int             vk_filedialog_set_colors(vk_filedialog_t *dialog,
+                    short fg, short bg);
+int             vk_filedialog_set_highlight(vk_filedialog_t *dialog,
+                    short fg, short bg);
+int             vk_filedialog_update(vk_filedialog_t *dialog);
+void            vk_filedialog_destroy(vk_filedialog_t *dialog);
 
 #endif
