@@ -26,7 +26,6 @@ _vk_box_update(vk_box_t *box);
 static int
 _vk_box_kmio(vk_object_t *object, int32_t keystroke);
 
-
 require_klass(VK_CONTAINER_KLASS);
 
 declare_klass(VK_BOX_KLASS)
@@ -36,7 +35,6 @@ declare_klass(VK_BOX_KLASS)
     .ctor = _vk_box_ctor,
     .dtor = _vk_box_dtor,
 };
-
 
 inline vk_box_t*
 vk_box_create(int width, int height, int orientation, int slots)
@@ -57,8 +55,6 @@ vk_box_set_homogeneous(vk_box_t *box, bool homogeneous)
 {
     if(box == NULL) return -1;
 
-    if(!vk_object_assert(box, vk_box_t)) return -1;
-
     box->homogeneous = homogeneous;
 
     return 0;
@@ -70,8 +66,6 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
     vk_container_t  *container;
 
     if(box == NULL) return -1;
-
-    if(!vk_object_assert(box, vk_box_t)) return -1;
 
     if(slot < 0 || slot >= box->slots) return -1;
 
@@ -130,8 +124,6 @@ vk_box_get_slot_count(vk_box_t *box)
 {
     if(box == NULL) return -1;
 
-    if(!vk_object_assert(box, vk_box_t)) return -1;
-
     return box->slots;
 }
 
@@ -139,8 +131,6 @@ inline vk_widget_t*
 vk_box_get_widget(vk_box_t *box, int slot)
 {
     if(box == NULL) return NULL;
-
-    if(!vk_object_assert(box, vk_box_t)) return NULL;
 
     if(slot < 0 || slot >= box->slots) return NULL;
 
@@ -153,8 +143,6 @@ vk_box_set_subfocus(vk_box_t *box, int slot)
     int old_slot;
 
     if(box == NULL) return -1;
-
-    if(!vk_object_assert(box, vk_box_t)) return -1;
 
     if(slot < 0 || slot >= box->slots) return -1;
     if(slot == box->focused_slot) return 0;
@@ -178,8 +166,6 @@ vk_box_get_subfocus(vk_box_t *box)
 {
     if(box == NULL) return -1;
 
-    if(!vk_object_assert(box, vk_box_t)) return -1;
-
     return box->focused_slot;
 }
 
@@ -187,8 +173,6 @@ inline int
 vk_box_update(vk_box_t *box)
 {
     if(box == NULL) return -1;
-
-    if(!vk_object_assert(box, vk_box_t)) return -1;
 
     return box->_update(box);
 }
@@ -202,7 +186,6 @@ vk_box_destroy(vk_box_t *box)
 
     box->dtor(VK_OBJECT(box));
 }
-
 
 static int
 _vk_box_ctor(vk_object_t *object, va_list *argp, ...)

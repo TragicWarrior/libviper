@@ -6,7 +6,6 @@
 #include "vk_object.h"
 #include "vk_event.h"
 
-
 /*
     this is our static template which will be passed into the object
     allocator and also to the constructor.

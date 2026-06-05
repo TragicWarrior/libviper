@@ -6,7 +6,6 @@
 #include "vk_widget.h"
 #include "vk_container.h"
 
-
 // base klass methods
 static int
 _vk_container_ctor(vk_object_t *object, va_list *argp, ...);
@@ -27,7 +26,6 @@ _vk_container_rotate(vk_container_t *container, int vector);
 static int
 _vk_container_vacate(vk_container_t *container);
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_CONTAINER_KLASS)
@@ -37,7 +35,6 @@ declare_klass(VK_CONTAINER_KLASS)
     .ctor = _vk_container_ctor,
     .dtor = _vk_container_dtor,
 };
-
 
 // create a new widget from scratch
 inline vk_container_t*
@@ -59,8 +56,6 @@ vk_container_add_widget(vk_container_t *container, vk_widget_t *widget)
     if(container == NULL) return -1;
     if(widget == NULL) return -1;
 
-    if(!vk_object_assert(container, vk_container_t)) return -1;
-
     container->add_widget(container, widget);
 
     return 0;
@@ -72,8 +67,6 @@ vk_container_remove_widget(vk_container_t *container, vk_widget_t *widget)
     if(container == NULL) return -1;
     if(widget == NULL) return -1;
 
-    if(!vk_object_assert(container, vk_container_t)) return -1;
-
     container->remove_widget(container, widget);
 
     return 0;
@@ -83,8 +76,6 @@ inline int
 vk_container_vacate(vk_container_t *container)
 {
     if(container == NULL) return -1;
-
-    if(!vk_object_assert(container, vk_container_t)) return -1;
 
     container->vacate(container);
 
@@ -102,7 +93,6 @@ vk_container_destroy(vk_container_t *container)
 
     return -1;
 }
-
 
 static int
 _vk_container_ctor(vk_object_t *object, va_list *argp, ...)
@@ -136,7 +126,6 @@ _vk_container_ctor(vk_object_t *object, va_list *argp, ...)
 
     return 0;
 }
-
 
 static int
 _vk_container_dtor(vk_object_t *object)

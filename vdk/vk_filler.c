@@ -11,7 +11,6 @@ _vk_filler_ctor(vk_object_t *object, va_list *argp, ...);
 static int
 _vk_filler_dtor(vk_object_t *object);
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_FILLER_KLASS)
@@ -21,7 +20,6 @@ declare_klass(VK_FILLER_KLASS)
     .ctor = _vk_filler_ctor,
     .dtor = _vk_filler_dtor,
 };
-
 
 inline vk_filler_t*
 vk_filler_create(void)
@@ -45,7 +43,6 @@ vk_filler_destroy(vk_filler_t *filler)
 
     filler->dtor(VK_OBJECT(filler));
 }
-
 
 static int
 _vk_filler_ctor(vk_object_t *object, va_list *argp, ...)

@@ -17,7 +17,6 @@ _vk_marquee_dtor(vk_object_t *object);
 static int
 _vk_marquee_update(vk_label_t *label);
 
-
 require_klass(VK_LABEL_KLASS);
 
 declare_klass(VK_MARQUEE_KLASS)
@@ -27,7 +26,6 @@ declare_klass(VK_MARQUEE_KLASS)
     .ctor = _vk_marquee_ctor,
     .dtor = _vk_marquee_dtor,
 };
-
 
 inline vk_marquee_t*
 vk_marquee_create(int width)
@@ -47,8 +45,6 @@ vk_marquee_set_text(vk_marquee_t *marquee, const char *text)
     vk_label_t  *label;
 
     if(marquee == NULL) return -1;
-
-    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
 
     label = VK_LABEL(marquee);
 
@@ -78,22 +74,10 @@ vk_marquee_set_text(vk_marquee_t *marquee, const char *text)
     return 0;
 }
 
-inline const char*
-vk_marquee_get_text(vk_marquee_t *marquee)
-{
-    if(marquee == NULL) return NULL;
-
-    if(!vk_object_assert(marquee, vk_marquee_t)) return NULL;
-
-    return VK_LABEL(marquee)->text;
-}
-
 inline int
 vk_marquee_set_direction(vk_marquee_t *marquee, int direction)
 {
     if(marquee == NULL) return -1;
-
-    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
 
     if(direction != VK_SCROLL_LEFT && direction != VK_SCROLL_RIGHT
         && direction != VK_SCROLL_LOOP)
@@ -109,8 +93,6 @@ vk_marquee_set_speed(vk_marquee_t *marquee, int interval)
 {
     if(marquee == NULL) return -1;
 
-    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
-
     if(interval < 1) return -1;
 
     marquee->scroll_interval = interval;
@@ -122,8 +104,6 @@ inline int
 vk_marquee_set_pause(vk_marquee_t *marquee, int duration)
 {
     if(marquee == NULL) return -1;
-
-    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
 
     if(duration < 0) return -1;
 
@@ -137,8 +117,6 @@ vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat)
 {
     if(marquee == NULL) return -1;
 
-    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
-
     marquee->repeat = repeat;
 
     return 0;
@@ -148,8 +126,6 @@ inline int
 vk_marquee_run(vk_marquee_t *marquee)
 {
     if(marquee == NULL) return -1;
-
-    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
 
     return VK_LABEL(marquee)->_update(VK_LABEL(marquee));
 }
@@ -163,7 +139,6 @@ vk_marquee_destroy(vk_marquee_t *marquee)
 
     marquee->dtor(VK_OBJECT(marquee));
 }
-
 
 static int
 _vk_marquee_ctor(vk_object_t *object, va_list *argp, ...)

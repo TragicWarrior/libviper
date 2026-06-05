@@ -53,7 +53,6 @@ _vk_input_ensure_capacity(vk_input_t *input, int needed)
     return 0;
 }
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_INPUT_KLASS)
@@ -63,7 +62,6 @@ declare_klass(VK_INPUT_KLASS)
     .ctor = _vk_input_ctor,
     .dtor = _vk_input_dtor,
 };
-
 
 inline vk_input_t*
 vk_input_create(int width)
@@ -89,8 +87,6 @@ vk_input_set_text(vk_input_t *input, const char *text)
     int len;
 
     if(input == NULL) return -1;
-
-    if(!vk_object_assert(input, vk_input_t)) return -1;
 
     if(text == NULL)
     {
@@ -123,8 +119,6 @@ vk_input_get_text(vk_input_t *input)
 {
     if(input == NULL) return NULL;
 
-    if(!vk_object_assert(input, vk_input_t)) return NULL;
-
     return input->text;
 }
 
@@ -134,8 +128,6 @@ vk_input_set_relief_style(vk_input_t *input, int style)
     vk_widget_t *widget;
 
     if(input == NULL) return -1;
-
-    if(!vk_object_assert(input, vk_input_t)) return -1;
 
     if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
         && style != VK_BUTTON_BASIC)
@@ -158,8 +150,6 @@ vk_input_set_max_length(vk_input_t *input, int max)
 {
     if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
     input->max_len = (max > 0) ? max : 0;
 
     if(input->max_len > 0 && input->text_len > input->max_len)
@@ -178,8 +168,6 @@ inline int
 vk_input_insert_char(vk_input_t *input, int ch)
 {
     if(input == NULL) return -1;
-
-    if(!vk_object_assert(input, vk_input_t)) return -1;
 
     if(ch < 32 || ch > 126) return -1;
 
@@ -205,8 +193,6 @@ vk_input_backspace(vk_input_t *input)
 {
     if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
     if(input->cursor == 0) return -1;
 
     memmove(&input->text[input->cursor - 1],
@@ -223,8 +209,6 @@ inline int
 vk_input_delete(vk_input_t *input)
 {
     if(input == NULL) return -1;
-
-    if(!vk_object_assert(input, vk_input_t)) return -1;
 
     if(input->cursor >= input->text_len) return -1;
 
@@ -244,8 +228,6 @@ vk_input_move_cursor(vk_input_t *input, int offset)
 
     if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
     new_pos = input->cursor + offset;
 
     if(new_pos < 0) new_pos = 0;
@@ -261,8 +243,6 @@ vk_input_home(vk_input_t *input)
 {
     if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
     input->cursor = 0;
 
     return 0;
@@ -273,8 +253,6 @@ vk_input_end(vk_input_t *input)
 {
     if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
     input->cursor = input->text_len;
 
     return 0;
@@ -284,8 +262,6 @@ inline int
 vk_input_clear(vk_input_t *input)
 {
     if(input == NULL) return -1;
-
-    if(!vk_object_assert(input, vk_input_t)) return -1;
 
     input->text[0] = '\0';
     input->text_len = 0;
@@ -300,8 +276,6 @@ vk_input_update(vk_input_t *input)
 {
     if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
     return input->_update(input);
 }
 
@@ -314,7 +288,6 @@ vk_input_destroy(vk_input_t *input)
 
     input->dtor(VK_OBJECT(input));
 }
-
 
 static int
 _vk_input_ctor(vk_object_t *object, va_list *argp, ...)

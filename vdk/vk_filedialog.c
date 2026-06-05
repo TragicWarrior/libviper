@@ -69,7 +69,6 @@ _vk_filedialog_set_child(vk_filedialog_t *dialog, int slot,
     }
 }
 
-
 require_klass(VK_BOX_KLASS);
 
 declare_klass(VK_FILEDIALOG_KLASS)
@@ -79,7 +78,6 @@ declare_klass(VK_FILEDIALOG_KLASS)
     .ctor = _vk_filedialog_ctor,
     .dtor = _vk_filedialog_dtor,
 };
-
 
 inline vk_filedialog_t*
 vk_filedialog_create(int width, int height, int style, bool multiselect)
@@ -169,8 +167,6 @@ vk_filedialog_set_path(vk_filedialog_t *dialog, const char *path)
 
     if(dialog == NULL || path == NULL) return -1;
 
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
-
     if(realpath(path, resolved) == NULL) return -1;
 
     if(dialog->path != NULL) free(dialog->path);
@@ -184,8 +180,6 @@ vk_filedialog_get_path(vk_filedialog_t *dialog)
 {
     if(dialog == NULL) return NULL;
 
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return NULL;
-
     return dialog->path;
 }
 
@@ -198,8 +192,6 @@ vk_filedialog_get_selected(vk_filedialog_t *dialog)
     int                 idx = 0;
 
     if(dialog == NULL) return NULL;
-
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return NULL;
 
     lb = dialog->file_list;
 
@@ -221,8 +213,6 @@ vk_filedialog_set_colors(vk_filedialog_t *dialog, short fg, short bg)
 {
     if(dialog == NULL) return -1;
 
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
-
     vk_widget_set_colors(VK_WIDGET(dialog), fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->path_input), fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->file_list), fg, bg);
@@ -243,12 +233,7 @@ vk_filedialog_set_wrap(vk_filedialog_t *dialog, bool allowed)
 {
     if(dialog == NULL) return -1;
 
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
-
-    if(dialog->multiselect)
-        vk_selectbox_set_wrap(VK_SELECTBOX(dialog->file_list), allowed);
-    else
-        vk_listbox_set_wrap(dialog->file_list, allowed);
+    vk_listbox_set_wrap(dialog->file_list, allowed);
 
     return 0;
 }
@@ -258,12 +243,7 @@ vk_filedialog_set_highlight(vk_filedialog_t *dialog, short fg, short bg)
 {
     if(dialog == NULL) return -1;
 
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
-
-    if(dialog->multiselect)
-        vk_selectbox_set_highlight(VK_SELECTBOX(dialog->file_list), fg, bg);
-    else
-        vk_listbox_set_highlight(dialog->file_list, fg, bg);
+    vk_listbox_set_highlight(dialog->file_list, fg, bg);
 
     return 0;
 }
@@ -272,8 +252,6 @@ inline int
 vk_filedialog_update(vk_filedialog_t *dialog)
 {
     if(dialog == NULL) return -1;
-
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
 
     vk_input_update(dialog->path_input);
     dialog->file_list->_update(dialog->file_list);
@@ -301,7 +279,6 @@ vk_filedialog_destroy(vk_filedialog_t *dialog)
 
     dialog->dtor(VK_OBJECT(dialog));
 }
-
 
 static int
 _vk_filedialog_ctor(vk_object_t *object, va_list *argp, ...)

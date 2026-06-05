@@ -38,7 +38,6 @@ _vk_scroller_draw_hscroll_unicode(vk_scroller_t *scroller,
     int track_start, int track_len, int thumb_pos,
     short color_pair);
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_SCROLLER_KLASS)
@@ -48,7 +47,6 @@ declare_klass(VK_SCROLLER_KLASS)
     .ctor = _vk_scroller_ctor,
     .dtor = _vk_scroller_dtor,
 };
-
 
 inline vk_scroller_t*
 vk_scroller_create(int flags)
@@ -66,8 +64,6 @@ vk_scroller_set_border_style(vk_scroller_t *scroller, int style)
 {
     if(scroller == NULL) return -1;
 
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
     int base = style & ~VK_FRAME_REVERSE;
     if(base < VK_FRAME_NONE || base > VK_FRAME_ASCII) return -1;
 
@@ -81,8 +77,6 @@ vk_scroller_set_border_colors(vk_scroller_t *scroller, short fg, short bg)
 {
     if(scroller == NULL) return -1;
 
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
     scroller->border_fg = fg;
     scroller->border_bg = bg;
 
@@ -94,8 +88,6 @@ vk_scroller_set_scroll_info(vk_scroller_t *scroller, VkScrollInfoFunc func)
 {
     if(scroller == NULL) return -1;
 
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
     scroller->scroll_info_func = func;
 
     return 0;
@@ -106,8 +98,6 @@ vk_scroller_set_scroll_source(vk_scroller_t *scroller, vk_widget_t *source)
 {
     if(scroller == NULL) return -1;
 
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
     scroller->scroll_source = source;
 
     return 0;
@@ -117,8 +107,6 @@ inline int
 vk_scroller_update(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return -1;
-
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
     return scroller->_update(scroller);
 }
@@ -141,8 +129,6 @@ vk_widget_attach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
     vk_widget_t *sw;
 
     if(host == NULL || scroller == NULL) return -1;
-
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
     if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
     {
@@ -193,7 +179,6 @@ vk_widget_detach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
 
     return 0;
 }
-
 
 static int
 _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)

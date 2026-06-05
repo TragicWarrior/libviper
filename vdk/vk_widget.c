@@ -29,7 +29,6 @@ _vk_widget_recreate(vk_widget_t *widget);
 static int
 _vk_widget_erase(vk_widget_t *widget);
 
-
 require_klass(VK_OBJECT_KLASS);
 
 declare_klass(VK_WIDGET_KLASS)
@@ -39,7 +38,6 @@ declare_klass(VK_WIDGET_KLASS)
     .ctor = _vk_widget_ctor,
     .dtor = _vk_widget_dtor,
 };
-
 
 // create a new widget from scratch
 inline vk_widget_t*
@@ -54,7 +52,6 @@ vk_widget_create(int width, int height)
 
     return widget;
 }
-
 
 inline int
 vk_widget_set_surface(vk_widget_t *widget, WINDOW *surface)

@@ -65,7 +65,6 @@ declare_klass(VK_LISTBOX_KLASS)
     .dtor = _vk_listbox_dtor,
 };
 
-
 // create a new widget from scratch
 inline vk_listbox_t*
 vk_listbox_create(int width, int height)
@@ -157,7 +156,6 @@ vk_listbox_update(vk_listbox_t *listbox)
     if(listbox == NULL) return -1;
 
     // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
     listbox->_update(listbox);
 
@@ -376,7 +374,6 @@ vk_listbox_reset(vk_listbox_t *listbox)
     if(listbox == NULL) return -1;
 
     // make sure the item is actually a listbox widget
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
     retval = listbox->_reset(listbox);
 
@@ -403,7 +400,6 @@ vk_listbox_destroy(vk_listbox_t *listbox)
 
     return;
 }
-
 
 static int
 _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
@@ -459,7 +455,6 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
 
     return 0;
 }
-
 
 static int
 _vk_listbox_dtor(vk_object_t *object)
@@ -725,7 +720,6 @@ _vk_listbox_update(vk_listbox_t *listbox)
     {
         listbox->scroll_top = 0;
     }
-
 
     listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
 

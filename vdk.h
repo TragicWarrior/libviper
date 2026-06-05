@@ -176,7 +176,7 @@ int             vk_object_destroy(vk_object_t *object);
 vk_screen_t*    vk_screen_create(void);
 int             vk_screen_add_surface(vk_screen_t *screen);
 int             vk_screen_del_surface(vk_screen_t *screen, int id);
-int             vk_screen_switch_surface(vk_screen_t *screen, int id);
+int             vk_screen_set_surface(vk_screen_t *screen, int id);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
@@ -264,38 +264,18 @@ void            vk_listbox_destroy(vk_listbox_t *listbox);
 /* vk_selectbox */
 vk_selectbox_t* vk_selectbox_create(int width, int height, int mode);
 int             vk_selectbox_set_style(vk_selectbox_t *selectbox, int style);
-int             vk_selectbox_set_wrap(vk_selectbox_t *selectbox, bool allowed);
-int             vk_selectbox_set_highlight(vk_selectbox_t *selectbox,
-                    int fg, int bg);
-int             vk_selectbox_add_item(vk_selectbox_t *selectbox,
-                    char *name, VkWidgetFunc func, void *anything);
-int             vk_selectbox_add_separator(vk_selectbox_t *selectbox,
-                    int style);
-int             vk_selectbox_remove_item(vk_selectbox_t *selectbox, int idx);
-int             vk_selectbox_get_item_count(vk_selectbox_t *selectbox);
-int             vk_selectbox_get_curr(vk_selectbox_t *selectbox);
-int             vk_selectbox_set_curr(vk_selectbox_t *selectbox, int idx);
-int             vk_selectbox_exec_curr(vk_selectbox_t *selectbox);
-int             vk_selectbox_set_next(vk_selectbox_t *selectbox);
-int             vk_selectbox_set_prev(vk_selectbox_t *selectbox);
-int             vk_selectbox_get_item(vk_selectbox_t *selectbox, int idx,
-                    char *buf, int buf_sz);
-int             vk_selectbox_set_item(vk_selectbox_t *selectbox, int idx,
-                    char *name, VkWidgetFunc func, void *anything);
-bool            vk_selectbox_item_is_separator(vk_selectbox_t *selectbox,
-                    int idx);
 int             vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx);
 bool            vk_selectbox_item_is_checked(vk_selectbox_t *selectbox,
                     int idx);
 int             vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_uncheck_all(vk_selectbox_t *selectbox);
-int             vk_selectbox_update(vk_selectbox_t *selectbox);
 void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
 /* vk_frame */
 vk_frame_t*     vk_frame_create(int width, int height);
 int             vk_frame_set_border_style(vk_frame_t *frame, int style);
+int             vk_frame_get_border_style(vk_frame_t *frame);
 int             vk_frame_set_border_colors(vk_frame_t *frame,
                     short fg, short bg);
 short           vk_frame_get_border_fg(vk_frame_t *frame);
@@ -330,15 +310,6 @@ const char*     vk_window_get_title(vk_window_t *window);
 int             vk_window_set_title_justify(vk_window_t *window, int justify);
 int             vk_window_set_decorate(vk_window_t *window,
                     VkWindowDecorateFunc func, void *data);
-int             vk_window_set_border_style(vk_window_t *window, int style);
-int             vk_window_get_border_style(vk_window_t *window);
-int             vk_window_set_border_colors(vk_window_t *window,
-                    short fg, short bg);
-short           vk_window_get_border_fg(vk_window_t *window);
-short           vk_window_get_border_bg(vk_window_t *window);
-int             vk_window_set_child(vk_window_t *window, vk_widget_t *child);
-vk_widget_t*    vk_window_get_child(vk_window_t *window);
-int             vk_window_update(vk_window_t *window);
 void            vk_window_destroy(vk_window_t *window);
 
 /* vk_box */
@@ -381,7 +352,6 @@ void            vk_textbox_destroy(vk_textbox_t *textbox);
 /* vk_marquee */
 vk_marquee_t*   vk_marquee_create(int width);
 int             vk_marquee_set_text(vk_marquee_t *marquee, const char *text);
-const char*     vk_marquee_get_text(vk_marquee_t *marquee);
 int             vk_marquee_set_direction(vk_marquee_t *marquee, int direction);
 int             vk_marquee_set_speed(vk_marquee_t *marquee, int interval);
 int             vk_marquee_set_pause(vk_marquee_t *marquee, int duration);

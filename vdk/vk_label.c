@@ -15,7 +15,6 @@ _vk_label_dtor(vk_object_t *object);
 static int
 _vk_label_update(vk_label_t *label);
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_LABEL_KLASS)
@@ -25,7 +24,6 @@ declare_klass(VK_LABEL_KLASS)
     .ctor = _vk_label_ctor,
     .dtor = _vk_label_dtor,
 };
-
 
 inline vk_label_t*
 vk_label_create(int width)
@@ -44,8 +42,6 @@ vk_label_set_text(vk_label_t *label, const char *text)
 {
     if(label == NULL) return -1;
 
-    if(!vk_object_assert(label, vk_label_t)) return -1;
-
     if(label->text != NULL)
     {
         free(label->text);
@@ -63,8 +59,6 @@ vk_label_get_text(vk_label_t *label)
 {
     if(label == NULL) return NULL;
 
-    if(!vk_object_assert(label, vk_label_t)) return NULL;
-
     return label->text;
 }
 
@@ -72,8 +66,6 @@ inline int
 vk_label_set_justify(vk_label_t *label, int justify)
 {
     if(label == NULL) return -1;
-
-    if(!vk_object_assert(label, vk_label_t)) return -1;
 
     if(justify < VK_JUSTIFY_LEFT || justify > VK_JUSTIFY_CENTER)
         return -1;
@@ -88,8 +80,6 @@ vk_label_update(vk_label_t *label)
 {
     if(label == NULL) return -1;
 
-    if(!vk_object_assert(label, vk_label_t)) return -1;
-
     return label->_update(label);
 }
 
@@ -102,7 +92,6 @@ vk_label_destroy(vk_label_t *label)
 
     label->dtor(VK_OBJECT(label));
 }
-
 
 static int
 _vk_label_ctor(vk_object_t *object, va_list *argp, ...)

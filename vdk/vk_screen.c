@@ -30,8 +30,6 @@ _vk_surface_destroy(vk_surface_t *surface);
 static pid_t
 _vk_screen_evict_pty(const char *pty);
 
-
-
 declare_klass(VK_SCREEN_KLASS)
 {
     .size = KLASS_SIZE(vk_screen_t),
@@ -39,7 +37,6 @@ declare_klass(VK_SCREEN_KLASS)
     .ctor = _vk_screen_ctor,
     .dtor = _vk_screen_dtor,
 };
-
 
 inline vk_screen_t*
 vk_screen_create(void)
@@ -59,8 +56,6 @@ vk_screen_add_surface(vk_screen_t *screen)
     int             id;
 
     if(screen == NULL) return -1;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     surface = _vk_surface_create(screen->term, screen->width, screen->height);
     if(surface == NULL) return -1;
@@ -90,8 +85,6 @@ vk_screen_del_surface(vk_screen_t *screen, int id)
 
     if(screen == NULL) return -1;
 
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
-
     if(id < 0 || id >= screen->surface_count) return -1;
 
     if(screen->surface_count == 1) return -1;
@@ -115,11 +108,9 @@ vk_screen_del_surface(vk_screen_t *screen, int id)
 }
 
 inline int
-vk_screen_switch_surface(vk_screen_t *screen, int id)
+vk_screen_set_surface(vk_screen_t *screen, int id)
 {
     if(screen == NULL) return -1;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     if(id < 0 || id >= screen->surface_count) return -1;
 
@@ -134,8 +125,6 @@ vk_screen_get_window(vk_screen_t *screen)
     vk_surface_t    *surface;
 
     if(screen == NULL) return NULL;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return NULL;
 
     if(screen->active_surface < 0 ||
         screen->active_surface >= screen->surface_count)
@@ -154,8 +143,6 @@ vk_screen_attach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t     **new_array;
 
     if(screen == NULL || widget == NULL) return -1;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     if(surface_id < 0 || surface_id >= screen->surface_count) return -1;
 
@@ -191,8 +178,6 @@ vk_screen_detach_widget(vk_screen_t *screen, int surface_id,
 
     if(screen == NULL || widget == NULL) return -1;
 
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
-
     if(surface_id < 0 || surface_id >= screen->surface_count) return -1;
 
     surface = screen->surfaces[surface_id];
@@ -227,8 +212,6 @@ vk_screen_resize(vk_screen_t *screen)
 
     if(screen == NULL) return -1;
 
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
-
     if(screen->fd_out != NULL &&
         ioctl(fileno(screen->fd_out), TIOCGWINSZ, &ws) == 0)
     {
@@ -252,8 +235,6 @@ vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
 {
     if(screen == NULL) return -1;
 
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
-
     screen->wallpaper_func = func;
 
     return 0;
@@ -266,8 +247,6 @@ vk_screen_refresh(vk_screen_t *screen)
     int             i;
 
     if(screen == NULL) return -1;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     if(screen->active_surface < 0 ||
         screen->active_surface >= screen->surface_count)
@@ -304,8 +283,6 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     int             j;
 
     if(screen == NULL || pty == NULL) return -1;
-
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     if(screen->evicted_pid > 0)
     {
@@ -515,7 +492,6 @@ vk_screen_destroy(vk_screen_t *screen)
 
     screen->dtor(VK_OBJECT(screen));
 }
-
 
 static int
 _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)

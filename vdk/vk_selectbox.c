@@ -31,7 +31,6 @@ _vk_selectbox_get_item_at(vk_selectbox_t *sb, int idx);
 static const char*
 _vk_selectbox_glyph(vk_selectbox_t *sb, bool checked, int *col_width);
 
-
 require_klass(VK_LISTBOX_KLASS);
 
 declare_klass(VK_SELECTBOX_KLASS)
@@ -41,7 +40,6 @@ declare_klass(VK_SELECTBOX_KLASS)
     .ctor = _vk_selectbox_ctor,
     .dtor = _vk_selectbox_dtor,
 };
-
 
 inline vk_selectbox_t*
 vk_selectbox_create(int width, int height, int mode)
@@ -61,51 +59,9 @@ vk_selectbox_set_style(vk_selectbox_t *selectbox, int style)
 {
     if(selectbox == NULL) return -1;
 
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
     selectbox->style = style;
 
     return 0;
-}
-
-inline int
-vk_selectbox_set_wrap(vk_selectbox_t *selectbox, bool allowed)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    if(allowed)
-        VK_LISTBOX(selectbox)->flags |= VK_FLAG_ALLOW_WRAP;
-    else
-        VK_LISTBOX(selectbox)->flags &= ~VK_FLAG_ALLOW_WRAP;
-
-    return 0;
-}
-
-inline int
-vk_selectbox_set_highlight(vk_selectbox_t *selectbox, int fg, int bg)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    VK_LISTBOX(selectbox)->highlight_fg = fg;
-    VK_LISTBOX(selectbox)->highlight_bg = bg;
-
-    return 0;
-}
-
-inline int
-vk_selectbox_add_item(vk_selectbox_t *selectbox, char *name,
-    VkWidgetFunc func, void *anything)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_add_item(VK_LISTBOX(selectbox),
-        name, func, anything);
 }
 
 inline int
@@ -114,8 +70,6 @@ vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx)
     vk_item_t   *item;
 
     if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
 
     item = _vk_selectbox_get_item_at(selectbox, idx);
     if(item == NULL) return -1;
@@ -147,8 +101,6 @@ vk_selectbox_item_is_checked(vk_selectbox_t *selectbox, int idx)
 
     if(selectbox == NULL) return false;
 
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return false;
-
     item = _vk_selectbox_get_item_at(selectbox, idx);
     if(item == NULL) return false;
 
@@ -161,8 +113,6 @@ vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx)
     vk_item_t   *item;
 
     if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
 
     item = _vk_selectbox_get_item_at(selectbox, idx);
     if(item == NULL) return -1;
@@ -185,8 +135,6 @@ vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx)
 
     if(selectbox == NULL) return -1;
 
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
     item = _vk_selectbox_get_item_at(selectbox, idx);
     if(item == NULL) return -1;
 
@@ -206,8 +154,6 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
 
     if(selectbox == NULL) return -1;
 
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
     listbox = VK_LISTBOX(selectbox);
 
     list_for_each(pos, &listbox->item_list)
@@ -221,143 +167,6 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
     return 0;
 }
 
-inline int
-vk_selectbox_add_separator(vk_selectbox_t *selectbox, int style)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_add_separator(VK_LISTBOX(selectbox), style);
-}
-
-inline int
-vk_selectbox_remove_item(vk_selectbox_t *selectbox, int idx)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_remove_item(VK_LISTBOX(selectbox), idx);
-}
-
-inline int
-vk_selectbox_get_item_count(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_get_item_count(VK_LISTBOX(selectbox));
-}
-
-inline int
-vk_selectbox_get_curr(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_get_selected(VK_LISTBOX(selectbox));
-}
-
-inline int
-vk_selectbox_set_curr(vk_selectbox_t *selectbox, int idx)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    if(idx < 0 || idx >= VK_LISTBOX(selectbox)->item_count) return -1;
-
-    VK_LISTBOX(selectbox)->curr_item = idx;
-
-    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_SELECT);
-
-    return 0;
-}
-
-inline int
-vk_selectbox_exec_curr(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    vk_object_emit(VK_OBJECT(selectbox), VK_EVENT_ON_ACTIVATE);
-
-    return VK_LISTBOX(selectbox)->_exec_item(VK_LISTBOX(selectbox));
-}
-
-inline int
-vk_selectbox_set_next(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return vk_listbox_set_next(VK_LISTBOX(selectbox));
-}
-
-inline int
-vk_selectbox_set_prev(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return vk_listbox_set_prev(VK_LISTBOX(selectbox));
-}
-
-inline int
-vk_selectbox_get_item(vk_selectbox_t *selectbox, int idx,
-    char *buf, int buf_sz)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_get_item(VK_LISTBOX(selectbox),
-        idx, buf, buf_sz);
-}
-
-inline int
-vk_selectbox_set_item(vk_selectbox_t *selectbox, int idx, char *name,
-    VkWidgetFunc func, void *anything)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_set_item(VK_LISTBOX(selectbox),
-        idx, name, func, anything);
-}
-
-inline bool
-vk_selectbox_item_is_separator(vk_selectbox_t *selectbox, int idx)
-{
-    vk_item_t           *item;
-
-    if(selectbox == NULL) return false;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return false;
-
-    item = _vk_selectbox_get_item_at(selectbox, idx);
-    if(item == NULL) return false;
-
-    return (item->separator_style > 0) ? true : false;
-}
-
-inline int
-vk_selectbox_update(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    return VK_LISTBOX(selectbox)->_update(VK_LISTBOX(selectbox));
-}
-
 inline void
 vk_selectbox_destroy(vk_selectbox_t *selectbox)
 {
@@ -367,7 +176,6 @@ vk_selectbox_destroy(vk_selectbox_t *selectbox)
 
     selectbox->dtor(VK_OBJECT(selectbox));
 }
-
 
 static int
 _vk_selectbox_ctor(vk_object_t *object, va_list *argp, ...)

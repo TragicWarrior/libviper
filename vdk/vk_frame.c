@@ -39,7 +39,6 @@ static void
 _vk_frame_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
     attr_t extra);
 
-
 require_klass(VK_CONTAINER_KLASS);
 
 declare_klass(VK_FRAME_KLASS)
@@ -49,7 +48,6 @@ declare_klass(VK_FRAME_KLASS)
     .ctor = _vk_frame_ctor,
     .dtor = _vk_frame_dtor,
 };
-
 
 inline vk_frame_t*
 vk_frame_create(int width, int height)
@@ -68,17 +66,21 @@ vk_frame_set_border_style(vk_frame_t *frame, int style)
 {
     if(frame == NULL) return -1;
 
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
-
     return frame->_set_border_style(frame, style);
+}
+
+inline int
+vk_frame_get_border_style(vk_frame_t *frame)
+{
+    if(frame == NULL) return -1;
+
+    return frame->border_style;
 }
 
 inline int
 vk_frame_set_border_colors(vk_frame_t *frame, short fg, short bg)
 {
     if(frame == NULL) return -1;
-
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
 
     frame->border_fg = fg;
     frame->border_bg = bg;
@@ -91,8 +93,6 @@ vk_frame_get_border_fg(vk_frame_t *frame)
 {
     if(frame == NULL) return -1;
 
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
-
     return frame->border_fg;
 }
 
@@ -100,8 +100,6 @@ inline short
 vk_frame_get_border_bg(vk_frame_t *frame)
 {
     if(frame == NULL) return -1;
-
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
 
     return frame->border_bg;
 }
@@ -111,8 +109,6 @@ vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
 {
     if(frame == NULL) return -1;
 
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
-
     return frame->_set_child(frame, child);
 }
 
@@ -121,8 +117,6 @@ vk_frame_get_child(vk_frame_t *frame)
 {
     if(frame == NULL) return NULL;
 
-    if(!vk_object_assert(frame, vk_frame_t)) return NULL;
-
     return frame->child;
 }
 
@@ -130,8 +124,6 @@ inline int
 vk_frame_update(vk_frame_t *frame)
 {
     if(frame == NULL) return -1;
-
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
 
     return frame->_update(frame);
 }
@@ -147,7 +139,6 @@ vk_frame_destroy(vk_frame_t *frame)
 
     return;
 }
-
 
 static int
 _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)

@@ -29,7 +29,6 @@ _vk_textbox_reflow(vk_textbox_t *textbox);
 static void
 _vk_textbox_free_lines(vk_textbox_t *textbox);
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_TEXTBOX_KLASS)
@@ -39,7 +38,6 @@ declare_klass(VK_TEXTBOX_KLASS)
     .ctor = _vk_textbox_ctor,
     .dtor = _vk_textbox_dtor,
 };
-
 
 inline vk_textbox_t*
 vk_textbox_create(int width, int height)
@@ -59,8 +57,6 @@ vk_textbox_set_text(vk_textbox_t *textbox, const char *text)
 {
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     if(textbox->text != NULL) free(textbox->text);
 
     textbox->text = (text != NULL) ? strdup(text) : NULL;
@@ -76,8 +72,6 @@ vk_textbox_get_text(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return NULL;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return NULL;
-
     return textbox->text;
 }
 
@@ -85,8 +79,6 @@ inline int
 vk_textbox_set_word_wrap(vk_textbox_t *textbox, bool enabled)
 {
     if(textbox == NULL) return -1;
-
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
 
     if(textbox->word_wrap == enabled) return 0;
 
@@ -103,8 +95,6 @@ vk_textbox_get_line_count(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     return textbox->line_count;
 }
 
@@ -113,8 +103,6 @@ vk_textbox_get_scroll_pos(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     return textbox->scroll_top;
 }
 
@@ -122,8 +110,6 @@ inline int
 vk_textbox_scroll_up(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
-
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
 
     if(textbox->scroll_top > 0)
     {
@@ -139,8 +125,6 @@ vk_textbox_scroll_down(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     textbox->scroll_top++;
 
     vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
@@ -155,8 +139,6 @@ vk_textbox_scroll_pgup(vk_textbox_t *textbox)
     int         paint_height;
 
     if(textbox == NULL) return -1;
-
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
 
     widget = VK_WIDGET(textbox);
     paint_height = widget->height;
@@ -179,8 +161,6 @@ vk_textbox_scroll_pgdn(vk_textbox_t *textbox)
 
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     widget = VK_WIDGET(textbox);
     paint_height = widget->height;
     if(widget->hscroller != NULL) paint_height--;
@@ -201,8 +181,6 @@ vk_textbox_scroll_home(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     textbox->scroll_top = 0;
 
     vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
@@ -218,8 +196,6 @@ vk_textbox_scroll_end(vk_textbox_t *textbox)
     int         max_top;
 
     if(textbox == NULL) return -1;
-
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
 
     widget = VK_WIDGET(textbox);
     paint_height = widget->height;
@@ -240,8 +216,6 @@ vk_textbox_update(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
-
     return textbox->_update(textbox);
 }
 
@@ -254,7 +228,6 @@ vk_textbox_destroy(vk_textbox_t *textbox)
 
     textbox->dtor(VK_OBJECT(textbox));
 }
-
 
 static int
 _vk_textbox_ctor(vk_object_t *object, va_list *argp, ...)

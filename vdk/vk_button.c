@@ -38,7 +38,6 @@ _vk_button_text_width(const char *text)
     return (w >= 0) ? w : (int)strlen(text);
 }
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_BUTTON_KLASS)
@@ -48,7 +47,6 @@ declare_klass(VK_BUTTON_KLASS)
     .ctor = _vk_button_ctor,
     .dtor = _vk_button_dtor,
 };
-
 
 inline vk_button_t*
 vk_button_create(const char *text)
@@ -77,8 +75,6 @@ vk_button_set_text(vk_button_t *button, const char *text)
 {
     if(button == NULL) return -1;
 
-    if(!vk_object_assert(button, vk_button_t)) return -1;
-
     if(button->text != NULL)
     {
         free(button->text);
@@ -96,8 +92,6 @@ vk_button_get_text(vk_button_t *button)
 {
     if(button == NULL) return NULL;
 
-    if(!vk_object_assert(button, vk_button_t)) return NULL;
-
     return button->text;
 }
 
@@ -108,8 +102,6 @@ vk_button_set_relief_style(vk_button_t *button, int style)
     int         text_width;
 
     if(button == NULL) return -1;
-
-    if(!vk_object_assert(button, vk_button_t)) return -1;
 
     if(style != VK_FRAME_SINGLE && style != VK_FRAME_ASCII
         && style != VK_BUTTON_BASIC)
@@ -133,8 +125,6 @@ vk_button_set_pressed_colors(vk_button_t *button, short fg, short bg)
 {
     if(button == NULL) return;
 
-    if(!vk_object_assert(button, vk_button_t)) return;
-
     button->pressed_fg = fg;
     button->pressed_bg = bg;
 }
@@ -143,8 +133,6 @@ inline int
 vk_button_set_on_press(vk_button_t *button, VkWidgetFunc func, void *anything)
 {
     if(button == NULL) return -1;
-
-    if(!vk_object_assert(button, vk_button_t)) return -1;
 
     button->on_press = func;
     button->anything = anything;
@@ -156,8 +144,6 @@ inline int
 vk_button_press(vk_button_t *button)
 {
     if(button == NULL) return -1;
-
-    if(!vk_object_assert(button, vk_button_t)) return -1;
 
     button->pressed = true;
 
@@ -174,8 +160,6 @@ vk_button_release(vk_button_t *button)
 {
     if(button == NULL) return -1;
 
-    if(!vk_object_assert(button, vk_button_t)) return -1;
-
     button->pressed = false;
 
     return 0;
@@ -185,8 +169,6 @@ inline int
 vk_button_update(vk_button_t *button)
 {
     if(button == NULL) return -1;
-
-    if(!vk_object_assert(button, vk_button_t)) return -1;
 
     return button->_update(button);
 }
@@ -200,7 +182,6 @@ vk_button_destroy(vk_button_t *button)
 
     button->dtor(VK_OBJECT(button));
 }
-
 
 static int
 _vk_button_ctor(vk_object_t *object, va_list *argp, ...)

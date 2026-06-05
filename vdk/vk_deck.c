@@ -35,7 +35,6 @@ _vk_deck_kmio(vk_object_t *object, int32_t keystroke);
 static void
 _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface);
 
-
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_DECK_KLASS)
@@ -45,7 +44,6 @@ declare_klass(VK_DECK_KLASS)
     .ctor = _vk_deck_ctor,
     .dtor = _vk_deck_dtor,
 };
-
 
 inline vk_deck_t*
 vk_deck_create(void)
@@ -63,8 +61,6 @@ vk_deck_add_widget(vk_deck_t *deck, vk_widget_t *widget, int position)
     if(deck == NULL) return -1;
     if(widget == NULL) return -1;
 
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
-
     if(position == VK_DECK_BOTTOM)
         list_add_tail(&widget->list, &deck->widget_list);
     else
@@ -79,8 +75,6 @@ vk_deck_remove_widget(vk_deck_t *deck, vk_widget_t *widget)
     if(deck == NULL) return -1;
     if(widget == NULL) return -1;
 
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
-
     list_del(&widget->list);
     widget->surface = NULL;
 
@@ -93,8 +87,6 @@ vk_deck_set_top(vk_deck_t *deck, vk_widget_t *widget)
     if(deck == NULL) return -1;
     if(widget == NULL) return -1;
 
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
-
     list_move(&widget->list, &deck->widget_list);
 
     return 0;
@@ -105,8 +97,6 @@ vk_deck_get_top(vk_deck_t *deck)
 {
     if(deck == NULL) return NULL;
 
-    if(!vk_object_assert(deck, vk_deck_t)) return NULL;
-
     if(list_empty(&deck->widget_list)) return NULL;
 
     return list_first_entry(&deck->widget_list, vk_widget_t, list);
@@ -116,8 +106,6 @@ inline int
 vk_deck_cycle(vk_deck_t *deck, int vector)
 {
     if(deck == NULL) return -1;
-
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
 
     if(list_empty(&deck->widget_list)) return 0;
 
@@ -134,8 +122,6 @@ vk_deck_set_shadow(vk_deck_t *deck, bool enabled)
 {
     if(deck == NULL) return -1;
 
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
-
     deck->shadows = enabled;
 
     return 0;
@@ -145,8 +131,6 @@ inline int
 vk_deck_update(vk_deck_t *deck)
 {
     if(deck == NULL) return -1;
-
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
 
     return deck->_update(deck);
 }
@@ -160,7 +144,6 @@ vk_deck_destroy(vk_deck_t *deck)
 
     deck->dtor(VK_OBJECT(deck));
 }
-
 
 static int
 _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)

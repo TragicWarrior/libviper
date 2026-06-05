@@ -24,7 +24,6 @@ _vk_window_draw_title(vk_window_t *window);
 static int
 _vk_window_recreate(vk_widget_t *widget);
 
-
 require_klass(VK_FRAME_KLASS);
 
 declare_klass(VK_WINDOW_KLASS)
@@ -34,7 +33,6 @@ declare_klass(VK_WINDOW_KLASS)
     .ctor = _vk_window_ctor,
     .dtor = _vk_window_dtor,
 };
-
 
 inline vk_window_t*
 vk_window_create(int width, int height)
@@ -54,8 +52,6 @@ vk_window_set_title(vk_window_t *window, const char *title)
 {
     if(window == NULL) return -1;
 
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
     if(window->title != NULL) free(window->title);
 
     window->title = (title != NULL) ? strdup(title) : NULL;
@@ -68,8 +64,6 @@ vk_window_get_title(vk_window_t *window)
 {
     if(window == NULL) return NULL;
 
-    if(!vk_object_assert(window, vk_window_t)) return NULL;
-
     return window->title;
 }
 
@@ -77,8 +71,6 @@ inline int
 vk_window_set_title_justify(vk_window_t *window, int justify)
 {
     if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
 
     if(justify < VK_JUSTIFY_LEFT || justify > VK_JUSTIFY_CENTER) return -1;
 
@@ -93,95 +85,10 @@ vk_window_set_decorate(vk_window_t *window, VkWindowDecorateFunc func,
 {
     if(window == NULL) return -1;
 
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
     window->on_decorate = func;
     window->decorate_data = data;
 
     return 0;
-}
-
-inline int
-vk_window_set_border_style(vk_window_t *window, int style)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    return VK_FRAME(window)->_set_border_style(VK_FRAME(window), style);
-}
-
-inline int
-vk_window_get_border_style(vk_window_t *window)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    return VK_FRAME(window)->border_style;
-}
-
-inline int
-vk_window_set_border_colors(vk_window_t *window, short fg, short bg)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    VK_FRAME(window)->border_fg = fg;
-    VK_FRAME(window)->border_bg = bg;
-
-    return 0;
-}
-
-inline short
-vk_window_get_border_fg(vk_window_t *window)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    return VK_FRAME(window)->border_fg;
-}
-
-inline short
-vk_window_get_border_bg(vk_window_t *window)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    return VK_FRAME(window)->border_bg;
-}
-
-inline int
-vk_window_set_child(vk_window_t *window, vk_widget_t *child)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    return VK_FRAME(window)->_set_child(VK_FRAME(window), child);
-}
-
-inline vk_widget_t*
-vk_window_get_child(vk_window_t *window)
-{
-    if(window == NULL) return NULL;
-
-    if(!vk_object_assert(window, vk_window_t)) return NULL;
-
-    return VK_FRAME(window)->child;
-}
-
-inline int
-vk_window_update(vk_window_t *window)
-{
-    if(window == NULL) return -1;
-
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    return VK_FRAME(window)->_update(VK_FRAME(window));
 }
 
 inline void
@@ -195,7 +102,6 @@ vk_window_destroy(vk_window_t *window)
 
     return;
 }
-
 
 static int
 _vk_window_ctor(vk_object_t *object, va_list *argp, ...)

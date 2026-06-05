@@ -198,8 +198,14 @@ _vk_scroller_dtor
 
 `vk_object_assert(object, type)` compares the object's runtime `.name` string
 and `.size` against a compile-time type. Returns 1 if the object IS that exact
-type, 0 otherwise. Used as a guard in public APIs to verify klass identity
-before dispatching.
+type, 0 otherwise.
+
+Assert is used **only in destructors** (`_dtor` / `_destroy`) as a safety
+guard before freeing resources. Public API functions do not assert — callers
+who cast via `VK_FRAME()`, `VK_LISTBOX()`, etc. accept responsibility for
+type correctness. This means derived types can be used through their parent's
+public API without wrapper functions (e.g. a `vk_window_t*` can be passed to
+`vk_frame_set_border_colors()` via `VK_FRAME(window)`).
 
 ## Virtual Methods
 
@@ -230,8 +236,8 @@ dispatch. Public APIs call through these pointers.
 ## Public API Inline Convention
 
 All public API functions in the `.c` files are declared `inline` as a compiler
-hint to reduce call overhead. These are thin wrappers that validate arguments,
-assert klass identity, and dispatch through the virtual method pointers.
+hint to reduce call overhead. These are thin wrappers that validate arguments
+and dispatch through the virtual method pointers.
 
 ## Headers
 
@@ -280,7 +286,7 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 |----------|---------|
 | `vk_screen_add_surface` | Add a new virtual surface, returns its id |
 | `vk_screen_del_surface` | Remove a surface by id (minimum one must remain) |
-| `vk_screen_switch_surface` | Set the active surface by id |
+| `vk_screen_set_surface` | Set the active surface by id |
 | `vk_screen_get_window` | Return the active surface's canvas |
 | `vk_screen_attach_widget` | Attach a widget to a surface |
 | `vk_screen_detach_widget` | Detach a widget from a surface |
@@ -530,10 +536,9 @@ sets both the callback and a scroll source widget via
 `_update` for content dimensions and scroll offsets. The scroller does not
 drive scrolling -- the source widget manages its own scroll position.
 
-Because `vk_object_assert` uses exact type matching, `vk_window_t` provides
-its own wrapper functions for inherited frame APIs (asserting `vk_window_t`).
 Both `vk_window_t` and `vk_frame_t` override `_update` to include scroller
-drawing.
+drawing. Since assert is only used in destructors, callers access inherited
+frame APIs on a window via `VK_FRAME(window)` — no wrapper functions needed.
 
 ## Windows
 
@@ -916,9 +921,9 @@ For `VK_SCROLL_LOOP`:
 - Text wraps around with a small gap between repetitions
 - Uses wide character rendering (`mvwadd_wch`) for proper unicode support
 
-Because `vk_object_assert` uses exact type matching, `vk_marquee_t`
-provides its own wrapper functions for text get/set (delegating to the
-label's text field internally).
+`vk_marquee_set_text()` is a marquee-specific function (not a pass-through)
+because it resets scroll state when text changes. To read the text, callers
+use `vk_label_get_text(VK_LABEL(marquee))`.
 
 ## Selectboxes
 
@@ -953,14 +958,9 @@ cannot be checked.
 
 The selectbox is IO-agnostic. The application installs a `kmio` handler that
 calls `vk_selectbox_toggle_item()` on Enter/Space and delegates navigation
-keystrokes (arrow keys, wrapping) to a listbox-style handler.
-
-### Wrapper Functions
-
-Because `vk_object_assert` uses exact type matching, `vk_selectbox_t`
-provides its own wrapper functions (e.g. `vk_selectbox_add_item`,
-`vk_selectbox_set_wrap`, `vk_selectbox_set_highlight`) that assert
-`vk_selectbox_t` then delegate to the listbox's function pointers.
+to the listbox API via `VK_LISTBOX()` cast (e.g. `vk_listbox_set_next()`,
+`vk_listbox_update()`). Item management (add, remove, wrap, highlight) also
+uses the listbox API with `VK_LISTBOX()` cast.
 
 ### _update Override
 
@@ -1018,11 +1018,10 @@ heights while the file list absorbs remaining space.
 
 Default path is `$HOME` (falls back to `.` if unset).
 
-### Assert Bypass Pattern
+### Internal Construction
 
-Because `vk_object_assert` uses exact type matching, public `vk_box_*` API
-calls fail on a `vk_filedialog_t` (the name string is `"vk_filedialog_t"`,
-not `"vk_box_t"`). The filedialog works around this by:
+The filedialog builds its widget tree using internal helpers and direct
+struct access rather than the public box API:
 
 - Direct struct access: `VK_BOX(dialog)->homogeneous = false`
 - Internal helper: `_vk_filedialog_set_child()` writes `slot_widgets[]`
