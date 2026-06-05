@@ -24,6 +24,7 @@
 #define VK_FRAME_SINGLE             1
 #define VK_FRAME_DOUBLE             2
 #define VK_FRAME_ASCII              3
+#define VK_FRAME_REVERSE            (1 << 4)
 
 /* separator styles */
 #define VK_SEPARATOR_BLANK          1

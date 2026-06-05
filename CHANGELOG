@@ -53,6 +53,12 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Fix vdk_color_init() pair 0 swap. ncurses pair 0 cannot
   be init_pair'd so white-on-black was unreachable. Steal the green-on-black
   slot and load it with white-on-black colors. Deck shadows use this slot.
+* [Bryan Christ] Add VK_FRAME_REVERSE modifier flag for border styles.
+  OR it with VK_FRAME_SINGLE, VK_FRAME_DOUBLE, or VK_FRAME_ASCII to draw
+  borders in reverse video. Supported by frames, windows, and scrollers.
+* [Bryan Christ] Add VkWindowDecorateFunc-based window chrome to demo deck
+  windows: title-bar buttons (─ □ ✕) in reverse video flanked by tees that
+  match the border style, and a horizontal separator under the heading.
 
 Version 3.1.1
 

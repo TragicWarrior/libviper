@@ -230,10 +230,78 @@ build_textbox(int width, int height)
 }
 
 static void
+deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
+{
+    int         max_y, max_x;
+    int         sx;
+    cchar_t     cc;
+    wchar_t     wch_close[2] = {0x2715, 0};
+    wchar_t     wch_square[2] = {0x25A1, 0};
+    wchar_t     wch_hline[2] = {0x2500, 0};
+    wchar_t     wch_block[2] = {' ', 0};
+    wchar_t     wch_rtee[2];
+    wchar_t     wch_ltee[2];
+    vk_frame_t  *frame;
+    short       fg, bg, pair;
+
+    frame = VK_FRAME(window);
+    getmaxyx(canvas, max_y, max_x);
+    (void)max_y;
+
+    fg = (frame->border_fg == -1) ? VK_WIDGET(window)->fg : frame->border_fg;
+    bg = (frame->border_bg == -1) ? VK_WIDGET(window)->bg : frame->border_bg;
+    pair = vdk_color_pair(fg, bg);
+
+    if(frame->border_style == VK_FRAME_DOUBLE)
+    {
+        wch_rtee[0] = 0x2563;  wch_rtee[1] = 0;
+        wch_ltee[0] = 0x2560;  wch_ltee[1] = 0;
+    }
+    else
+    {
+        wch_rtee[0] = 0x2524;  wch_rtee[1] = 0;
+        wch_ltee[0] = 0x251C;  wch_ltee[1] = 0;
+    }
+
+    // ┤ [block ─ block □ block ✕ block] ├
+    setcchar(&cc, wch_rtee, A_NORMAL, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 10, &cc);
+
+    setcchar(&cc, wch_block, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 9, &cc);
+
+    setcchar(&cc, wch_hline, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 8, &cc);
+
+    setcchar(&cc, wch_block, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 7, &cc);
+
+    setcchar(&cc, wch_square, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 6, &cc);
+
+    setcchar(&cc, wch_block, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 5, &cc);
+
+    setcchar(&cc, wch_close, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 4, &cc);
+
+    setcchar(&cc, wch_block, A_REVERSE, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 3, &cc);
+
+    setcchar(&cc, wch_ltee, A_NORMAL, pair, NULL);
+    mvwadd_wch(canvas, 0, max_x - 2, &cc);
+
+    setcchar(&cc, wch_hline, A_NORMAL, pair, NULL);
+    for(sx = 1; sx < max_x - 1; sx++)
+        mvwadd_wch(canvas, 2, sx, &cc);
+}
+
+static void
 deck_notes_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 {
-    (void)window;
     (void)data;
+
+    deck_draw_chrome(window, canvas);
 
     mvwprintw(canvas, 1, 2, "Meeting Notes");
     mvwprintw(canvas, 3, 2, "- Review architecture");
@@ -246,8 +314,9 @@ deck_notes_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 static void
 deck_tasks_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 {
-    (void)window;
     (void)data;
+
+    deck_draw_chrome(window, canvas);
 
     mvwprintw(canvas, 1, 2, "Task List");
     mvwprintw(canvas, 3, 2, "[x] Implement deck widget");
@@ -260,14 +329,45 @@ deck_tasks_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 static void
 deck_help_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 {
-    (void)window;
     (void)data;
+
+    deck_draw_chrome(window, canvas);
 
     mvwprintw(canvas, 1, 2, "VK Deck Widget");
     mvwprintw(canvas, 3, 2, "TAB cycles through the");
     mvwprintw(canvas, 4, 2, "window stack. The top");
     mvwprintw(canvas, 5, 2, "window receives focus");
     mvwprintw(canvas, 6, 2, "and keyboard input.");
+}
+
+static void
+deck_log_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+{
+    (void)data;
+
+    deck_draw_chrome(window, canvas);
+
+    mvwprintw(canvas, 1, 2, "Activity Log");
+    mvwprintw(canvas, 3, 2, "09:14  Build succeeded");
+    mvwprintw(canvas, 4, 2, "09:15  Tests passed (47/47)");
+    mvwprintw(canvas, 5, 2, "09:16  Deploy to staging");
+    mvwprintw(canvas, 6, 2, "09:22  Health check OK");
+    mvwprintw(canvas, 7, 2, "09:30  Promote to prod");
+}
+
+static void
+deck_config_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+{
+    (void)data;
+
+    deck_draw_chrome(window, canvas);
+
+    mvwprintw(canvas, 1, 2, "Settings");
+    mvwprintw(canvas, 3, 2, "Theme ......... Dark");
+    mvwprintw(canvas, 4, 2, "Font .......... Mono 10");
+    mvwprintw(canvas, 5, 2, "Tab width ..... 4");
+    mvwprintw(canvas, 6, 2, "Line numbers .. On");
+    mvwprintw(canvas, 7, 2, "Word wrap ..... Off");
 }
 
 static int
@@ -856,6 +956,8 @@ int main(void)
     vk_window_t     *deck_win1;
     vk_window_t     *deck_win2;
     vk_window_t     *deck_win3;
+    vk_window_t     *deck_win4;
+    vk_window_t     *deck_win5;
 
     // shared
     vk_marquee_t    *marquee;
@@ -1115,7 +1217,7 @@ int main(void)
     deck_win2 = vk_window_create(35, 10);
     vk_window_set_title(deck_win2, " Tasks ");
     vk_window_set_border_style(deck_win2, VK_FRAME_DOUBLE);
-    vk_window_set_border_colors(deck_win2, COLOR_WHITE, COLOR_BLACK);
+    vk_window_set_border_colors(deck_win2, COLOR_RED, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win2), COLOR_WHITE, COLOR_GREEN);
     vk_window_set_decorate(deck_win2, deck_tasks_decorate, NULL);
     vk_window_update(deck_win2);
@@ -1131,6 +1233,28 @@ int main(void)
     vk_window_update(deck_win3);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win3), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win3), 27, 8);
+
+    deck_win4 = vk_window_create(35, 10);
+    vk_window_set_title(deck_win4, " Log ");
+    vk_window_set_border_style(deck_win4,
+        VK_FRAME_SINGLE | VK_FRAME_REVERSE);
+    vk_window_set_border_colors(deck_win4, COLOR_YELLOW, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(deck_win4), COLOR_WHITE, COLOR_CYAN);
+    vk_window_set_decorate(deck_win4, deck_log_decorate, NULL);
+    vk_window_update(deck_win4);
+    vk_deck_add_widget(deck, VK_WIDGET(deck_win4), VK_DECK_TOP);
+    vk_widget_move(VK_WIDGET(deck_win4), 8, 4);
+
+    deck_win5 = vk_window_create(35, 10);
+    vk_window_set_title(deck_win5, " Settings ");
+    vk_window_set_border_style(deck_win5,
+        VK_FRAME_DOUBLE | VK_FRAME_REVERSE);
+    vk_window_set_border_colors(deck_win5, COLOR_MAGENTA, COLOR_BLACK);
+    vk_widget_set_colors(VK_WIDGET(deck_win5), COLOR_WHITE, COLOR_RED);
+    vk_window_set_decorate(deck_win5, deck_config_decorate, NULL);
+    vk_window_update(deck_win5);
+    vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
+    vk_widget_move(VK_WIDGET(deck_win5), 20, 7);
 
     // --- initial draw and event loop ---
 
@@ -1358,18 +1482,25 @@ int main(void)
         {
             vk_widget_t *top = vk_deck_get_top(deck);
 
-            short c1 = COLOR_WHITE, c2 = COLOR_WHITE, c3 = COLOR_WHITE;
+            short c1 = COLOR_WHITE, c2 = COLOR_RED, c3 = COLOR_WHITE;
+            short c4 = COLOR_YELLOW, c5 = COLOR_MAGENTA;
             if(top == VK_WIDGET(deck_win1)) c1 = COLOR_YELLOW;
             else if(top == VK_WIDGET(deck_win2)) c2 = COLOR_GREEN;
             else if(top == VK_WIDGET(deck_win3)) c3 = COLOR_CYAN;
+            else if(top == VK_WIDGET(deck_win4)) c4 = COLOR_WHITE;
+            else if(top == VK_WIDGET(deck_win5)) c5 = COLOR_WHITE;
 
             vk_window_set_border_colors(deck_win1, c1, COLOR_BLACK);
             vk_window_set_border_colors(deck_win2, c2, COLOR_BLACK);
             vk_window_set_border_colors(deck_win3, c3, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win4, c4, COLOR_BLACK);
+            vk_window_set_border_colors(deck_win5, c5, COLOR_BLACK);
 
             vk_window_update(deck_win1);
             vk_window_update(deck_win2);
             vk_window_update(deck_win3);
+            vk_window_update(deck_win4);
+            vk_window_update(deck_win5);
         }
 
         vk_marquee_run(marquee);
@@ -1412,6 +1543,8 @@ int main(void)
     vk_window_destroy(deck_win1);
     vk_window_destroy(deck_win2);
     vk_window_destroy(deck_win3);
+    vk_window_destroy(deck_win4);
+    vk_window_destroy(deck_win5);
 
     vk_screen_destroy(vk_screen);
 

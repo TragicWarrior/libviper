@@ -372,6 +372,16 @@ styles:
 | `VK_FRAME_SINGLE` | ncurses ACS single-line box |
 | `VK_FRAME_DOUBLE` | Unicode double-line box (U+2550 et al.) |
 
+Any style except `VK_FRAME_NONE` can be combined with `VK_FRAME_REVERSE`
+to draw the border in reverse video:
+
+```c
+vk_frame_set_border_style(frame, VK_FRAME_SINGLE | VK_FRAME_REVERSE);
+```
+
+The flag is a modifier (bit 4), not a standalone style. Frames, windows,
+and scrollers all honour it.
+
 The border occupies one cell on each side, so the child is sized to
 `(width-2, height-2)`. Border colors default to -1 (inherit from widget
 fg/bg) but can be overridden independently. Minimum size is 3x3.
