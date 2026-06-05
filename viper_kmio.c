@@ -75,6 +75,14 @@ viper_kmio_fetch(MEVENT *mouse_event)
 }
 
 
+static MEVENT *last_mouse_event = NULL;
+
+MEVENT*
+viper_kmio_get_mouse_event(void)
+{
+    return last_mouse_event;
+}
+
 void
 viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 {
@@ -93,6 +101,8 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 
     // invalid / no keystroke
     if(keystroke == KMIO_NONE) return;
+
+    last_mouse_event = mouse_event;
 
     // the unmanaged window deck always has priority
     if(keystroke != KEY_RESIZE && keystroke != KEY_MOUSE)

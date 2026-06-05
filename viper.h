@@ -221,6 +221,7 @@ void            viper_window_redraw(vwnd_t *wnd);
 /* kmio faclilities (keyboard & mouse i/o)   */
 int32_t         viper_kmio_fetch(MEVENT *mouse_event);
 void            viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event);
+MEVENT*         viper_kmio_get_mouse_event(void);
 void            viper_window_set_key_func(vwnd_t *wnd, ViperWkeyFunc func);
 
 /* event handling */
