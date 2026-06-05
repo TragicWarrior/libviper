@@ -63,6 +63,9 @@ Version 4.0.0 (in progress)
   canvas, which poisoned ncurses pair 0 and caused deck shadows to inherit
   the wallpaper color instead of rendering white-on-black. Wallpaper now
   paints manually with wattron/mvwaddch.
+* [Bryan Christ] Add vk_button_t klass. Single-line push button with
+  raised relief (Unicode line-drawing or ASCII fallback). Supports
+  normal/pressed states with separate color pairs and a press callback.
 
 Version 3.1.1
 

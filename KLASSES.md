@@ -27,7 +27,7 @@ vk_object_t
    │
    ├─ vk_textbox_t
    │
-   ├─ vk_button (todo)
+   ├─ vk_button_t
    │
    ├─ vk_spinner (todo)
    │
@@ -642,6 +642,29 @@ has a fixed height of 1.
 
 Text longer than the widget width is truncated. The label does not scroll;
 see `vk_marquee_t` for overflow scrolling.
+
+## Buttons
+
+`vk_button_t` is a single-line push button derived from `vk_widget_t`.
+The widget is 3 rows tall: a top padding row, the text row (with 1 cell
+left padding), and a bottom relief row. Width is `1 + textlen + 1`. The
+right column and bottom row display raised-relief line-drawing characters
+that disappear when the button is pressed.
+
+| API | Description |
+|-----|-------------|
+| `vk_button_create(text)` | Create a button; text determines width |
+| `vk_button_set_text` | Replace button text (no resize) |
+| `vk_button_set_relief_style` | `VK_FRAME_SINGLE` (unicode, default) or `VK_FRAME_ASCII` |
+| `vk_button_set_pressed_colors` | Set fg/bg for the pressed state |
+| `vk_button_set_on_press` | Register a `VkWidgetFunc` callback + user data |
+| `vk_button_press` | Set pressed state and fire callback |
+| `vk_button_release` | Clear pressed state |
+| `vk_button_update` | Redraw the button |
+
+Normal colors are set via `vk_widget_set_colors()`. The button is
+IO-agnostic; the application calls `vk_button_press()` /
+`vk_button_release()` to toggle state.
 
 ## Textboxes
 

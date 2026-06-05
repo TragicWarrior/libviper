@@ -75,6 +75,7 @@ add_library(viper-static STATIC
     vdk/vk_window.c
     vdk/vk_box.c
     vdk/vk_label.c
+    vdk/vk_button.c
     vdk/vk_textbox.c
     vdk/vk_marquee.c
     vdk/vk_deck.c
@@ -119,6 +120,7 @@ add_library(viper.o OBJECT
     vdk/vk_window.c
     vdk/vk_box.c
     vdk/vk_label.c
+    vdk/vk_button.c
     vdk/vk_textbox.c
     vdk/vk_marquee.c
     vdk/vk_deck.c

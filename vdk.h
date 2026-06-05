@@ -98,6 +98,7 @@ typedef struct  _vk_label_s         vk_label_t;
 typedef struct  _vk_textbox_s       vk_textbox_t;
 typedef struct  _vk_marquee_s       vk_marquee_t;
 typedef struct  _vk_deck_s          vk_deck_t;
+typedef struct  _vk_button_s        vk_button_t;
 
 /* callback typedefs */
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
@@ -125,6 +126,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_TEXTBOX(x)           ((vk_textbox_t *)x)
 #define VK_MARQUEE(x)           ((vk_marquee_t *)x)
 #define VK_DECK(x)              ((vk_deck_t *)x)
+#define VK_BUTTON(x)            ((vk_button_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -323,5 +325,19 @@ int             vk_deck_cycle(vk_deck_t *deck, int vector);
 int             vk_deck_set_shadow(vk_deck_t *deck, bool enabled);
 int             vk_deck_update(vk_deck_t *deck);
 void            vk_deck_destroy(vk_deck_t *deck);
+
+/* vk_button */
+vk_button_t*    vk_button_create(const char *text);
+int             vk_button_set_text(vk_button_t *button, const char *text);
+const char*     vk_button_get_text(vk_button_t *button);
+int             vk_button_set_relief_style(vk_button_t *button, int style);
+void            vk_button_set_pressed_colors(vk_button_t *button,
+                    short fg, short bg);
+int             vk_button_set_on_press(vk_button_t *button,
+                    VkWidgetFunc func, void *anything);
+int             vk_button_press(vk_button_t *button);
+int             vk_button_release(vk_button_t *button);
+int             vk_button_update(vk_button_t *button);
+void            vk_button_destroy(vk_button_t *button);
 
 #endif
