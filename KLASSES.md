@@ -262,15 +262,19 @@ compatibility, so existing code that includes `viper.h` continues to work.
 VDK uses ncurses color pairs. The color API is declared in `vdk.h`:
 
 - `vdk_color_init()` — optional convenience that calls `start_color()` and
-  registers all 64 color pairs (8×8 matrix) via `init_pair()`. Must be
-  called after `vk_screen_create()`. Because ncurses pair 0 cannot be
-  modified with `init_pair()`, `vdk_color_init()` swaps white-on-black into
-  index 0 so it maps to the ncurses default pair. The color that originally
-  occupied index 0 moves to the slot white-on-black would have used. With
-  the standard 8-color table this is a no-op since white-on-black naturally
-  lands at index 0.
+  registers color pairs via `init_pair()`. Must be called after
+  `vk_screen_create()`. Because ncurses pair 0 cannot be modified with
+  `init_pair()`, `vdk_color_init()` swaps white-on-black into index 0 so
+  it maps to the ncurses default pair. Pairs are registered in three tiers:
+  - **Basic (0–63):** 8×8 matrix for the standard 8 colors (0–7)
+  - **ANSI 16×16 (64–319):** exact pairs for colors 0–15 (skipping the
+    basic pairs already covered above). Provides accurate mapping for
+    AIX bright colors (8–15) without the halved-fg approximation.
+  - **Extended (320+):** 256×256 with halved foreground (`fg >> 1`) to
+    fit within `SHRT_MAX`. Only registered when `COLORS >= 256`.
 - `vdk_color_pair(fg, bg)` — maps an (fg, bg) pair to an ncurses pair
-  index using fast arithmetic. No globals.
+  index using fast arithmetic. No globals. Uses a tiered lookup: basic
+  (fg ≤ 7, bg ≤ 7), ANSI 16×16 (fg ≤ 15, bg ≤ 15), then extended.
 - `VDK_COLORS(fg, bg)` — convenience macro: `COLOR_PAIR(vdk_color_pair(fg, bg))`.
 
 Widget internals use `COLOR_PAIR(vdk_color_pair(fg, bg))` directly (the

@@ -7,16 +7,24 @@ static void
 _vdk_color_init_extended(void)
 {
     int     fg, bg;
-    int     fg_half;
     int     pair_idx;
+
+    for(fg = 0; fg < 16; fg++)
+    {
+        for(bg = 0; bg < 16; bg++)
+        {
+            if(fg <= 7 && bg <= 7) continue;
+
+            pair_idx = 64 + (bg * 16) + fg;
+            init_pair(pair_idx, fg, bg);
+        }
+    }
 
     for(fg = 0; fg < 256; fg += 2)
     {
-        fg_half = fg >> 1;
-
         for(bg = 0; bg < 256; bg++)
         {
-            pair_idx = 64 + (bg * 128) + fg_half;
+            pair_idx = 320 + (bg * 128) + (fg >> 1);
 
             if(pair_idx <= 0 || pair_idx > SHRT_MAX) continue;
 
@@ -73,12 +81,15 @@ vdk_color_pair(short fg, short bg)
 {
     if(fg == COLOR_WHITE && bg == COLOR_BLACK) return 0;
 
-    if(fg > 7 || bg > 7)
+    if(fg <= 7 && bg <= 7)
+        return (bg * VDK_COLOR_COUNT) + (VDK_COLOR_COUNT - fg - 1);
+
+    if(fg <= 15 && bg <= 15)
+        return 64 + (bg * 16) + fg;
+
     {
-        int idx = 64 + (bg * 128) + (fg >> 1);
+        int idx = 320 + (bg * 128) + (fg >> 1);
         if(idx > 0 && idx <= SHRT_MAX) return (short)idx;
         return 0;
     }
-
-    return (bg * VDK_COLOR_COUNT) + (VDK_COLOR_COUNT - fg - 1);
 }

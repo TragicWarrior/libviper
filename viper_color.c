@@ -34,16 +34,24 @@ static void
 _viper_color_init_extended(void)
 {
     int     fg, bg;
-    int     fg_half;
     int     pair_idx;
+
+    for(fg = 0; fg < 16; fg++)
+    {
+        for(bg = 0; bg < 16; bg++)
+        {
+            if(fg <= 7 && bg <= 7) continue;
+
+            pair_idx = 64 + (bg * 16) + fg;
+            init_pair(pair_idx, fg, bg);
+        }
+    }
 
     for(fg = 0; fg < 256; fg += 2)
     {
-        fg_half = fg >> 1;
-
         for(bg = 0; bg < 256; bg++)
         {
-            pair_idx = 64 + (bg * 128) + fg_half;
+            pair_idx = 320 + (bg * 128) + (fg >> 1);
 
             if(pair_idx <= 0 || pair_idx > SHRT_MAX) continue;
 
@@ -123,28 +131,32 @@ viper_color_pair(short fg, short bg)
 
 	if(fg == COLOR_WHITE && bg == COLOR_BLACK) return 0;
 
-	if(fg > 7 || bg > 7)
+	if(fg <= 7 && bg <= 7)
 	{
-		i = 64 + (bg * 128) + (fg >> 1);
-		if(i > 0 && i <= SHRT_MAX) return (short)i;
-		return 0;
+		/*	use fast color indexing when possible.	*/
+		if(viper_global_flags & VIPER_FASTCOLOR)
+		{
+			color_pair = (bg * viper_color_count) + (viper_color_count - fg -1);
+			return color_pair;
+		}
+
+		/* safe color indexing (slower)	*/
+		for(i = 1; i < COLOR_PAIRS; i++)
+		{
+			pair_content(i, &fg_color, &bg_color);
+			if(fg_color == fg && bg_color == bg) break;
+		}
+
+		return i;
 	}
 
-	/*	use fast color indexing when possible.	*/
-	if(viper_global_flags & VIPER_FASTCOLOR)
-	{
-		color_pair = (bg * viper_color_count) + (viper_color_count - fg -1);
-		return color_pair;
-	}
+	if(fg <= 15 && bg <= 15)
+		return 64 + (bg * 16) + fg;
 
-	/* safe color indexing (slower)	*/
-	for(i = 1; i < COLOR_PAIRS; i++)
-	{
-		pair_content(i, &fg_color, &bg_color);
-		if(fg_color == fg && bg_color == bg) break;
-	}
+	i = 320 + (bg * 128) + (fg >> 1);
 
-	return i;
+	if(i > 0 && i <= SHRT_MAX) return (short)i;
+	return 0;
 }
 
 int
@@ -161,12 +173,22 @@ viper_pair_content(short pair, short *fg, short *bg)
         return 0;
     }
 
+    if(pair >= 320)
+    {
+        int idx = pair - 320;
+
+        *bg = idx / 128;
+        *fg = (idx % 128) * 2;
+
+        return 0;
+    }
+
     if(pair >= 64)
     {
         int idx = pair - 64;
 
-        *bg = idx / 128;
-        *fg = (idx % 128) * 2;
+        *bg = idx / 16;
+        *fg = idx % 16;
 
         return 0;
     }
