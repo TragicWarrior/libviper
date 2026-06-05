@@ -50,6 +50,9 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Add optional drop shadows to vk_deck_t via
   vk_deck_set_shadow(). Shadow is an L-shaped strip (right + bottom edge)
   rendered white-on-black, composited per-child in z-order.
+* [Bryan Christ] Fix vdk_color_init() pair 0 swap. ncurses pair 0 cannot
+  be init_pair'd so white-on-black was unreachable. Steal the green-on-black
+  slot and load it with white-on-black colors. Deck shadows use this slot.
 
 Version 3.1.1
 

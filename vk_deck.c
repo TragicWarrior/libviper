@@ -7,6 +7,8 @@
 #include "vk_deck.h"
 #include "vdk_color.h"
 
+#define VK_SHADOW_PAIR      vdk_color_pair(COLOR_GREEN, COLOR_BLACK)
+
 static int
 _vk_deck_ctor(vk_object_t *object, va_list *argp, ...);
 
@@ -183,6 +185,7 @@ _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)
     widget->composer = NULL;
 
     INIT_LIST_HEAD(&deck->widget_list);
+    deck->shadows = false;
 
     deck->ctor = _vk_deck_ctor;
     deck->dtor = _vk_deck_dtor;
@@ -287,14 +290,12 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 {
     int         sx, sy;
     int         max_y, max_x;
-    short       pair;
     cchar_t     cc;
     wchar_t     wch[CCHARW_MAX];
     attr_t      attrs;
     short       color;
 
     getmaxyx(surface, max_y, max_x);
-    pair = vdk_color_pair(COLOR_WHITE, COLOR_BLACK);
 
     // right edge: 1 column at (x + width), rows [y+1 .. y+height]
     sx = child->x + child->width;
@@ -306,7 +307,7 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 
             mvwin_wch(surface, sy, sx, &cc);
             getcchar(&cc, wch, &attrs, &color, NULL);
-            setcchar(&cc, wch, A_NORMAL, pair, NULL);
+            setcchar(&cc, wch, A_NORMAL, VK_SHADOW_PAIR, NULL);
             mvwadd_wch(surface, sy, sx, &cc);
         }
     }
@@ -321,7 +322,7 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 
             mvwin_wch(surface, sy, sx, &cc);
             getcchar(&cc, wch, &attrs, &color, NULL);
-            setcchar(&cc, wch, A_NORMAL, pair, NULL);
+            setcchar(&cc, wch, A_NORMAL, VK_SHADOW_PAIR, NULL);
             mvwadd_wch(surface, sy, sx, &cc);
         }
     }
