@@ -5,8 +5,6 @@
 #include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
-#include "vk_container.h"
-#include "vk_frame.h"
 #include "vk_scroller.h"
 
 static int
@@ -16,36 +14,33 @@ static int
 _vk_scroller_dtor(vk_object_t *object);
 
 static int
-_vk_scroller_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
-_vk_scroller_update(vk_frame_t *frame);
+_vk_scroller_update(vk_scroller_t *scroller);
 
 static int
 _vk_scroller_draw_scrollbar(vk_scroller_t *scroller);
 
 static void
 _vk_scroller_draw_vscroll_ascii(vk_scroller_t *scroller,
-    int track_x, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     int border_colors);
 
 static void
 _vk_scroller_draw_vscroll_unicode(vk_scroller_t *scroller,
-    int track_x, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     short color_pair);
 
 static void
 _vk_scroller_draw_hscroll_ascii(vk_scroller_t *scroller,
-    int track_y, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     int border_colors);
 
 static void
 _vk_scroller_draw_hscroll_unicode(vk_scroller_t *scroller,
-    int track_y, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     short color_pair);
 
 
-require_klass(VK_FRAME_KLASS);
+require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_SCROLLER_KLASS)
 {
@@ -53,19 +48,16 @@ declare_klass(VK_SCROLLER_KLASS)
     .name = KLASS_NAME(vk_scroller_t),
     .ctor = _vk_scroller_ctor,
     .dtor = _vk_scroller_dtor,
-    .kmio = _vk_scroller_kmio,
 };
 
 
 vk_scroller_t*
-vk_scroller_create(int width, int height)
+vk_scroller_create(int flags)
 {
     vk_scroller_t   *scroller;
 
-    if(height < 3 || width < 3) return NULL;
-
     scroller = (vk_scroller_t*)vk_object_create(VK_SCROLLER_KLASS,
-        width, height);
+        1, 1, flags);
 
     return scroller;
 }
@@ -77,7 +69,11 @@ vk_scroller_set_border_style(vk_scroller_t *scroller, int style)
 
     if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
-    return VK_FRAME(scroller)->_set_border_style(VK_FRAME(scroller), style);
+    if(style < VK_FRAME_NONE || style > VK_FRAME_ASCII) return -1;
+
+    scroller->border_style = style;
+
+    return 0;
 }
 
 int
@@ -87,40 +83,8 @@ vk_scroller_set_border_colors(vk_scroller_t *scroller, short fg, short bg)
 
     if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
-    VK_FRAME(scroller)->border_fg = fg;
-    VK_FRAME(scroller)->border_bg = bg;
-
-    return 0;
-}
-
-int
-vk_scroller_set_child(vk_scroller_t *scroller, vk_widget_t *child)
-{
-    if(scroller == NULL) return -1;
-
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
-    return VK_FRAME(scroller)->_set_child(VK_FRAME(scroller), child);
-}
-
-vk_widget_t*
-vk_scroller_get_child(vk_scroller_t *scroller)
-{
-    if(scroller == NULL) return NULL;
-
-    if(!vk_object_assert(scroller, vk_scroller_t)) return NULL;
-
-    return VK_FRAME(scroller)->child;
-}
-
-int
-vk_scroller_set_scrollbar(vk_scroller_t *scroller, int flags)
-{
-    if(scroller == NULL) return -1;
-
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
-    scroller->scrollbar_flags = flags;
+    scroller->border_fg = fg;
+    scroller->border_bg = bg;
 
     return 0;
 }
@@ -138,13 +102,25 @@ vk_scroller_set_scroll_info(vk_scroller_t *scroller, VkScrollInfoFunc func)
 }
 
 int
+vk_scroller_set_scroll_source(vk_scroller_t *scroller, vk_widget_t *source)
+{
+    if(scroller == NULL) return -1;
+
+    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
+
+    scroller->scroll_source = source;
+
+    return 0;
+}
+
+int
 vk_scroller_update(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return -1;
 
     if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
-    return VK_FRAME(scroller)->_update(VK_FRAME(scroller));
+    return scroller->_update(scroller);
 }
 
 void
@@ -159,24 +135,72 @@ vk_scroller_destroy(vk_scroller_t *scroller)
     return;
 }
 
-
-static int
-_vk_scroller_kmio(vk_object_t *object, int32_t keystroke)
+int
+vk_widget_attach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
 {
-    vk_frame_t  *frame;
+    vk_widget_t *sw;
 
-    frame = VK_FRAME(object);
+    if(host == NULL || scroller == NULL) return -1;
 
-    if(frame->child == NULL) return 0;
+    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
-    return vk_object_push_keystroke(VK_OBJECT(frame->child), keystroke);
+    if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
+    {
+        if(host->vscroller != NULL) return -1;
+        host->vscroller = scroller;
+    }
+    else if(scroller->scrollbar_flags & VK_SCROLLBAR_HORIZONTAL)
+    {
+        if(host->hscroller != NULL) return -1;
+        host->hscroller = scroller;
+    }
+    else return -1;
+
+    scroller->host = host;
+
+    sw = VK_WIDGET(scroller);
+
+    vk_widget_set_surface(sw, host->canvas);
+
+    if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
+    {
+        vk_widget_resize(sw, 1, host->height);
+        vk_widget_move(sw, host->width - 1, 0);
+    }
+    else
+    {
+        vk_widget_resize(sw, host->width, 1);
+        vk_widget_move(sw, 0, host->height - 1);
+    }
+
+    return 0;
 }
+
+int
+vk_widget_detach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
+{
+    if(host == NULL || scroller == NULL) return -1;
+
+    if(host->vscroller == scroller)
+        host->vscroller = NULL;
+    else if(host->hscroller == scroller)
+        host->hscroller = NULL;
+    else
+        return -1;
+
+    scroller->host = NULL;
+    VK_WIDGET(scroller)->surface = NULL;
+
+    return 0;
+}
+
 
 static int
 _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_scroller_t   *scroller;
     va_list         args;
+    int             flags;
 
     if(object == NULL) return -1;
 
@@ -184,30 +208,34 @@ _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
     {
         va_start(args, argp);
         argp = &args;
+    }
 
-        VK_FRAME_KLASS->ctor(object, &args);
-        va_end(args);
-    }
-    else
-    {
-        VK_FRAME_KLASS->ctor(object, argp);
-    }
+    VK_WIDGET_KLASS->ctor(object, argp);
+
+    flags = va_arg(*argp, int);
+
+    va_end(args);
 
     scroller = VK_SCROLLER(object);
 
+    scroller->host = NULL;
+    scroller->scroll_source = NULL;
     scroller->scroll_info_func = NULL;
     scroller->content_height = 0;
     scroller->content_width = 0;
     scroller->scroll_y = 0;
     scroller->scroll_x = 0;
-    scroller->scrollbar_flags = VK_SCROLLBAR_VERTICAL;
+    scroller->scrollbar_flags = flags;
+
+    scroller->border_style = VK_FRAME_SINGLE;
+    scroller->border_fg = -1;
+    scroller->border_bg = -1;
 
     scroller->ctor = _vk_scroller_ctor;
     scroller->dtor = _vk_scroller_dtor;
 
+    scroller->_update = _vk_scroller_update;
     scroller->_draw_scrollbar = _vk_scroller_draw_scrollbar;
-
-    VK_FRAME(scroller)->_update = _vk_scroller_update;
 
     return 0;
 }
@@ -215,20 +243,21 @@ _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
 static int
 _vk_scroller_dtor(vk_object_t *object)
 {
-    vk_frame_t      *frame;
-    vk_container_t  *container;
+    vk_scroller_t   *scroller;
 
     if(object == NULL) return -1;
 
     if(!vk_object_assert(object, vk_scroller_t)) return -1;
 
-    frame = VK_FRAME(object);
-    container = VK_CONTAINER(object);
+    scroller = VK_SCROLLER(object);
 
-    if(frame->child != NULL)
+    if(scroller->host != NULL)
     {
-        container->remove_widget(container, frame->child);
-        frame->child = NULL;
+        if(scroller->host->vscroller == scroller)
+            scroller->host->vscroller = NULL;
+        if(scroller->host->hscroller == scroller)
+            scroller->host->hscroller = NULL;
+        scroller->host = NULL;
     }
 
     vk_object_demote(object, vk_widget_t);
@@ -238,71 +267,77 @@ _vk_scroller_dtor(vk_object_t *object)
 }
 
 static int
-_vk_scroller_update(vk_frame_t *frame)
+_vk_scroller_update(vk_scroller_t *scroller)
 {
-    vk_scroller_t   *scroller;
-    vk_widget_t     *widget;
+    vk_widget_t *sw;
+    int         viewport;
 
-    if(frame == NULL) return -1;
+    if(scroller == NULL) return -1;
+    if(scroller->host == NULL) return -1;
 
-    scroller = VK_SCROLLER(frame);
-    widget = VK_WIDGET(frame);
-
-    if(scroller->scroll_info_func != NULL && frame->child != NULL)
+    if(scroller->scroll_info_func != NULL && scroller->scroll_source != NULL)
     {
-        scroller->scroll_info_func(frame->child,
+        scroller->scroll_info_func(scroller->scroll_source,
             &scroller->content_height, &scroller->content_width,
             &scroller->scroll_y, &scroller->scroll_x);
     }
 
-    widget->_erase(widget);
-    frame->_draw_border(frame);
-    scroller->_draw_scrollbar(scroller);
+    sw = VK_WIDGET(scroller);
 
-    if(frame->child != NULL)
+    if(scroller->border_style == VK_FRAME_NONE)
+        return 0;
+
+    if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
     {
-        vk_widget_draw(frame->child);
+        viewport = sw->height - 2;
+        if(scroller->content_height <= viewport || viewport < 3)
+            return 0;
+    }
+    else if(scroller->scrollbar_flags & VK_SCROLLBAR_HORIZONTAL)
+    {
+        viewport = sw->width - 2;
+        if(scroller->content_width <= viewport || viewport < 3)
+            return 0;
     }
 
-    return 0;
+    sw->_erase(sw);
+    scroller->_draw_scrollbar(scroller);
+
+    return 1;
 }
 
 static int
 _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
 {
-    vk_frame_t      *frame;
-    vk_widget_t     *widget;
+    vk_widget_t     *sw;
     short           fg, bg;
     short           color_pair;
     int             border_colors;
-    int             viewport_h;
-    int             viewport_w;
+    int             viewport;
     int             scroll_range;
     int             track_len;
     int             thumb_pos;
 
     if(scroller == NULL) return -1;
 
-    frame = VK_FRAME(scroller);
-    widget = VK_WIDGET(scroller);
+    sw = VK_WIDGET(scroller);
 
-    if(frame->border_style == VK_FRAME_NONE) return 0;
+    if(scroller->border_style == VK_FRAME_NONE) return 0;
 
-    fg = (frame->border_fg == -1) ? widget->fg : frame->border_fg;
-    bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
+    fg = (scroller->border_fg == -1) ? sw->fg : scroller->border_fg;
+    bg = (scroller->border_bg == -1) ? sw->bg : scroller->border_bg;
     color_pair = viper_color_pair(fg, bg);
     border_colors = VIPER_COLORS(fg, bg);
 
-    viewport_h = widget->height - 2;
-    viewport_w = widget->width - 2;
-
-    // vertical scrollbar on right border
-    if((scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
-        && scroller->content_height > viewport_h
-        && viewport_h >= 3)
+    if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
     {
-        track_len = viewport_h;
-        scroll_range = scroller->content_height - viewport_h;
+        viewport = sw->height - 2;
+
+        if(scroller->content_height <= viewport || viewport < 3)
+            return 0;
+
+        track_len = viewport;
+        scroll_range = scroller->content_height - viewport;
 
         if(scroll_range > 0)
             thumb_pos = (scroller->scroll_y * (track_len - 1))
@@ -313,27 +348,26 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
         if(thumb_pos >= track_len) thumb_pos = track_len - 1;
         if(thumb_pos < 0) thumb_pos = 0;
 
-        if(frame->border_style == VK_FRAME_ASCII)
+        if(scroller->border_style == VK_FRAME_ASCII)
         {
             _vk_scroller_draw_vscroll_ascii(scroller,
-                widget->width - 1, 1, track_len, thumb_pos,
-                border_colors);
+                1, track_len, thumb_pos, border_colors);
         }
         else
         {
             _vk_scroller_draw_vscroll_unicode(scroller,
-                widget->width - 1, 1, track_len, thumb_pos,
-                color_pair);
+                1, track_len, thumb_pos, color_pair);
         }
     }
-
-    // horizontal scrollbar on bottom border
-    if((scroller->scrollbar_flags & VK_SCROLLBAR_HORIZONTAL)
-        && scroller->content_width > viewport_w
-        && viewport_w >= 3)
+    else if(scroller->scrollbar_flags & VK_SCROLLBAR_HORIZONTAL)
     {
-        track_len = viewport_w;
-        scroll_range = scroller->content_width - viewport_w;
+        viewport = sw->width - 2;
+
+        if(scroller->content_width <= viewport || viewport < 3)
+            return 0;
+
+        track_len = viewport;
+        scroll_range = scroller->content_width - viewport;
 
         if(scroll_range > 0)
             thumb_pos = (scroller->scroll_x * (track_len - 1))
@@ -344,17 +378,15 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
         if(thumb_pos >= track_len) thumb_pos = track_len - 1;
         if(thumb_pos < 0) thumb_pos = 0;
 
-        if(frame->border_style == VK_FRAME_ASCII)
+        if(scroller->border_style == VK_FRAME_ASCII)
         {
             _vk_scroller_draw_hscroll_ascii(scroller,
-                widget->height - 1, 1, track_len, thumb_pos,
-                border_colors);
+                1, track_len, thumb_pos, border_colors);
         }
         else
         {
             _vk_scroller_draw_hscroll_unicode(scroller,
-                widget->height - 1, 1, track_len, thumb_pos,
-                color_pair);
+                1, track_len, thumb_pos, color_pair);
         }
     }
 
@@ -363,45 +395,45 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
 
 static void
 _vk_scroller_draw_vscroll_ascii(vk_scroller_t *scroller,
-    int track_x, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     int border_colors)
 {
-    vk_widget_t *widget = VK_WIDGET(scroller);
+    vk_widget_t *sw = VK_WIDGET(scroller);
     int         i;
 
-    wattron(widget->canvas, border_colors);
+    wattron(sw->canvas, border_colors);
 
-    mvwaddch(widget->canvas, 0, track_x, '^');
-    mvwaddch(widget->canvas, widget->height - 1, track_x, 'v');
+    mvwaddch(sw->canvas, 0, 0, '^');
+    mvwaddch(sw->canvas, sw->height - 1, 0, 'v');
 
     for(i = 0; i < track_len; i++)
     {
         if(i == thumb_pos)
-            mvwaddch(widget->canvas, track_start + i, track_x, '#');
+            mvwaddch(sw->canvas, track_start + i, 0, '#');
         else
-            mvwaddch(widget->canvas, track_start + i, track_x, '|');
+            mvwaddch(sw->canvas, track_start + i, 0, '|');
     }
 
-    wattroff(widget->canvas, border_colors);
+    wattroff(sw->canvas, border_colors);
 }
 
 static void
 _vk_scroller_draw_vscroll_unicode(vk_scroller_t *scroller,
-    int track_x, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     short color_pair)
 {
-    vk_widget_t *widget = VK_WIDGET(scroller);
+    vk_widget_t *sw = VK_WIDGET(scroller);
     cchar_t     ch;
     wchar_t     wch[2] = {0, 0};
     int         i;
 
     wch[0] = 0x25B2;
     setcchar(&ch, wch, A_NORMAL, color_pair, NULL);
-    mvwadd_wch(widget->canvas, 0, track_x, &ch);
+    mvwadd_wch(sw->canvas, 0, 0, &ch);
 
     wch[0] = 0x25BC;
     setcchar(&ch, wch, A_NORMAL, color_pair, NULL);
-    mvwadd_wch(widget->canvas, widget->height - 1, track_x, &ch);
+    mvwadd_wch(sw->canvas, sw->height - 1, 0, &ch);
 
     for(i = 0; i < track_len; i++)
     {
@@ -411,51 +443,51 @@ _vk_scroller_draw_vscroll_unicode(vk_scroller_t *scroller,
             wch[0] = 0x2592;
 
         setcchar(&ch, wch, A_NORMAL, color_pair, NULL);
-        mvwadd_wch(widget->canvas, track_start + i, track_x, &ch);
+        mvwadd_wch(sw->canvas, track_start + i, 0, &ch);
     }
 }
 
 static void
 _vk_scroller_draw_hscroll_ascii(vk_scroller_t *scroller,
-    int track_y, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     int border_colors)
 {
-    vk_widget_t *widget = VK_WIDGET(scroller);
+    vk_widget_t *sw = VK_WIDGET(scroller);
     int         i;
 
-    wattron(widget->canvas, border_colors);
+    wattron(sw->canvas, border_colors);
 
-    mvwaddch(widget->canvas, track_y, 0, '<');
-    mvwaddch(widget->canvas, track_y, widget->width - 1, '>');
+    mvwaddch(sw->canvas, 0, 0, '<');
+    mvwaddch(sw->canvas, 0, sw->width - 1, '>');
 
     for(i = 0; i < track_len; i++)
     {
         if(i == thumb_pos)
-            mvwaddch(widget->canvas, track_y, track_start + i, '=');
+            mvwaddch(sw->canvas, 0, track_start + i, '=');
         else
-            mvwaddch(widget->canvas, track_y, track_start + i, '-');
+            mvwaddch(sw->canvas, 0, track_start + i, '-');
     }
 
-    wattroff(widget->canvas, border_colors);
+    wattroff(sw->canvas, border_colors);
 }
 
 static void
 _vk_scroller_draw_hscroll_unicode(vk_scroller_t *scroller,
-    int track_y, int track_start, int track_len, int thumb_pos,
+    int track_start, int track_len, int thumb_pos,
     short color_pair)
 {
-    vk_widget_t *widget = VK_WIDGET(scroller);
+    vk_widget_t *sw = VK_WIDGET(scroller);
     cchar_t     ch;
     wchar_t     wch[2] = {0, 0};
     int         i;
 
     wch[0] = 0x25C4;
     setcchar(&ch, wch, A_NORMAL, color_pair, NULL);
-    mvwadd_wch(widget->canvas, track_y, 0, &ch);
+    mvwadd_wch(sw->canvas, 0, 0, &ch);
 
     wch[0] = 0x25BA;
     setcchar(&ch, wch, A_NORMAL, color_pair, NULL);
-    mvwadd_wch(widget->canvas, track_y, widget->width - 1, &ch);
+    mvwadd_wch(sw->canvas, 0, sw->width - 1, &ch);
 
     for(i = 0; i < track_len; i++)
     {
@@ -465,6 +497,6 @@ _vk_scroller_draw_hscroll_unicode(vk_scroller_t *scroller,
             wch[0] = 0x2592;
 
         setcchar(&ch, wch, A_NORMAL, color_pair, NULL);
-        mvwadd_wch(widget->canvas, track_y, track_start + i, &ch);
+        mvwadd_wch(sw->canvas, 0, track_start + i, &ch);
     }
 }

@@ -9,13 +9,15 @@ vk_object_t
 │
 └─ vk_widget_t
    │
+   ├─ vk_scroller_t
+   │
    ├─ vk_container_t
    │  │
    │  ├─ vk_box_t
    │  │
    │  └─ vk_frame_t
    │     │
-   │     └─ vk_scroller_t
+   │     └─ vk_window_t
    │
    ├─ vk_label_t
    │  │
@@ -26,8 +28,6 @@ vk_object_t
    ├─ vk_spinner (todo)
    │
    └─ vk_listbox_t
-      │
-      └─ vk_menu_t
 ```
 
 ## Klass Framework Overview
@@ -54,7 +54,7 @@ Cast macros are defined in `viper.h`:
 | `VK_LABEL(x)` | `vk_label_t *` |
 | `VK_MARQUEE(x)` | `vk_marquee_t *` |
 | `VK_LISTBOX(x)` | `vk_listbox_t *` |
-| `VK_MENU(x)` | `vk_menu_t *` |
+| `VK_WINDOW(x)` | `vk_window_t *` |
 
 ## Klass Templates
 
@@ -66,8 +66,8 @@ require_klass(KLASS_NAME);    // extern reference from other files
 ```
 
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
-`VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_BOX_KLASS`, `VK_LABEL_KLASS`,
-`VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`, `VK_MENU_KLASS`.
+`VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
+`VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`.
 The template carries the type's size, name, constructor, destructor, and
 optional kmio handler. It serves as both the type descriptor and the vtable
 seed.
@@ -87,12 +87,12 @@ vk_screen_create(void)
 vk_widget_create(width, height)
 vk_container_create(width, height)
 vk_frame_create(width, height)
-vk_scroller_create(width, height)
+vk_scroller_create(flags)
 vk_box_create(width, height, orientation, slots)
 vk_label_create(width)
 vk_marquee_create(width)
 vk_listbox_create(width, height)
-vk_menu_create(width, height)
+vk_window_create(width, height)
 ```
 
 ## Constructor Chaining
@@ -104,12 +104,12 @@ klass singleton before installing its own methods:
 _vk_screen_ctor     -> vk_object_construct (no parent ctor call)
 _vk_container_ctor  -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_frame_ctor      -> VK_CONTAINER_KLASS->ctor(object, argp)
-_vk_scroller_ctor   -> VK_FRAME_KLASS->ctor(object, argp)
+_vk_scroller_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_box_ctor        -> VK_CONTAINER_KLASS->ctor(object, argp)
 _vk_label_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_marquee_ctor    -> VK_LABEL_KLASS->ctor(object, argp)
+_vk_window_ctor     -> VK_FRAME_KLASS->ctor(object, argp)
 _vk_listbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
-_vk_menu_ctor       -> VK_LISTBOX_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -128,26 +128,11 @@ Destruction cascades from derived to base. A derived dtor:
 
 This continues until `vk_object_destroy()` calls `free()`.
 
-### Example: vk_menu_t
+### Example: vk_window_t
 
 ```
-_vk_menu_dtor
-  -> vk_object_demote(object, vk_listbox_t)
-  -> vk_listbox_destroy
-    -> _vk_listbox_dtor
-      -> vk_object_demote(object, vk_widget_t)
-      -> vk_widget_destroy
-        -> _vk_widget_dtor
-          -> vk_object_demote(object, vk_object_t)
-          -> vk_object_destroy
-            -> free(object)
-```
-
-### Example: vk_scroller_t
-
-```
-_vk_scroller_dtor
-  -> detach child from container
+_vk_window_dtor
+  -> free title, detach child
   -> vk_object_demote(object, vk_widget_t)
   -> vk_widget_destroy
     -> _vk_widget_dtor
@@ -156,7 +141,20 @@ _vk_scroller_dtor
         -> free(object)
 ```
 
-> **Note:** `vk_frame_t`, `vk_scroller_t`, and `vk_box_t` skip the container
+### Example: vk_scroller_t
+
+```
+_vk_scroller_dtor
+  -> detach from host (clear host->vscroller or host->hscroller)
+  -> vk_object_demote(object, vk_widget_t)
+  -> vk_widget_destroy
+    -> _vk_widget_dtor
+      -> vk_object_demote(object, vk_object_t)
+      -> vk_object_destroy
+        -> free(object)
+```
+
+> **Note:** `vk_frame_t`, `vk_window_t`, and `vk_box_t` skip the container
 > dtor and demote directly to `vk_widget_t` because `vk_container_t` does not
 > install its own dtor during construction (left NULL from calloc).
 > Similarly, `vk_label_t` and `vk_marquee_t` demote directly to `vk_widget_t`.
@@ -181,11 +179,11 @@ dispatch. Public APIs call through these pointers.
 | `vk_container_t` | `ctor`, `dtor`, `add_widget`, `remove_widget`, `vacate`, `rotate` |
 | `vk_box_t` | `ctor`, `dtor`, `_update` |
 | `vk_frame_t` | `ctor`, `dtor`, `_set_border_style`, `_set_child`, `_draw_border`, `_update` |
-| `vk_scroller_t` | `ctor`, `dtor`, `_draw_scrollbar` |
-| `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_update`, `_reset` |
+| `vk_scroller_t` | `ctor`, `dtor`, `_update`, `_draw_scrollbar` |
+| `vk_window_t` | `ctor`, `dtor`, `_draw_title` |
+| `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_update`, `_reset` |
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
-| `vk_menu_t` | `ctor`, `dtor`, `_set_frame`, `_add_separator`, `_update`, `_reset` |
 
 ## Screens and Desktops
 
@@ -262,9 +260,9 @@ are pushed to an object via `vk_object_push_keystroke()`.
 - **vk_box_t** -- `KEY_TAB` cycles focused slot; all other keystrokes
   forward to the widget in the focused slot.
 - **vk_frame_t** -- forwards keystrokes to its child widget.
-- **vk_scroller_t** -- forwards keystrokes to its child widget.
+- **vk_window_t** -- forwards keystrokes to its child widget.
 - **vk_listbox_t** -- handles `KEY_UP`, `KEY_DOWN`, and `Enter` (execute item).
-- **vk_menu_t** -- same as listbox but skips separators during navigation.
+  Skips separators during navigation.
 
 ## Frames and Scrollers
 
@@ -282,28 +280,65 @@ The border occupies one cell on each side, so the child is sized to
 `(width-2, height-2)`. Border colors default to -1 (inherit from widget
 fg/bg) but can be overridden independently. Minimum size is 3x3.
 
-`vk_scroller_t` inherits from `vk_frame_t` and draws scrollbar indicators
-atop the frame borders. Scrollbar display is controlled by flags:
+`vk_scroller_t` derives directly from `vk_widget_t` (not from `vk_frame_t`).
+It is not a container and does not own children. Instead, it is an attachment
+widget that draws a scrollbar strip on a host widget's canvas.
 
-| Flag | Effect |
-|------|--------|
-| `VK_SCROLLBAR_NONE` | No scrollbars |
-| `VK_SCROLLBAR_VERTICAL` | Vertical scrollbar on right border |
-| `VK_SCROLLBAR_HORIZONTAL` | Horizontal scrollbar on bottom border |
-| `VK_SCROLLBAR_BOTH` | Both scrollbars |
+Each scroller handles one axis. Create with `vk_scroller_create(flags)` where
+`flags` is `VK_SCROLLBAR_VERTICAL` or `VK_SCROLLBAR_HORIZONTAL`. For both
+axes, create two scrollers and attach both.
 
-Scroll state is obtained through a `VkScrollInfoFunc` callback which the
-caller registers. The callback receives the child widget and returns content
-dimensions and current scroll offsets. The scroller itself does not drive
-scrolling -- the child manages its own scroll position and the scroller
-queries it for indicator rendering.
+Attachment is via `vk_widget_attach_scroller(host, scroller)`. This sets:
+- `host->vscroller` or `host->hscroller` (stored on `vk_widget_t`)
+- `scroller->surface = host->canvas` (blit target)
+- Scroller canvas sized to a 1-column or 1-row strip matching the host
 
-Because `vk_object_assert` uses exact type matching, `vk_scroller_t` provides
-its own wrapper functions for all inherited frame APIs (e.g.
-`vk_scroller_set_child` delegates to `frame->_set_child` after asserting
-`vk_scroller_t`). The scroller ctor overwrites `VK_FRAME(scroller)->_update`
-to point at the scroller's own update function which adds the scrollbar draw
-step.
+Bordered hosts (frame, window) draw attached scrollers in `_update` after the
+border and before children. Borderless hosts (listbox) draw scrollers after
+their own content. On resize, the host repositions attached scrollers. On
+recreate (teleport), the host updates scroller surfaces.
+
+When there is nothing to scroll (content fits the viewport), the scroller
+skips drawing entirely so the host's border is preserved underneath.
+
+On a bordered host (frame/window), the scrollbar replaces the right border
+column (vertical) or bottom border row (horizontal). On a borderless host
+(e.g. listbox), the scrollbar hugs the edge and the host renders content
+1 column/row narrower.
+
+Scroll state is obtained through a `VkScrollInfoFunc` callback. The caller
+sets both the callback and a scroll source widget via
+`vk_scroller_set_scroll_source()`. The scroller queries the source during
+`_update` for content dimensions and scroll offsets. The scroller does not
+drive scrolling -- the source widget manages its own scroll position.
+
+Because `vk_object_assert` uses exact type matching, `vk_window_t` provides
+its own wrapper functions for inherited frame APIs (asserting `vk_window_t`).
+Both `vk_window_t` and `vk_frame_t` override `_update` to include scroller
+drawing.
+
+## Windows
+
+`vk_window_t` inherits from `vk_frame_t` and adds a title drawn on the top
+border and a user decoration callback. Like `vk_scroller_t`, it overrides
+`_update` and `_recreate`.
+
+The title is rendered on border row 0 using the border colors with `A_BOLD`.
+Justification is controlled by:
+
+| Constant | Alignment |
+|----------|-----------|
+| `VK_JUSTIFY_LEFT` | Title starts at column 2 |
+| `VK_JUSTIFY_CENTER` | Title centered on border |
+| `VK_JUSTIFY_RIGHT` | Title ends at column width-2 |
+
+If the border style is `VK_FRAME_NONE`, no title is drawn.
+
+A `VkWindowDecorateFunc` callback can be registered via
+`vk_window_set_decorate()`. It fires during `_update` after the border and
+title are drawn but before the child widget is drawn. The callback receives
+the window's canvas, so the caller can paint on the border (which persists)
+or inside the frame (which the child will overwrite).
 
 ## Boxes
 
@@ -334,8 +369,10 @@ successfully resizes the canvas, it fires `widget->_on_resize(widget)` if
 non-NULL. Container klasses install their own handlers to propagate resize
 to children:
 
-- **vk_frame_t** -- resizes child to `(width - 2, height - 2)`
+- **vk_frame_t** -- resizes child to `(width - 2, height - 2)`;
+  resizes and repositions attached scrollers
 - **vk_box_t** -- recalculates slot dimensions and resizes each child
+- **vk_listbox_t** -- resizes and repositions attached scrollers, repaints
 
 Propagation is recursive: resizing a box triggers its `_on_resize`, which
 resizes each slot's widget, which in turn fires their `_on_resize` hooks
@@ -353,17 +390,19 @@ the new canvas, then fires `widget->_on_recreate(widget)` if non-NULL.
 The base `_recreate` creates a fresh `newwin`. Container klasses override
 it to propagate through the widget tree:
 
-- **vk_frame_t** -- creates its canvas, then recreates the child
+- **vk_frame_t** -- creates its canvas, updates scroller surfaces, recreates
+  scrollers, then recreates the child
+- **vk_window_t** -- same as frame (scrollers first, then child)
 - **vk_box_t** -- creates its canvas, then recreates each slot's widget
 
-Both update child surface pointers before propagating so children blit to
-the correct parent canvas.
+All update child and scroller surface pointers before propagating so
+widgets blit to the correct parent canvas.
 
 The `_on_recreate` hook is for content-bearing widgets that need to repaint
 after canvas recreation. Widget types install it in their ctors:
 
-- **vk_listbox_t** -- calls its `_update` to repaint items
-- **vk_menu_t** -- calls its `_update` to repaint items and separators
+- **vk_listbox_t** -- updates attached scroller surfaces, recreates them,
+  then calls its `_update` to repaint items and scrollers
 
 Callers can also set `_on_recreate` directly on plain `vk_widget_t`
 instances for custom content (the same way `_on_resize` is set).

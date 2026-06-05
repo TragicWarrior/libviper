@@ -7,12 +7,13 @@
 #include "viper.h"
 #include "vk_object.h"
 #include "vk_widget.h"
-#include "vk_container.h"
-#include "vk_frame.h"
 
 struct _vk_scroller_s
 {
-    vk_frame_t          parent_klass;
+    vk_widget_t         parent_klass;
+
+    vk_widget_t         *host;
+    vk_widget_t         *scroll_source;
 
     VkScrollInfoFunc    scroll_info_func;
 
@@ -23,9 +24,14 @@ struct _vk_scroller_s
 
     int                 scrollbar_flags;
 
+    int                 border_style;
+    short               border_fg;
+    short               border_bg;
+
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
+    int                 (*_update)          (vk_scroller_t *);
     int                 (*_draw_scrollbar)  (vk_scroller_t *);
 };
 

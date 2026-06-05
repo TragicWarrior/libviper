@@ -7,6 +7,7 @@
 #include "vk_widget.h"
 #include "vk_listbox.h"
 #include "vk_item.h"
+#include "vk_scroller.h"
 
 // base klass methods
 static int
@@ -43,10 +44,19 @@ static int
 _vk_listbox_exec_item(vk_listbox_t *listbox);
 
 static int
+_vk_listbox_add_separator(vk_listbox_t *listbox, int style);
+
+static int
+_vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx);
+
+static int
 _vk_listbox_update(vk_listbox_t *listbox);
 
 static int
 _vk_listbox_on_recreate(vk_widget_t *widget);
+
+static int
+_vk_listbox_on_resize(vk_widget_t *widget);
 
 static int
 _vk_listbox_reset(vk_listbox_t *listbox);
@@ -227,6 +237,14 @@ vk_listbox_reset(vk_listbox_t *listbox)
     return retval;
 }
 
+int
+vk_listbox_add_separator(vk_listbox_t *listbox, int style)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->_add_separator(listbox, style);
+}
+
 void
 vk_listbox_destroy(vk_listbox_t *listbox)
 {
@@ -282,10 +300,12 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
     listbox->_get_selected = _vk_listbox_get_selected;
     listbox->_remove_item = _vk_listbox_remove_item;
     listbox->_exec_item = _vk_listbox_exec_item;
+    listbox->_add_separator = _vk_listbox_add_separator;
     listbox->_update = _vk_listbox_update;
     listbox->_reset = _vk_listbox_reset;
 
     VK_WIDGET(listbox)->_on_recreate = _vk_listbox_on_recreate;
+    VK_WIDGET(listbox)->_on_resize = _vk_listbox_on_resize;
 
     INIT_LIST_HEAD(&listbox->item_list);
 
@@ -314,15 +334,28 @@ _vk_listbox_kmio(vk_object_t *object, int32_t keystroke)
 {
     vk_listbox_t    *listbox;
     int             retval;
+    int             saved_item;
+    int             direction = 0;
+    int             attempts;
 
     listbox = VK_LISTBOX(object);
 
     if(list_empty(&listbox->item_list)) return 0;
 
+    saved_item = listbox->curr_item;
+
     switch(keystroke)
     {
-        case KEY_UP:    listbox->curr_item--;           break;
-        case KEY_DOWN:  listbox->curr_item++;           break;
+        case KEY_UP:
+            listbox->curr_item--;
+            direction = -1;
+            break;
+
+        case KEY_DOWN:
+            listbox->curr_item++;
+            direction = 1;
+            break;
+
         case 10:
         {
             retval = listbox->_exec_item(listbox);
@@ -345,6 +378,41 @@ _vk_listbox_kmio(vk_object_t *object, int32_t keystroke)
         else
             listbox->curr_item--;
     }
+
+    attempts = 0;
+    while(direction != 0
+        && _vk_listbox_item_is_separator(listbox, listbox->curr_item)
+        && attempts < listbox->item_count)
+    {
+        listbox->curr_item += direction;
+
+        if(listbox->curr_item < 0)
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                listbox->curr_item = listbox->item_count - 1;
+            else
+            {
+                listbox->curr_item = saved_item;
+                break;
+            }
+        }
+
+        if(listbox->curr_item > (listbox->item_count - 1))
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                listbox->curr_item = 0;
+            else
+            {
+                listbox->curr_item = saved_item;
+                break;
+            }
+        }
+
+        attempts++;
+    }
+
+    if(attempts >= listbox->item_count)
+        listbox->curr_item = saved_item;
 
     // now cause the widget to redraw
     listbox->_update(listbox);
@@ -370,6 +438,43 @@ _vk_listbox_add_item(vk_listbox_t *listbox, char *name,
 
     list_add_tail(&item->list, &listbox->item_list);
     listbox->item_count++;
+
+    return 0;
+}
+
+static int
+_vk_listbox_add_separator(vk_listbox_t *listbox, int style)
+{
+    vk_item_t   *item;
+
+    if(listbox == NULL) return -1;
+    if(style < 1) style = VK_SEPARATOR_BLANK;
+
+    item = (vk_item_t *)calloc(1, sizeof(vk_item_t));
+    item->separator_style = style;
+
+    list_add_tail(&item->list, &listbox->item_list);
+    listbox->item_count++;
+
+    return 0;
+}
+
+static int
+_vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 i = 0;
+
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx)
+        {
+            item = list_entry(pos, vk_item_t, list);
+            return (item->separator_style > 0) ? 1 : 0;
+        }
+        i++;
+    }
 
     return 0;
 }
@@ -493,6 +598,36 @@ _vk_listbox_exec_item(vk_listbox_t *listbox)
 static int
 _vk_listbox_on_recreate(vk_widget_t *widget)
 {
+    if(widget->vscroller != NULL)
+    {
+        VK_WIDGET(widget->vscroller)->surface = widget->canvas;
+        vk_widget_recreate(VK_WIDGET(widget->vscroller));
+    }
+
+    if(widget->hscroller != NULL)
+    {
+        VK_WIDGET(widget->hscroller)->surface = widget->canvas;
+        vk_widget_recreate(VK_WIDGET(widget->hscroller));
+    }
+
+    return _vk_listbox_update(VK_LISTBOX(widget));
+}
+
+static int
+_vk_listbox_on_resize(vk_widget_t *widget)
+{
+    if(widget->vscroller != NULL)
+    {
+        vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);
+        vk_widget_move(VK_WIDGET(widget->vscroller), widget->width - 1, 0);
+    }
+
+    if(widget->hscroller != NULL)
+    {
+        vk_widget_resize(VK_WIDGET(widget->hscroller), widget->width, 1);
+        vk_widget_move(VK_WIDGET(widget->hscroller), 0, widget->height - 1);
+    }
+
     return _vk_listbox_update(VK_LISTBOX(widget));
 }
 
@@ -502,9 +637,11 @@ _vk_listbox_update(vk_listbox_t *listbox)
     vk_widget_t         *widget;
     vk_item_t           *item;
     struct list_head    *pos;
+    int                 paint_width;
     int                 paint_height;
     int                 paint_colors;
     int                 highlight;
+    attr_t              highlight_attr;
     int                 idx = 0;
     int                 x = 0;
     int                 y = 0;
@@ -514,7 +651,11 @@ _vk_listbox_update(vk_listbox_t *listbox)
     widget = VK_WIDGET(listbox);
 
     widget->_erase(widget);
+    paint_width = widget->width;
     paint_height = widget->height;
+
+    if(widget->vscroller != NULL) paint_width--;
+    if(widget->hscroller != NULL) paint_height--;
 
     // if highlight colors net set, use inverted widget colors
     if(listbox->highlight_fg == -1) listbox->highlight_fg = widget->bg;
@@ -528,7 +669,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
     // if the title exists we need to show it and account for it
     if(listbox->title != NULL)
     {
-        mvwaddstr(widget->canvas, 0, (widget->width / 2), listbox->title);
+        mvwaddstr(widget->canvas, 0, (paint_width / 2), listbox->title);
         paint_height--;
         y = 1;
     }
@@ -570,26 +711,58 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
         if(idx > listbox->scroll_bottom) break;
 
-        mvwprintw(widget->canvas, y, x, "%-*s",
-            widget->width,
-            item->name);
+        highlight_attr = A_NORMAL;
+
+        if(item->separator_style > 0)
+        {
+            if(item->separator_style == VK_SEPARATOR_BLANK)
+            {
+                mvwprintw(widget->canvas, y, x, "%-*c",
+                    paint_width, ' ');
+            }
+
+            if(item->separator_style == VK_SEPARATOR_SINGLE)
+            {
+                mvwhline(widget->canvas, y, x, ACS_HLINE, paint_width);
+                highlight_attr = A_ALTCHARSET;
+            }
+        }
+        else
+        {
+            mvwprintw(widget->canvas, y, x, "%-*.*s",
+                paint_width,
+                paint_width,
+                item->name);
+        }
 
         if(idx == listbox->curr_item)
         {
-            mvwchgat(widget->canvas, y, 0, -1,
-                 A_NORMAL, PAIR_NUMBER(highlight), NULL);
+            mvwchgat(widget->canvas, y, x, paint_width,
+                highlight_attr, PAIR_NUMBER(highlight), NULL);
         }
 
         y++;
         idx++;
     }
 
-    while(y < widget->height)
+    while(y < paint_height)
     {
         mvwprintw(widget->canvas, y, x, "%-*c",
-            widget->width, ' ');
+            paint_width, ' ');
 
         y++;
+    }
+
+    if(widget->vscroller != NULL)
+    {
+        if(vk_scroller_update(widget->vscroller) > 0)
+            vk_widget_draw(VK_WIDGET(widget->vscroller));
+    }
+
+    if(widget->hscroller != NULL)
+    {
+        if(vk_scroller_update(widget->hscroller) > 0)
+            vk_widget_draw(VK_WIDGET(widget->hscroller));
     }
 
     return 0;

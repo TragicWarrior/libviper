@@ -31,6 +31,8 @@ struct _vk_widget_s
     short               bg;                 // background color for canvas
     attr_t              attrs;              // text attributes (A_BOLD, etc.)
 
+    vk_scroller_t       *vscroller;
+    vk_scroller_t       *hscroller;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

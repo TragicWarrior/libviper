@@ -118,9 +118,9 @@ typedef struct  _vk_desktop_s       vk_desktop_t;
 typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
-typedef struct  _vk_menu_s          vk_menu_t;
 typedef struct  _vk_frame_s         vk_frame_t;
 typedef struct  _vk_scroller_s      vk_scroller_t;
+typedef struct  _vk_window_s        vk_window_t;
 typedef struct  _vk_box_s           vk_box_t;
 typedef struct  _vk_label_s         vk_label_t;
 typedef struct  _vk_marquee_s       vk_marquee_t;
@@ -136,6 +136,8 @@ typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
 typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
                         int *content_h, int *content_w,
                         int *scroll_y, int *scroll_x);
+typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
+                        WINDOW *canvas, void *data);
 
 /* basic window routines    */
 WINDOW*             window_create(WINDOW *parent, int x, int y,
@@ -296,9 +298,9 @@ void*           viper_window_get_userptr(vwnd_t *wnd);
 #define VK_WIDGET(x)            ((vk_widget_t *)x)
 #define VK_CONTAINER(x)         ((vk_container_t *)x)
 #define VK_LISTBOX(x)           ((vk_listbox_t *)x)
-#define VK_MENU(x)              ((vk_menu_t *)x)
 #define VK_FRAME(x)             ((vk_frame_t *)x)
 #define VK_SCROLLER(x)          ((vk_scroller_t *)x)
+#define VK_WINDOW(x)            ((vk_window_t *)x)
 #define VK_BOX(x)               ((vk_box_t *)x)
 #define VK_LABEL(x)             ((vk_label_t *)x)
 #define VK_MARQUEE(x)           ((vk_marquee_t *)x)
@@ -371,14 +373,8 @@ int             vk_listbox_get_metrics(vk_listbox_t *listbox,
                     int *width, int *height);
 int             vk_listbox_update(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
+int             vk_listbox_add_separator(vk_listbox_t *listbox, int style);
 void            vk_listbox_destroy(vk_listbox_t *listbox);
-
-vk_menu_t*      vk_menu_create(int width, int height);
-int             vk_menu_set_frame(vk_menu_t *menu, int style);
-int             vk_menu_add_separator(vk_menu_t *menu, int style);
-int             vk_menu_update(vk_menu_t *menu);
-int             vk_menu_reset(vk_menu_t *menu);
-void            vk_menu_destroy(vk_menu_t *menu);
 
 vk_frame_t*     vk_frame_create(int width, int height);
 int             vk_frame_set_border_style(vk_frame_t *frame, int style);
@@ -389,19 +385,36 @@ vk_widget_t*    vk_frame_get_child(vk_frame_t *frame);
 int             vk_frame_update(vk_frame_t *frame);
 void            vk_frame_destroy(vk_frame_t *frame);
 
-vk_scroller_t*  vk_scroller_create(int width, int height);
+vk_scroller_t*  vk_scroller_create(int flags);
 int             vk_scroller_set_border_style(vk_scroller_t *scroller,
                     int style);
 int             vk_scroller_set_border_colors(vk_scroller_t *scroller,
                     short fg, short bg);
-int             vk_scroller_set_child(vk_scroller_t *scroller,
-                    vk_widget_t *child);
-vk_widget_t*    vk_scroller_get_child(vk_scroller_t *scroller);
-int             vk_scroller_set_scrollbar(vk_scroller_t *scroller, int flags);
 int             vk_scroller_set_scroll_info(vk_scroller_t *scroller,
                     VkScrollInfoFunc func);
+int             vk_scroller_set_scroll_source(vk_scroller_t *scroller,
+                    vk_widget_t *source);
 int             vk_scroller_update(vk_scroller_t *scroller);
 void            vk_scroller_destroy(vk_scroller_t *scroller);
+
+int             vk_widget_attach_scroller(vk_widget_t *host,
+                    vk_scroller_t *scroller);
+int             vk_widget_detach_scroller(vk_widget_t *host,
+                    vk_scroller_t *scroller);
+
+vk_window_t*    vk_window_create(int width, int height);
+int             vk_window_set_title(vk_window_t *window, const char *title);
+const char*     vk_window_get_title(vk_window_t *window);
+int             vk_window_set_title_justify(vk_window_t *window, int justify);
+int             vk_window_set_decorate(vk_window_t *window,
+                    VkWindowDecorateFunc func, void *data);
+int             vk_window_set_border_style(vk_window_t *window, int style);
+int             vk_window_set_border_colors(vk_window_t *window,
+                    short fg, short bg);
+int             vk_window_set_child(vk_window_t *window, vk_widget_t *child);
+vk_widget_t*    vk_window_get_child(vk_window_t *window);
+int             vk_window_update(vk_window_t *window);
+void            vk_window_destroy(vk_window_t *window);
 
 vk_box_t*       vk_box_create(int width, int height,
                     int orientation, int slots);
