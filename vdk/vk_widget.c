@@ -188,6 +188,7 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     if(height == WSIZE_UNCHANGED) height = widget->height;
 
     if(width < 0 || height < 0) return -1;
+    if(width == widget->width && height == widget->height) return 0;
 
     retval = widget->_resize(widget, width, height);
 
