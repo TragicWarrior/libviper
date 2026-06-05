@@ -126,7 +126,7 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
     vk_widget_attach_scroller(VK_WIDGET(dialog->file_list),
         dialog->scroller);
 
-    dialog->btn_ok = vk_button_create("OK");
+    dialog->btn_ok = vk_button_create("Okay");
     dialog->btn_cancel = vk_button_create("Cancel");
 
     if(style == VK_BUTTON_BASIC)
