@@ -356,6 +356,10 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     widget->x = 0;
     widget->y = 0;
 
+    /* self-initialize the list node so list_del() is safe even for a
+       widget that is never added to a deck/container */
+    INIT_LIST_HEAD(&widget->list);
+
     return 0;
 }
 
