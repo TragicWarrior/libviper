@@ -7,6 +7,12 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Remove vk_menu_t (replaced by vk_listbox_t in VDK).
 * [Bryan Christ] Build system now produces libvdk.a, libvdk.so, libviper.a,
   and libviper.so. libviper continues to bundle VDK for backwards compat.
+* [Bryan Christ] Add vk_popup_t composite widget: bordered dialog with
+  configurable client area and auto-laid-out button bar.  Buttons can be
+  specified at create time (va_args, NULL-terminated) or added later.
+  Button press emits VK_EVENT_ON_CLOSE with the button index as result.
+  Supports VK_FRAME_SINGLE, VK_FRAME_ASCII, and VK_BUTTON_BASIC styles.
+  All window APIs available via convenience macros.
 
 Version 3.1.1
 

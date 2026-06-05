@@ -100,6 +100,7 @@ enum
     VK_EVENT_ON_UNSELECT    = 12,
     VK_EVENT_ON_ACTIVATE    = 13,
     VK_EVENT_ON_SUBMIT      = 14,
+    VK_EVENT_ON_CLOSE       = 15,
 
     /* state */
     VK_EVENT_ON_FOCUS       = 20,
@@ -142,6 +143,7 @@ typedef struct  _vk_activity_s      vk_activity_t;
 typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 typedef struct  _vk_calendar_s      vk_calendar_t;
+typedef struct  _vk_popup_s         vk_popup_t;
 
 /* callback typedefs */
 typedef int         (*VkEventFunc)(vk_object_t *object, int event,
@@ -179,6 +181,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_MENUBAR(x)           ((vk_menubar_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 #define VK_CALENDAR(x)          ((vk_calendar_t *)x)
+#define VK_POPUP(x)             ((vk_popup_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -602,5 +605,35 @@ int             vk_calendar_set_header_attrs(vk_calendar_t *calendar,
                     attr_t attrs);
 int             vk_calendar_update(vk_calendar_t *calendar);
 void            vk_calendar_destroy(vk_calendar_t *calendar);
+
+/* vk_popup */
+vk_popup_t*     vk_popup_create(int width, int height, int style, ...);
+int             vk_popup_set_client(vk_popup_t *popup,
+                    vk_widget_t *widget);
+vk_widget_t*    vk_popup_get_client(vk_popup_t *popup);
+int             vk_popup_add_button(vk_popup_t *popup, const char *text);
+vk_button_t*    vk_popup_get_button(vk_popup_t *popup, int index);
+int             vk_popup_get_button_count(vk_popup_t *popup);
+vk_box_t*       vk_popup_get_button_bar(vk_popup_t *popup);
+int             vk_popup_get_result(vk_popup_t *popup);
+int             vk_popup_close(vk_popup_t *popup, int result);
+int             vk_popup_set_colors(vk_popup_t *popup,
+                    short fg, short bg);
+int             vk_popup_set_button_colors(vk_popup_t *popup,
+                    short fg, short bg);
+int             vk_popup_set_button_attrs(vk_popup_t *popup,
+                    attr_t attrs);
+#define         vk_popup_set_title(p, t) \
+                    vk_window_set_title(VK_WINDOW(p), (t))
+#define         vk_popup_get_title(p) \
+                    vk_window_get_title(VK_WINDOW(p))
+#define         vk_popup_set_border_style(p, s) \
+                    vk_window_set_border_style(VK_WINDOW(p), (s))
+#define         vk_popup_set_border_colors(p, fg, bg) \
+                    vk_window_set_border_colors(VK_WINDOW(p), (fg), (bg))
+#define         vk_popup_set_border_attrs(p, a) \
+                    vk_window_set_border_attrs(VK_WINDOW(p), (a))
+int             vk_popup_update(vk_popup_t *popup);
+void            vk_popup_destroy(vk_popup_t *popup);
 
 #endif

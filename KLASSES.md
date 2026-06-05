@@ -20,6 +20,8 @@ vk_object_t
    │  └─ vk_frame_t
    │     │
    │     └─ vk_window_t
+   │        │
+   │        └─ vk_popup_t
    │
    ├─ vk_label_t
    │  │
@@ -83,6 +85,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_MENUBAR(x)` | `vk_menubar_t *` |
 | `VK_FILEDIALOG(x)` | `vk_filedialog_t *` |
 | `VK_CALENDAR(x)` | `vk_calendar_t *` |
+| `VK_POPUP(x)` | `vk_popup_t *` |
 
 ## Klass Templates
 
@@ -98,7 +101,8 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
 `VK_SELECTBOX_KLASS`, `VK_DROPDOWN_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
 `VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
-`VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`.
+`VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`,
+`VK_POPUP_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -133,6 +137,7 @@ vk_filler_create(void)
 vk_menubar_create(width)
 vk_calendar_create(void)
 vk_filedialog_create(width, height, style, multiselect)
+vk_popup_create(width, height, style, ...)
 ```
 
 ## Constructor Chaining
@@ -160,6 +165,7 @@ _vk_filler_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_menubar_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_calendar_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filedialog_ctor -> VK_BOX_KLASS->ctor(object, argp)
+_vk_popup_ctor      -> VK_WINDOW_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -252,6 +258,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_menubar_t` | `ctor`, `dtor`, `_add_item`, `_get_item_count`, `_exec_item`, `_update`, `_reset` |
 | `vk_calendar_t` | `ctor`, `dtor`, `_update` |
 | `vk_filedialog_t` | `ctor`, `dtor` |
+| `vk_popup_t` | `ctor`, `dtor` |
 
 ## Public API Convention
 
@@ -1264,6 +1271,83 @@ child widget individually (scroller, button bar, buttons, file list, input).
 | `vk_filedialog_get_file_list(dialog)` | Return the internal file list widget |
 | `vk_filedialog_update(dialog)` | Update all children and composite |
 | `vk_filedialog_destroy(dialog)` | Destroy dialog and all children |
+
+## Popups
+
+`vk_popup_t` is a composite widget derived from `vk_window_t`. It provides
+a bordered dialog with a configurable client area and an optional button
+bar, suitable for modal prompts, confirmations, and edit forms.
+
+### Construction
+
+```c
+vk_popup_t *popup = vk_popup_create(width, height, style, "OK", "Cancel", NULL);
+```
+
+- `style`: `VK_FRAME_SINGLE`, `VK_FRAME_ASCII`, or `VK_BUTTON_BASIC` —
+  controls the relief style of buttons created at construction time
+- Variadic arguments are NULL-terminated button labels; pass only `NULL`
+  for a popup with no buttons
+- Minimum size: 5 columns, 3 rows
+
+The create function builds the internal widget tree:
+
+| Slot | Widget | Flags |
+|------|--------|-------|
+| 0 | client area (`vk_filler_t` default, or user widget) | `VK_STATE_EXPAND` |
+| 1 | `vk_box_t` (button bar, horizontal) | natural height |
+
+The layout is a 2-slot non-homogeneous vertical box. The client area
+absorbs all available space. The button bar height is 1 for basic style
+or 3 for framed styles.
+
+### Client Area
+
+`vk_popup_set_client(popup, widget)` replaces the default filler with a
+user-provided widget. The widget is given `VK_STATE_EXPAND`. Passing NULL
+restores the default filler. The popup does not destroy the user's client
+widget — only its own internal widgets (buttons, button bar, default
+filler, layout).
+
+### Buttons
+
+Buttons can be added at create time via variadic labels or later via
+`vk_popup_add_button()`. Up to `VK_POPUP_MAX_BUTTONS` (8) are supported.
+When a button is pressed, the popup stores the button's index as the
+result and emits `VK_EVENT_ON_CLOSE`. `vk_popup_close(popup, result)`
+does the same programmatically.
+
+`vk_popup_add_button` handles three cases: no existing bar (creates one),
+bar with available slots (fills next slot), bar needing more slots
+(reconstructs the bar).
+
+### Destructor
+
+The popup dtor saves pointers to all owned children, removes them from
+containers, demotes to `vk_window_t`, destroys the window, then destroys
+each child individually (buttons, button bar, default filler, layout).
+
+### API
+
+All window APIs (title, border style, border colors, border attrs) are
+available under `vk_popup_*` names via convenience macros.
+
+| API | Description |
+|-----|-------------|
+| `vk_popup_create(w, h, style, ...)` | Create a popup with NULL-terminated button labels |
+| `vk_popup_set_client(popup, widget)` | Set or clear the client area widget |
+| `vk_popup_get_client(popup)` | Return the client widget (or NULL) |
+| `vk_popup_add_button(popup, text)` | Add a button dynamically |
+| `vk_popup_get_button(popup, index)` | Return a button by index |
+| `vk_popup_get_button_count(popup)` | Return number of buttons |
+| `vk_popup_get_button_bar(popup)` | Return the button bar box |
+| `vk_popup_get_result(popup)` | Return the close result (button index or -1) |
+| `vk_popup_close(popup, result)` | Set result and emit `VK_EVENT_ON_CLOSE` |
+| `vk_popup_set_colors(popup, fg, bg)` | Set interior (layout) colors |
+| `vk_popup_set_button_colors(popup, fg, bg)` | Set button and button bar colors |
+| `vk_popup_set_button_attrs(popup, attrs)` | Set button text attributes |
+| `vk_popup_update(popup)` | Update buttons, button bar, layout, and window |
+| `vk_popup_destroy(popup)` | Destroy popup and all owned children |
 
 ## Calendars
 
