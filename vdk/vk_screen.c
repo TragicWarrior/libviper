@@ -156,6 +156,14 @@ vk_screen_get_window(vk_screen_t *screen)
 }
 
 inline int
+vk_screen_get_fd(vk_screen_t *screen)
+{
+    if(screen == NULL || screen->fd_out == NULL) return -1;
+
+    return fileno(screen->fd_out);
+}
+
+inline int
 vk_screen_attach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t *widget)
 {
@@ -382,6 +390,17 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
             vk_widget_recreate(surface->widgets[j]);
             surface->widgets[j]->surface = surface->canvas;
         }
+    }
+
+    /* turn off any-event mouse tracking on the OLD terminal before we
+       walk away from it -- the escape was sent via raw stdio at
+       startup so ncurses' endwin() doesn't know to disable it, and
+       the shell that takes over would otherwise show every mouse
+       move as garbage chars (\033[M...). */
+    if(old_out != NULL)
+    {
+        fputs("\033[?1003l", old_out);
+        fflush(old_out);
     }
 
     set_term(old_term);

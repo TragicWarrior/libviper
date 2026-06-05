@@ -1,6 +1,7 @@
 #ifndef _VDK_H_
 #define _VDK_H_
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -229,6 +230,7 @@ int             vk_screen_set_surface(vk_screen_t *screen, int id);
 int             vk_screen_get_active_surface(vk_screen_t *screen);
 int             vk_screen_get_surface_count(vk_screen_t *screen);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
+int             vk_screen_get_fd(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_detach_widget(vk_screen_t *screen,

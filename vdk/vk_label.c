@@ -15,6 +15,9 @@ _vk_label_dtor(vk_object_t *object);
 static int
 _vk_label_update(vk_label_t *label);
 
+static int
+_vk_label_recreate(vk_widget_t *widget);
+
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_LABEL_KLASS)
@@ -120,7 +123,31 @@ _vk_label_ctor(vk_object_t *object, va_list *argp, ...)
     label->dtor = _vk_label_dtor;
     label->_update = _vk_label_update;
 
+    VK_WIDGET(label)->_recreate = _vk_label_recreate;
+
     return 0;
+}
+
+/*
+    After a teleport recreate the canvas is empty -- re-render the
+    label text so the new SCREEN shows the same content the old one
+    did, instead of a blank slot.
+*/
+static int
+_vk_label_recreate(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    if(widget->composer != widget->canvas)
+        delwin(widget->composer);
+
+    widget->canvas = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state &= ~VK_STATE_FROZEN;
+
+    if(widget->canvas == NULL) return -1;
+
+    return _vk_label_update(VK_LABEL(widget));
 }
 
 static int
