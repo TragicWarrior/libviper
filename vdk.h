@@ -33,6 +33,14 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_BORDER_ASCII              3
 #define VK_BORDER_REVERSE            (1 << 4)
 
+/* relief modifiers -- compose with VK_BORDER_SINGLE.
+ * RAISED  : top/left edges painted relief_hi, bottom/right painted relief_lo
+ * SUNKEN  : inverse -- top/left painted relief_lo, bottom/right painted relief_hi
+ * setting both is rejected.  per-widget relief colors come from
+ * widget->relief_hi / widget->relief_lo (see vk_widget_set_relief_colors). */
+#define VK_RELIEF_RAISED            (1 << 5)
+#define VK_RELIEF_SUNKEN            (1 << 6)
+
 /* button relief styles (in addition to VK_BORDER_SINGLE / VK_BORDER_ASCII) */
 #define VK_BUTTON_BASIC             4
 
