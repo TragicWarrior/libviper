@@ -84,7 +84,7 @@ viper_msgbox_create(int screen_id, char *title, float x, float y,
     if(idx != -1)
     {
         wattron(WINDOW_FRAME(vwnd), icon_colors[idx] | A_REVERSE);
-        wprintw(WINDOW_FRAME(vwnd), "%s", icons[idx], msg);
+        wprintw(WINDOW_FRAME(vwnd), "%s", icons[idx]);
         wattroff(WINDOW_FRAME(vwnd), icon_colors[idx] | A_REVERSE);
         wprintw(WINDOW_FRAME(vwnd), " ");
     }

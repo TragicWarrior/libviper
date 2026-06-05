@@ -25,7 +25,6 @@ int
 viper_mvwin_rel(vwnd_t *vwnd, int vector_x, int vector_y)
 {
     int             retval = 0;
-    int             x, y;
 
     if(vector_x == 0 && vector_y == 0) return 1;
 
@@ -36,8 +35,6 @@ viper_mvwin_rel(vwnd_t *vwnd, int vector_x, int vector_y)
         /* this is a hack until mvwin is fixed */
         if((vwnd->ctx->managed == TRUE) && retval != ERR)
         {
-            getbegyx(vwnd->window_frame, y, x);
-            /* Use mvderwin to reposition subwindow relative to parent */
             mvderwin(vwnd->user_window, getpary(vwnd->user_window), getparx(vwnd->user_window));
         }
         /* end of hack */

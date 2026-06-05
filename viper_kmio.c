@@ -136,6 +136,28 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
         new_mouse = mouse_event;
         old_mouse = &previous_mouse_event;
 
+        // Shift+press: bring window to top then pass to app for selection
+        if((new_mouse->bstate & BUTTON_SHIFT) &&
+            (new_mouse->bstate & BUTTON1_PRESSED))
+        {
+            event_wnd = viper_deck_hit_test(-1, TRUE,
+                new_mouse->x, new_mouse->y);
+
+            if(event_wnd != NULL)
+            {
+                viper_window_set_top(event_wnd);
+                viper_window_redraw(event_wnd);
+                viper_screen_redraw(CURRENT_SCREEN_ID, REDRAW_ALL);
+            }
+
+            event_wnd = NULL;
+            goto mouse_to_app;
+        }
+
+        // Shift with other mouse events: pass directly to app
+        if(new_mouse->bstate & BUTTON_SHIFT)
+            goto mouse_to_app;
+
         if((new_mouse->bstate & REPORT_MOUSE_POSITION)
             && event_mode == EVENTMODE_MOVE)
         {
@@ -165,9 +187,28 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
                 memcpy(old_mouse, new_mouse, sizeof(MEVENT));
                 getbegyx(WINDOW_FRAME(event_wnd), beg_y, beg_x);
                 getmaxyx(WINDOW_FRAME(event_wnd), max_y, max_x);
-                if(new_mouse->x == (beg_x + max_x - 1) &&
-                new_mouse->y == (beg_y + max_y) - 1) event_mode = EVENTMODE_RESIZE;
-                else event_mode = EVENTMODE_MOVE;
+
+                // only border clicks start move/resize
+                if(new_mouse->y == beg_y ||
+                    new_mouse->y == beg_y + max_y - 1 ||
+                    new_mouse->x == beg_x ||
+                    new_mouse->x == beg_x + max_x - 1)
+                {
+                    if(new_mouse->x == (beg_x + max_x - 1) &&
+                        new_mouse->y == (beg_y + max_y) - 1)
+                    {
+                        event_mode = EVENTMODE_RESIZE;
+                    }
+                    else
+                    {
+                        event_mode = EVENTMODE_MOVE;
+                    }
+                }
+                else
+                {
+                    event_wnd = NULL;
+                    event_mode = EVENTMODE_IDLE;
+                }
             }
             else event_mode = EVENTMODE_IDLE;
         }
@@ -232,6 +273,8 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
             event_wnd = NULL;
             event_mode = EVENTMODE_IDLE;
         }
+
+    mouse_to_app: ;
     }
 
     // pass keystroke on to toplevel *managed* window
