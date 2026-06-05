@@ -16,10 +16,13 @@
 #include "vk_window.h"
 #include "vk_textbox.h"
 #include "vk_selectbox.h"
+#include "vk_button.h"
 #include "vk_deck.h"
 #include "vk_screen.h"
 
 #define NUM_SURFACES    5
+
+static vk_button_t *g_deck_button = NULL;
 
 static const char *surface_names[] =
 {
@@ -357,13 +360,6 @@ deck_config_decorate(vk_window_t *window, WINDOW *canvas, void *data)
     (void)data;
 
     deck_draw_chrome(window, canvas);
-
-    mvwprintw(canvas, 1, 2, "Settings");
-    mvwprintw(canvas, 3, 2, "Theme ......... Dark");
-    mvwprintw(canvas, 4, 2, "Font .......... Mono 10");
-    mvwprintw(canvas, 5, 2, "Tab width ..... 4");
-    mvwprintw(canvas, 6, 2, "Line numbers .. On");
-    mvwprintw(canvas, 7, 2, "Word wrap ..... Off");
 }
 
 static int
@@ -574,6 +570,22 @@ box_kmio(vk_object_t *object, int32_t keystroke)
     {
         return vk_object_push_keystroke(
             VK_OBJECT(box->slot_widgets[box->focused_slot]), keystroke);
+    }
+
+    return 0;
+}
+
+static int
+settings_kmio(vk_object_t *object, int32_t keystroke)
+{
+    (void)object;
+
+    if((keystroke == KEY_CRLF || keystroke == ' ') && g_deck_button != NULL)
+    {
+        if(g_deck_button->pressed)
+            vk_button_release(g_deck_button);
+        else
+            vk_button_press(g_deck_button);
     }
 
     return 0;
@@ -954,6 +966,9 @@ int main(void)
     vk_window_t     *deck_win3;
     vk_window_t     *deck_win4;
     vk_window_t     *deck_win5;
+    vk_box_t        *deck_box5;
+    vk_label_t      *deck_label5;
+    vk_button_t     *deck_button5;
 
     // shared
     vk_marquee_t    *marquee;
@@ -1013,6 +1028,7 @@ int main(void)
 
     listbox = build_listbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(listbox), listbox_kmio);
+    vk_widget_set_expand(VK_WIDGET(listbox));
     vk_window_set_child(window1, VK_WIDGET(listbox));
 
     vscroller1 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -1038,6 +1054,7 @@ int main(void)
 
     menu = build_menu(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(menu), listbox_kmio);
+    vk_widget_set_expand(VK_WIDGET(menu));
     vk_window_set_child(window2, VK_WIDGET(menu));
 
     vscroller2 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -1063,6 +1080,7 @@ int main(void)
 
     textbox3 = build_textbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(textbox3), textbox_kmio);
+    vk_widget_set_expand(VK_WIDGET(textbox3));
     vk_window_set_child(window3, VK_WIDGET(textbox3));
 
     vscroller3 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -1072,6 +1090,9 @@ int main(void)
     vk_scroller_set_scroll_info(vscroller3, textbox_scroll_info);
     vk_widget_attach_scroller(VK_WIDGET(textbox3), vscroller3);
 
+    vk_widget_set_expand(VK_WIDGET(window1));
+    vk_widget_set_expand(VK_WIDGET(window2));
+    vk_widget_set_expand(VK_WIDGET(window3));
     vk_box_set_widget(box, 0, VK_WIDGET(window1));
     vk_box_set_widget(box, 1, VK_WIDGET(window2));
     vk_box_set_widget(box, 2, VK_WIDGET(window3));
@@ -1096,6 +1117,7 @@ int main(void)
 
     lang_listbox = build_lang_listbox(max_x - 2, box_h - 2);
     vk_object_set_kmio(VK_OBJECT(lang_listbox), listbox_kmio);
+    vk_widget_set_expand(VK_WIDGET(lang_listbox));
     vk_frame_set_child(lang_frame, VK_WIDGET(lang_listbox));
 
     lang_vscroller = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -1136,6 +1158,7 @@ int main(void)
 
     checkbox = build_checkbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(checkbox), selectbox_kmio);
+    vk_widget_set_expand(VK_WIDGET(checkbox));
     vk_window_set_child(window4, VK_WIDGET(checkbox));
 
     vscroller4 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -1154,6 +1177,7 @@ int main(void)
 
     radio = build_radio(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(radio), selectbox_kmio);
+    vk_widget_set_expand(VK_WIDGET(radio));
     vk_window_set_child(window5, VK_WIDGET(radio));
 
     vscroller5 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -1172,8 +1196,12 @@ int main(void)
     vk_window_set_title_justify(about_window, VK_JUSTIFY_RIGHT);
 
     about = build_about_widget(inner_w, inner_h);
+    vk_widget_set_expand(about);
     vk_window_set_child(about_window, about);
 
+    vk_widget_set_expand(VK_WIDGET(window4));
+    vk_widget_set_expand(VK_WIDGET(window5));
+    vk_widget_set_expand(VK_WIDGET(about_window));
     vk_box_set_widget(box2, 0, VK_WIDGET(window4));
     vk_box_set_widget(box2, 1, VK_WIDGET(window5));
     vk_box_set_widget(box2, 2, VK_WIDGET(about_window));
@@ -1239,7 +1267,7 @@ int main(void)
     vk_window_set_decorate(deck_win4, deck_log_decorate, NULL);
     vk_window_update(deck_win4);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win4), VK_DECK_TOP);
-    vk_widget_move(VK_WIDGET(deck_win4), 8, 4);
+    vk_widget_move(VK_WIDGET(deck_win4), 39, 11);
 
     deck_win5 = vk_window_create(35, 10);
     vk_window_set_title(deck_win5, " Settings ");
@@ -1248,9 +1276,29 @@ int main(void)
     vk_window_set_border_colors(deck_win5, COLOR_MAGENTA, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win5), COLOR_WHITE, COLOR_RED);
     vk_window_set_decorate(deck_win5, deck_config_decorate, NULL);
+    vk_object_set_kmio(VK_OBJECT(deck_win5), settings_kmio);
+
+    deck_label5 = vk_label_create(33);
+    vk_label_set_text(deck_label5, "Theme: Dark");
+    vk_widget_set_colors(VK_WIDGET(deck_label5), COLOR_WHITE, COLOR_RED);
+    vk_label_update(deck_label5);
+
+    deck_button5 = vk_button_create("Apply");
+    vk_widget_set_colors(VK_WIDGET(deck_button5), COLOR_WHITE, COLOR_RED);
+    vk_button_set_pressed_colors(deck_button5, COLOR_BLACK, COLOR_WHITE);
+    vk_button_update(deck_button5);
+    g_deck_button = deck_button5;
+
+    deck_box5 = vk_box_create(33, 8, VK_BOX_VERTICAL, 2);
+    vk_widget_set_expand(VK_WIDGET(deck_label5));
+    vk_box_set_widget(deck_box5, 0, VK_WIDGET(deck_label5));
+    vk_box_set_widget(deck_box5, 1, VK_WIDGET(deck_button5));
+
+    vk_widget_set_expand(VK_WIDGET(deck_box5));
+    vk_window_set_child(deck_win5, VK_WIDGET(deck_box5));
     vk_window_update(deck_win5);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
-    vk_widget_move(VK_WIDGET(deck_win5), 20, 7);
+    vk_widget_move(VK_WIDGET(deck_win5), 51, 14);
 
     // --- initial draw and event loop ---
 
@@ -1496,6 +1544,10 @@ int main(void)
             vk_window_update(deck_win2);
             vk_window_update(deck_win3);
             vk_window_update(deck_win4);
+
+            vk_label_update(deck_label5);
+            vk_button_update(deck_button5);
+            vk_box_update(deck_box5);
             vk_window_update(deck_win5);
         }
 
@@ -1540,6 +1592,10 @@ int main(void)
     vk_window_destroy(deck_win2);
     vk_window_destroy(deck_win3);
     vk_window_destroy(deck_win4);
+    g_deck_button = NULL;
+    vk_label_destroy(deck_label5);
+    vk_button_destroy(deck_button5);
+    vk_box_destroy(deck_box5);
     vk_window_destroy(deck_win5);
 
     vk_screen_destroy(vk_screen);

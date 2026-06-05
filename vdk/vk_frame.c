@@ -232,7 +232,9 @@ _vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
 
     vk_widget_set_surface(child, widget->canvas);
     vk_widget_move(child, 1, 1);
-    vk_widget_resize(child, widget->width - 2, widget->height - 2);
+
+    if(child->state & VK_STATE_EXPAND)
+        vk_widget_resize(child, widget->width - 2, widget->height - 2);
 
     return 0;
 }
@@ -334,7 +336,7 @@ _vk_frame_on_resize(vk_widget_t *widget)
 
     frame = VK_FRAME(widget);
 
-    if(frame->child != NULL)
+    if(frame->child != NULL && (frame->child->state & VK_STATE_EXPAND))
         vk_widget_resize(frame->child, widget->width - 2, widget->height - 2);
 
     if(widget->vscroller != NULL)

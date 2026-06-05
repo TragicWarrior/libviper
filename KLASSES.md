@@ -585,14 +585,15 @@ instances for custom content (the same way `_on_resize` is set).
 ## Widget State Flags
 
 `vk_widget_t` carries a `uint32_t state` bitfield. The ctor initializes it
-to `STATE_VISIBLE`. State can be read with `vk_widget_get_state()` and
+to `VK_STATE_VISIBLE`. State can be read with `vk_widget_get_state()` and
 written with `vk_widget_set_state()`.
 
 | Flag | Bit | Effect |
 |------|-----|--------|
-| `STATE_VISIBLE` | `1 << 1` | Widget is drawn during refresh. Cleared = hidden. |
-| `STATE_FROZEN` | `1 << 3` | Widget skips drawing but remains visible in layout. |
-| `STATE_NORESIZE` | `1 << 7` | `vk_widget_resize()` returns -1 immediately. |
+| `VK_STATE_VISIBLE` | `1 << 1` | Widget is drawn during refresh. Cleared = hidden. |
+| `VK_STATE_FROZEN` | `1 << 3` | Widget skips drawing but remains visible in layout. |
+| `VK_STATE_NORESIZE` | `1 << 7` | `vk_widget_resize()` returns -1 immediately. |
+| `VK_STATE_EXPAND` | `1 << 8` | Container resizes widget to fill its slot. Off by default. |
 
 ### Visibility
 
@@ -618,9 +619,17 @@ windows are invalid on the new terminal).
 
 ### No-Resize
 
-When `STATE_NORESIZE` is set, `vk_widget_resize()` refuses to change the
+When `VK_STATE_NORESIZE` is set, `vk_widget_resize()` refuses to change the
 widget's dimensions and returns -1. Useful for fixed-size widgets that
 should not be affected by parent layout changes.
+
+### Expand
+
+When a widget is placed inside a container (`vk_box_t` slot or `vk_frame_t`
+child), the container only resizes it to fill the available space if
+`VK_STATE_EXPAND` is set. The flag is **off** by default so widgets keep
+their natural dimensions. Use `vk_widget_set_expand()` before placing the
+widget in a container to opt in.
 
 ## Widget Attributes
 
@@ -645,18 +654,24 @@ see `vk_marquee_t` for overflow scrolling.
 
 ## Buttons
 
-`vk_button_t` is a single-line push button derived from `vk_widget_t`.
-The widget is 3 rows tall: a top padding row, the text row (with 1 cell
-left padding), and a bottom relief row. Width is `1 + textlen + 1`. The
-right column and bottom row display raised-relief line-drawing characters
-that disappear when the button is pressed.
+`vk_button_t` is a push button derived from `vk_widget_t` with a Win3.1 /
+VB DOS beveled style. The widget is 3 rows tall: a border row, the
+centered text row, and a border row. Width is `1 + textlen + 1`.
+
+The bevel is a WACS_* single-line box with a two-tone color split that
+simulates a 3D raised look. Starting clockwise from the bottom-left corner
+(inclusive), the highlight color (white on face) covers the left edge,
+top-left corner, and top edge. From the top-right corner (inclusive), the
+shadow color (black on face) covers the right edge, bottom edge, and
+corners. On press, the highlight and shadow swap to simulate being pushed
+in. ASCII mode uses `+`, `-`, `|` with the same color split.
 
 | API | Description |
 |-----|-------------|
 | `vk_button_create(text)` | Create a button; text determines width |
 | `vk_button_set_text` | Replace button text (no resize) |
 | `vk_button_set_relief_style` | `VK_FRAME_SINGLE` (unicode, default) or `VK_FRAME_ASCII` |
-| `vk_button_set_pressed_colors` | Set fg/bg for the pressed state |
+| `vk_button_set_pressed_colors` | Set fg/bg for the pressed face |
 | `vk_button_set_on_press` | Register a `VkWidgetFunc` callback + user data |
 | `vk_button_press` | Set pressed state and fire callback |
 | `vk_button_release` | Clear pressed state |

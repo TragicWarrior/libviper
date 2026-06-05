@@ -96,10 +96,13 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
             if(j < slot) pos += slot_size;
         }
 
-        if(box->orientation == VK_BOX_HORIZONTAL)
-            vk_widget_resize(widget, slot_size, bw->height);
-        else
-            vk_widget_resize(widget, bw->width, slot_size);
+        if(widget->state & VK_STATE_EXPAND)
+        {
+            if(box->orientation == VK_BOX_HORIZONTAL)
+                vk_widget_resize(widget, slot_size, bw->height);
+            else
+                vk_widget_resize(widget, bw->width, slot_size);
+        }
     }
 
     return 0;
@@ -241,7 +244,7 @@ _vk_box_on_resize(vk_widget_t *widget)
 
         child = box->slot_widgets[i];
 
-        if(child != NULL)
+        if(child != NULL && (child->state & VK_STATE_EXPAND))
         {
             if(box->orientation == VK_BOX_HORIZONTAL)
                 vk_widget_resize(child, slot_size, widget->height);

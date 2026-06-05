@@ -243,8 +243,12 @@ _vk_button_update(vk_button_t *button)
 {
     vk_widget_t *widget;
     short       fg, bg;
-    int         colors;
-    int         max_text;
+    int         face_colors;
+    short       hi_pair;
+    short       sh_pair;
+    int         right_col;
+    int         bottom_row;
+    int         i;
 
     if(button == NULL) return -1;
 
@@ -262,57 +266,92 @@ _vk_button_update(vk_button_t *button)
         bg = widget->bg;
     }
 
-    colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
-    wbkgd(widget->canvas, ' ' | colors);
+    face_colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
+
+    hi_pair = button->pressed
+        ? vdk_color_pair(COLOR_BLACK, bg)
+        : vdk_color_pair(COLOR_WHITE, bg);
+
+    sh_pair = button->pressed
+        ? vdk_color_pair(COLOR_WHITE, bg)
+        : vdk_color_pair(COLOR_BLACK, bg);
+
+    wbkgd(widget->canvas, ' ' | face_colors);
+
+    right_col = widget->width - 1;
+    bottom_row = widget->height - 1;
 
     if(button->text != NULL)
     {
-        max_text = widget->width - 2;
+        int text_len = strlen(button->text);
+        int max_text = widget->width - 2;
+        int text_col;
 
-        wattron(widget->canvas, colors);
-        mvwprintw(widget->canvas, 1, 1, "%.*s", max_text, button->text);
-        wattroff(widget->canvas, colors);
+        if(text_len > max_text) text_len = max_text;
+        text_col = 1 + (max_text - text_len) / 2;
+
+        wattron(widget->canvas, face_colors);
+        mvwprintw(widget->canvas, 1, text_col, "%.*s", max_text, button->text);
+        wattroff(widget->canvas, face_colors);
     }
 
-    if(!button->pressed)
+    switch(button->relief_style)
     {
-        int right_col = widget->width - 1;
-        int bottom_row = widget->height - 1;
-        int i;
-
-        switch(button->relief_style)
+        case VK_FRAME_ASCII:
         {
-            case VK_FRAME_ASCII:
+            int hi_colors = COLOR_PAIR(hi_pair) | widget->attrs;
+            int sh_colors = COLOR_PAIR(sh_pair) | widget->attrs;
+
+            mvwaddch(widget->canvas, 0, 0, '+' | hi_colors);
+            for(i = 1; i < right_col; i++)
+                mvwaddch(widget->canvas, 0, i, '-' | hi_colors);
+            mvwaddch(widget->canvas, 0, right_col, '+' | sh_colors);
+
+            for(i = 1; i < bottom_row; i++)
             {
-                wattron(widget->canvas, colors);
-
-                mvwaddch(widget->canvas, 1, right_col, '|');
-
-                for(i = 0; i < right_col; i++)
-                    mvwaddch(widget->canvas, bottom_row, i, '_');
-                mvwaddch(widget->canvas, bottom_row, right_col, '|');
-
-                wattroff(widget->canvas, colors);
-                break;
+                mvwaddch(widget->canvas, i, 0, '|' | hi_colors);
+                mvwaddch(widget->canvas, i, right_col, '|' | sh_colors);
             }
 
-            default:
-            {
-                cchar_t     cc;
-                short       pair = vdk_color_pair(fg, bg);
-                attr_t      extra = widget->attrs;
+            mvwaddch(widget->canvas, bottom_row, 0, '+' | hi_colors);
+            for(i = 1; i < right_col; i++)
+                mvwaddch(widget->canvas, bottom_row, i, '-' | sh_colors);
+            mvwaddch(widget->canvas, bottom_row, right_col, '+' | sh_colors);
+            break;
+        }
 
-                _vk_button_build_cchar(&cc, WACS_VLINE, pair, extra);
-                mvwadd_wch(widget->canvas, 1, right_col, &cc);
+        default:
+        {
+            cchar_t cc;
 
-                _vk_button_build_cchar(&cc, WACS_HLINE, pair, extra);
-                for(i = 0; i < right_col; i++)
-                    mvwadd_wch(widget->canvas, bottom_row, i, &cc);
+            _vk_button_build_cchar(&cc, WACS_ULCORNER, hi_pair, 0);
+            mvwadd_wch(widget->canvas, 0, 0, &cc);
 
-                _vk_button_build_cchar(&cc, WACS_LRCORNER, pair, extra);
-                mvwadd_wch(widget->canvas, bottom_row, right_col, &cc);
-                break;
-            }
+            _vk_button_build_cchar(&cc, WACS_HLINE, hi_pair, 0);
+            for(i = 1; i < right_col; i++)
+                mvwadd_wch(widget->canvas, 0, i, &cc);
+
+            _vk_button_build_cchar(&cc, WACS_URCORNER, sh_pair, 0);
+            mvwadd_wch(widget->canvas, 0, right_col, &cc);
+
+            _vk_button_build_cchar(&cc, WACS_VLINE, hi_pair, 0);
+            for(i = 1; i < bottom_row; i++)
+                mvwadd_wch(widget->canvas, i, 0, &cc);
+
+            _vk_button_build_cchar(&cc, WACS_VLINE, sh_pair, 0);
+            for(i = 1; i < bottom_row; i++)
+                mvwadd_wch(widget->canvas, i, right_col, &cc);
+
+            _vk_button_build_cchar(&cc, WACS_LLCORNER, hi_pair, 0);
+            mvwadd_wch(widget->canvas, bottom_row, 0, &cc);
+
+            _vk_button_build_cchar(&cc, WACS_HLINE, sh_pair, 0);
+            for(i = 1; i < right_col; i++)
+                mvwadd_wch(widget->canvas, bottom_row, i, &cc);
+
+            _vk_button_build_cchar(&cc, WACS_LRCORNER, sh_pair, 0);
+            mvwadd_wch(widget->canvas, bottom_row, right_col, &cc);
+            break;
         }
     }
 

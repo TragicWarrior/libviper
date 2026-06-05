@@ -23,6 +23,7 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_STATE_VISIBLE            (1UL << 1)
 #define VK_STATE_FROZEN             (1UL << 3)
 #define VK_STATE_NORESIZE           (1UL << 7)
+#define VK_STATE_EXPAND             (1UL << 8)
 
 /* frame / border styles */
 #define VK_FRAME_NONE               0
@@ -181,6 +182,8 @@ void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
                     vk_widget_set_state(w, vk_widget_get_state(w) & ~VK_STATE_VISIBLE)
 #define         vk_widget_is_visible(w) \
                     (vk_widget_get_state(w) & VK_STATE_VISIBLE)
+#define         vk_widget_set_expand(w) \
+                    vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_EXPAND)
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
 void            vk_widget_destroy(vk_widget_t *widget);
 
