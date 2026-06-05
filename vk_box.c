@@ -21,6 +21,9 @@ static int
 _vk_box_on_resize(vk_widget_t *widget);
 
 static int
+_vk_box_recreate(vk_widget_t *widget);
+
+static int
 _vk_box_update(vk_box_t *box);
 
 
@@ -149,6 +152,7 @@ _vk_box_ctor(vk_object_t *object, va_list *argp, ...)
     box->_update = _vk_box_update;
 
     VK_WIDGET(box)->_on_resize = _vk_box_on_resize;
+    VK_WIDGET(box)->_recreate = _vk_box_recreate;
 
     return 0;
 }
@@ -251,6 +255,28 @@ _vk_box_on_resize(vk_widget_t *widget)
 }
 
 static int
+_vk_box_recreate(vk_widget_t *widget)
+{
+    vk_box_t    *box;
+    int         i;
+
+    widget->canvas = newwin(widget->height, widget->width, 0, 0);
+
+    box = VK_BOX(widget);
+
+    for(i = 0; i < box->slots; i++)
+    {
+        if(box->slot_widgets[i] != NULL)
+        {
+            box->slot_widgets[i]->surface = widget->canvas;
+            vk_widget_recreate(box->slot_widgets[i]);
+        }
+    }
+
+    return 0;
+}
+
+static int
 _vk_box_update(vk_box_t *box)
 {
     vk_widget_t     *widget;
@@ -285,6 +311,8 @@ _vk_box_update(vk_box_t *box)
 
         if(child != NULL)
         {
+            child->surface = widget->canvas;
+
             if(box->orientation == VK_BOX_HORIZONTAL)
                 vk_widget_move(child, pos, 0);
             else

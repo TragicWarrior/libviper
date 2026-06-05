@@ -24,6 +24,9 @@ static int
 _vk_widget_resize(vk_widget_t *widget, int width, int height);
 
 static int
+_vk_widget_recreate(vk_widget_t *widget);
+
+static int
 _vk_widget_erase(vk_widget_t *widget);
 
 
@@ -176,6 +179,14 @@ vk_widget_move(vk_widget_t *widget, int x, int y)
     return retval;
 }
 
+int
+vk_widget_recreate(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    return widget->_recreate(widget);
+}
+
 void
 vk_widget_destroy(vk_widget_t *widget)
 {
@@ -220,6 +231,7 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     widget->_move = _vk_widget_move;
     widget->_draw = _vk_widget_draw;
     widget->_resize = _vk_widget_resize;
+    widget->_recreate = _vk_widget_recreate;
     widget->_erase = _vk_widget_erase;
 
     // interate through var args after constructing base klass
@@ -329,6 +341,16 @@ _vk_widget_draw(vk_widget_t *widget)
     if(retval == ERR) return -1;
 
     return 0;
+}
+
+static int
+_vk_widget_recreate(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    widget->canvas = newwin(widget->height, widget->width, 0, 0);
+
+    return (widget->canvas == NULL) ? -1 : 0;
 }
 
 static int

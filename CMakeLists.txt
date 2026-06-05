@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(libviper)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC -s -DNCURSES_OPAQUE=0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC -DNCURSES_OPAQUE=0")
 set(PROJECT_DESCRIPTION "A library for developing windowed apps on ncurses")
 
 if (("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang") OR (("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU") AND (CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.0)))
@@ -63,6 +63,7 @@ add_library(viper-static STATIC
     w_move.c
     w_shadow.c
     vk_object.c
+    vk_screen.c
     vk_widget.c
     vk_container.c
     vk_listbox.c
@@ -102,6 +103,7 @@ add_library(viper.o OBJECT
     w_move.c
     w_shadow.c
     vk_object.c
+    vk_screen.c
     vk_widget.c
     vk_container.c
     vk_listbox.c

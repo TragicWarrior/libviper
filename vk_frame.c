@@ -30,6 +30,9 @@ static int
 _vk_frame_on_resize(vk_widget_t *widget);
 
 static int
+_vk_frame_recreate(vk_widget_t *widget);
+
+static int
 _vk_frame_update(vk_frame_t *frame);
 
 
@@ -160,6 +163,7 @@ _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
     frame->_update = _vk_frame_update;
 
     VK_WIDGET(frame)->_on_resize = _vk_frame_on_resize;
+    VK_WIDGET(frame)->_recreate = _vk_frame_recreate;
 
     return 0;
 }
@@ -323,6 +327,24 @@ _vk_frame_on_resize(vk_widget_t *widget)
 
     if(frame->child != NULL)
         vk_widget_resize(frame->child, widget->width - 2, widget->height - 2);
+
+    return 0;
+}
+
+static int
+_vk_frame_recreate(vk_widget_t *widget)
+{
+    vk_frame_t  *frame;
+
+    widget->canvas = newwin(widget->height, widget->width, 0, 0);
+
+    frame = VK_FRAME(widget);
+
+    if(frame->child != NULL)
+    {
+        frame->child->surface = widget->canvas;
+        vk_widget_recreate(frame->child);
+    }
 
     return 0;
 }

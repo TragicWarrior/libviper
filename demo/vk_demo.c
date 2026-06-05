@@ -14,6 +14,7 @@
 #include "vk_box.h"
 #include "vk_label.h"
 #include "vk_marquee.h"
+#include "vk_screen.h"
 
 static int
 on_item_activate(vk_widget_t *widget, void *anything)
@@ -206,16 +207,10 @@ build_menu(int width, int height)
     return menu;
 }
 
-static vk_widget_t*
-build_plain_widget(int width, int height)
+static void
+plain_widget_redraw(vk_widget_t *widget)
 {
-    vk_widget_t *widget;
-    int         fill_attr;
-
-    widget = vk_widget_create(width, height);
-    if(widget == NULL) return NULL;
-
-    vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLUE);
+    int fill_attr;
 
     fill_attr = VIPER_COLORS(COLOR_WHITE, COLOR_BLUE);
     wbkgd(widget->canvas, ' ' | fill_attr);
@@ -229,13 +224,25 @@ build_plain_widget(int width, int height)
     mvwprintw(widget->canvas, 9, 2, "no kmio handler,");
     mvwprintw(widget->canvas, 10, 2, "so arrow keys do");
     mvwprintw(widget->canvas, 11, 2, "nothing here.");
+}
+
+static vk_widget_t*
+build_plain_widget(int width, int height)
+{
+    vk_widget_t *widget;
+
+    widget = vk_widget_create(width, height);
+    if(widget == NULL) return NULL;
+
+    vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLUE);
+    plain_widget_redraw(widget);
 
     return widget;
 }
 
 int main(void)
 {
-    VIPER           *viper;
+    vk_screen_t     *vk_screen;
     WINDOW          *screen;
     vk_box_t        *box;
     vk_scroller_t   *scroller1;
@@ -252,22 +259,20 @@ int main(void)
 
     setlocale(LC_ALL, "");
 
-    viper = viper_init(0);
-    if(viper == NULL)
+    vk_screen = vk_screen_create();
+    if(vk_screen == NULL)
     {
-        fprintf(stderr, "viper_init failed\n");
+        fprintf(stderr, "vk_screen_create failed\n");
         return 1;
     }
 
-    screen = CURRENT_SCREEN;
-    keypad(screen, TRUE);
-    curs_set(0);
+    screen = vk_screen_get_window(vk_screen);
 
     getmaxyx(screen, max_y, max_x);
 
     if(max_x < 60 || max_y < 14)
     {
-        viper_end();
+        vk_screen_destroy(vk_screen);
         fprintf(stderr,
             "Terminal too small (need 60x14, have %dx%d)\n",
             max_x, max_y);
@@ -289,11 +294,11 @@ int main(void)
         "  S-\xE2\x86\x90\xE2\x86\x92:width  +/-:height  q:quit");
     vk_marquee_set_direction(marquee, VK_SCROLL_LOOP);
     vk_marquee_set_speed(marquee, 2);
-    vk_widget_set_surface(VK_WIDGET(marquee), screen);
+    vk_screen_attach_widget(vk_screen, 0, VK_WIDGET(marquee));
     vk_widget_move(VK_WIDGET(marquee), 0, 0);
 
     box = vk_box_create(max_x, box_h, VK_BOX_HORIZONTAL, 3);
-    vk_widget_set_surface(VK_WIDGET(box), screen);
+    vk_screen_attach_widget(vk_screen, 0, VK_WIDGET(box));
     vk_widget_move(VK_WIDGET(box), 0, 2);
 
     scroller1 = vk_scroller_create(slot_w, box_h);
@@ -341,13 +346,93 @@ int main(void)
     vk_widget_draw(VK_WIDGET(marquee));
 
     draw_chrome(screen, max_x, slot_w, box->focused_slot);
-    wrefresh(screen);
+    vk_screen_refresh(vk_screen);
 
-    wtimeout(screen, 100);
+    wtimeout(stdscr, 100);
 
-    while((key = wgetch(screen)) != 'q')
+    while((key = wgetch(stdscr)) != 'q')
     {
-        if(key == KEY_SRIGHT)
+        if(key == KEY_RESIZE)
+        {
+            vk_screen_resize(vk_screen);
+            screen = vk_screen_get_window(vk_screen);
+            getmaxyx(screen, max_y, max_x);
+
+            box_h = max_y - 2;
+            slot_w = max_x / 3;
+
+            vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
+            vk_widget_resize(VK_WIDGET(box), max_x, box_h);
+        }
+        else if(key == 't')
+        {
+            char    pty_path[128] = "";
+            int     pos = 0;
+            int     colors;
+            int     ch;
+
+            colors = VIPER_COLORS(COLOR_WHITE, COLOR_BLUE) | A_BOLD;
+            werase(screen);
+            wattron(screen, colors);
+            mvwhline(screen, 0, 0, ' ', max_x);
+            mvwprintw(screen, 0, 0, "Teleport to: ");
+            wattroff(screen, colors);
+            overwrite(screen, stdscr);
+            wrefresh(stdscr);
+
+            wtimeout(stdscr, -1);
+            curs_set(1);
+
+            while((ch = wgetch(stdscr)) != '\n')
+            {
+                if(ch == 27)
+                {
+                    pos = 0;
+                    break;
+                }
+
+                if((ch == KEY_BACKSPACE || ch == 127) && pos > 0)
+                {
+                    pos--;
+                    pty_path[pos] = '\0';
+                }
+                else if(ch >= 32 && ch < 127 && pos < (int)sizeof(pty_path) - 1)
+                {
+                    pty_path[pos++] = ch;
+                    pty_path[pos] = '\0';
+                }
+
+                wattron(screen, colors);
+                mvwhline(screen, 0, 0, ' ', max_x);
+                mvwprintw(screen, 0, 0, "Teleport to: %s", pty_path);
+                wattroff(screen, colors);
+                overwrite(screen, stdscr);
+                wrefresh(stdscr);
+            }
+
+            curs_set(0);
+            wtimeout(stdscr, 100);
+
+            if(pos > 0)
+            {
+                vk_screen_teleport(vk_screen, pty_path);
+                screen = vk_screen_get_window(vk_screen);
+                getmaxyx(screen, max_y, max_x);
+
+                box_h = max_y - 2;
+                slot_w = max_x / 3;
+
+                vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
+                vk_widget_resize(VK_WIDGET(box), max_x, box_h);
+
+                vk_listbox_update(listbox);
+                vk_menu_update(menu);
+                plain_widget_redraw(plain);
+
+                wtimeout(stdscr, 100);
+            }
+        }
+        else if(key == KEY_SRIGHT)
         {
             vk_widget_resize(VK_WIDGET(box),
                 VK_WIDGET(box)->width + 1, WSIZE_UNCHANGED);
@@ -396,7 +481,7 @@ int main(void)
         vk_widget_draw(VK_WIDGET(marquee));
 
         draw_chrome(screen, max_x, slot_w, box->focused_slot);
-        wrefresh(screen);
+        vk_screen_refresh(vk_screen);
     }
 
     vk_marquee_destroy(marquee);
@@ -410,7 +495,7 @@ int main(void)
     vk_menu_destroy(menu);
     vk_widget_destroy(plain);
 
-    viper_end();
+    vk_screen_destroy(vk_screen);
 
     return 0;
 }

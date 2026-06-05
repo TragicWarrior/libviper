@@ -113,6 +113,8 @@ typedef struct _viper_event_s       viper_event_t;
 
 // vk klasses
 typedef struct  _vk_object_s        vk_object_t;
+typedef struct  _vk_screen_s        vk_screen_t;
+typedef struct  _vk_desktop_s       vk_desktop_t;
 typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
@@ -290,6 +292,7 @@ void            viper_window_set_userptr(vwnd_t *wnd, void *anything);
 void*           viper_window_get_userptr(vwnd_t *wnd);
 
 #define VK_OBJECT(x)            ((vk_object_t *)x)
+#define VK_SCREEN(x)            ((vk_screen_t *)x)
 #define VK_WIDGET(x)            ((vk_widget_t *)x)
 #define VK_CONTAINER(x)         ((vk_container_t *)x)
 #define VK_LISTBOX(x)           ((vk_listbox_t *)x)
@@ -309,6 +312,20 @@ int             vk_object_push_keystroke(vk_object_t *object,
                     int32_t keystroke);
 int             vk_object_destroy(vk_object_t *object);
 
+vk_screen_t*    vk_screen_create(void);
+int             vk_screen_add_desktop(vk_screen_t *screen);
+int             vk_screen_del_desktop(vk_screen_t *screen, int id);
+int             vk_screen_switch_desktop(vk_screen_t *screen, int id);
+WINDOW*         vk_screen_get_window(vk_screen_t *screen);
+int             vk_screen_attach_widget(vk_screen_t *screen,
+                    int desktop_id, vk_widget_t *widget);
+int             vk_screen_detach_widget(vk_screen_t *screen,
+                    int desktop_id, vk_widget_t *widget);
+int             vk_screen_resize(vk_screen_t *screen);
+int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
+int             vk_screen_refresh(vk_screen_t *screen);
+void            vk_screen_destroy(vk_screen_t *screen);
+
 vk_widget_t*    vk_widget_create(int width, int height);
 int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
 WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
@@ -320,6 +337,7 @@ int             vk_widget_get_metrics(vk_widget_t *widget,
                     int *width, int *height);
 int             vk_widget_erase(vk_widget_t *widget);
 int             vk_widget_resize(vk_widget_t *widget, int width, int height);
+int             vk_widget_recreate(vk_widget_t *widget);
 void            vk_widget_fill(vk_widget_t *widget, chtype ch);
 int             vk_widget_draw(vk_widget_t *widget);
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
