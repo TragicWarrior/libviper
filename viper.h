@@ -65,11 +65,24 @@
 
 #define VK_FRAME_NONE               0               // disables a frame
 #define VK_FRAME_SINGLE             1
-#define VK_FRAME_DOUBLE             2               // not implemented
+#define VK_FRAME_DOUBLE             2
+#define VK_FRAME_ASCII              3
 
 #define VK_SEPARATOR_BLANK          1
 #define VK_SEPARATOR_SINGLE         2
 #define VK_SEPARATOR_DOUBLE         3               // not implemented
+
+#define VK_JUSTIFY_LEFT             0
+#define VK_JUSTIFY_RIGHT            1
+#define VK_JUSTIFY_CENTER           2
+
+#define VK_BOX_HORIZONTAL           0
+#define VK_BOX_VERTICAL             1
+
+#define VK_SCROLLBAR_NONE           0
+#define VK_SCROLLBAR_VERTICAL       (1 << 0)
+#define VK_SCROLLBAR_HORIZONTAL     (1 << 1)
+#define VK_SCROLLBAR_BOTH           (VK_SCROLLBAR_VERTICAL | VK_SCROLLBAR_HORIZONTAL)
 
 #define REDRAW_MOUSE                (1 << 1)
 #define REDRAW_WINDOWS              (1 << 2)
@@ -104,6 +117,11 @@ typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
 typedef struct  _vk_menu_s          vk_menu_t;
+typedef struct  _vk_frame_s         vk_frame_t;
+typedef struct  _vk_scroller_s      vk_scroller_t;
+typedef struct  _vk_box_s           vk_box_t;
+typedef struct  _vk_label_s         vk_label_t;
+typedef struct  _vk_marquee_s       vk_marquee_t;
 
 /* callback definitions */
 typedef int         (*ViperFunc)(vwnd_t *vwnd, void *arg);
@@ -113,6 +131,9 @@ typedef int32_t     (*ViperKmioHook)(int32_t keystroke);
 typedef void        (*ViperBkgdFunc)(int screen_id);
 
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
+typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
+                        int *content_h, int *content_w,
+                        int *scroll_y, int *scroll_x);
 
 /* basic window routines    */
 WINDOW*             window_create(WINDOW *parent, int x, int y,
@@ -273,6 +294,15 @@ void*           viper_window_get_userptr(vwnd_t *wnd);
 #define VK_CONTAINER(x)         ((vk_container_t *)x)
 #define VK_LISTBOX(x)           ((vk_listbox_t *)x)
 #define VK_MENU(x)              ((vk_menu_t *)x)
+#define VK_FRAME(x)             ((vk_frame_t *)x)
+#define VK_SCROLLER(x)          ((vk_scroller_t *)x)
+#define VK_BOX(x)               ((vk_box_t *)x)
+#define VK_LABEL(x)             ((vk_label_t *)x)
+#define VK_MARQUEE(x)           ((vk_marquee_t *)x)
+
+#define VK_SCROLL_LEFT          0
+#define VK_SCROLL_RIGHT         1
+#define VK_SCROLL_LOOP          2
 
 const char*     vk_object_get_klass_name(vk_object_t *object);
 int             vk_object_push_keystroke(vk_object_t *object,
@@ -283,6 +313,7 @@ vk_widget_t*    vk_widget_create(int width, int height);
 int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
 WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
 void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
+void            vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs);
 short           vk_widget_get_fg(vk_widget_t *widget);
 short           vk_widget_get_bg(vk_widget_t *widget);
 int             vk_widget_get_metrics(vk_widget_t *widget,
@@ -329,5 +360,53 @@ int             vk_menu_add_separator(vk_menu_t *menu, int style);
 int             vk_menu_update(vk_menu_t *menu);
 int             vk_menu_reset(vk_menu_t *menu);
 void            vk_menu_destroy(vk_menu_t *menu);
+
+vk_frame_t*     vk_frame_create(int width, int height);
+int             vk_frame_set_border_style(vk_frame_t *frame, int style);
+int             vk_frame_set_border_colors(vk_frame_t *frame,
+                    short fg, short bg);
+int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child);
+vk_widget_t*    vk_frame_get_child(vk_frame_t *frame);
+int             vk_frame_update(vk_frame_t *frame);
+void            vk_frame_destroy(vk_frame_t *frame);
+
+vk_scroller_t*  vk_scroller_create(int width, int height);
+int             vk_scroller_set_border_style(vk_scroller_t *scroller,
+                    int style);
+int             vk_scroller_set_border_colors(vk_scroller_t *scroller,
+                    short fg, short bg);
+int             vk_scroller_set_child(vk_scroller_t *scroller,
+                    vk_widget_t *child);
+vk_widget_t*    vk_scroller_get_child(vk_scroller_t *scroller);
+int             vk_scroller_set_scrollbar(vk_scroller_t *scroller, int flags);
+int             vk_scroller_set_scroll_info(vk_scroller_t *scroller,
+                    VkScrollInfoFunc func);
+int             vk_scroller_update(vk_scroller_t *scroller);
+void            vk_scroller_destroy(vk_scroller_t *scroller);
+
+vk_box_t*       vk_box_create(int width, int height,
+                    int orientation, int slots);
+int             vk_box_set_widget(vk_box_t *box, int slot,
+                    vk_widget_t *widget);
+vk_widget_t*    vk_box_get_widget(vk_box_t *box, int slot);
+int             vk_box_update(vk_box_t *box);
+void            vk_box_destroy(vk_box_t *box);
+
+vk_label_t*     vk_label_create(int width);
+int             vk_label_set_text(vk_label_t *label, const char *text);
+const char*     vk_label_get_text(vk_label_t *label);
+int             vk_label_set_justify(vk_label_t *label, int justify);
+int             vk_label_update(vk_label_t *label);
+void            vk_label_destroy(vk_label_t *label);
+
+vk_marquee_t*   vk_marquee_create(int width);
+int             vk_marquee_set_text(vk_marquee_t *marquee, const char *text);
+const char*     vk_marquee_get_text(vk_marquee_t *marquee);
+int             vk_marquee_set_direction(vk_marquee_t *marquee, int direction);
+int             vk_marquee_set_speed(vk_marquee_t *marquee, int interval);
+int             vk_marquee_set_pause(vk_marquee_t *marquee, int duration);
+int             vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat);
+int             vk_marquee_run(vk_marquee_t *marquee);
+void            vk_marquee_destroy(vk_marquee_t *marquee);
 
 #endif

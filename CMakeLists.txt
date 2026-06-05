@@ -67,6 +67,11 @@ add_library(viper-static STATIC
     vk_container.c
     vk_listbox.c
     vk_menu.c
+    vk_frame.c
+    vk_scroller.c
+    vk_box.c
+    vk_label.c
+    vk_marquee.c
     )
 
 add_library(viper.o OBJECT
@@ -101,6 +106,11 @@ add_library(viper.o OBJECT
     vk_container.c
     vk_listbox.c
     vk_menu.c
+    vk_frame.c
+    vk_scroller.c
+    vk_box.c
+    vk_label.c
+    vk_marquee.c
     )
 
 add_library(viper-shared SHARED
@@ -140,3 +150,5 @@ else()
     set(PKG_CONFIG_INSTALL_DIR "lib/pkgconfig")
 endif()
 install (FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION ${PKG_CONFIG_INSTALL_DIR})
+
+add_subdirectory(demo)

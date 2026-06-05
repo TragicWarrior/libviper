@@ -95,6 +95,14 @@ vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
     return;
 }
 
+void
+vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
+{
+    if(widget == NULL) return;
+
+    widget->attrs = attrs;
+}
+
 int
 vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
 {
@@ -119,6 +127,9 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     if(width < 0 || height < 0) return -1;
 
     retval = widget->_resize(widget, width, height);
+
+    if(retval == 0 && widget->_on_resize != NULL)
+        widget->_on_resize(widget);
 
     return retval;
 }

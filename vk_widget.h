@@ -29,6 +29,7 @@ struct _vk_widget_s
 
     short               fg;                 // foreground color for canvas
     short               bg;                 // background color for canvas
+    attr_t              attrs;              // text attributes (A_BOLD, etc.)
 
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
@@ -37,6 +38,7 @@ struct _vk_widget_s
     int                 (*_draw)            (vk_widget_t *);
     int                 (*_move)            (vk_widget_t *, int, int);
     int                 (*_resize)          (vk_widget_t *, int, int);
+    int                 (*_on_resize)       (vk_widget_t *);
     int                 (*_erase)           (vk_widget_t *);
 
 };
