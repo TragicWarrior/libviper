@@ -4,12 +4,16 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_filler.h"
+#include "vk_event.h"
 
 static int
 _vk_filler_ctor(vk_object_t *object, va_list *argp, ...);
 
 static int
 _vk_filler_dtor(vk_object_t *object);
+
+static int
+_vk_filler_on_repaint(vk_object_t *object, int event, void *data);
 
 require_klass(VK_WIDGET_KLASS);
 
@@ -67,6 +71,11 @@ _vk_filler_ctor(vk_object_t *object, va_list *argp, ...)
     filler->ctor = _vk_filler_ctor;
     filler->dtor = _vk_filler_dtor;
 
+    vk_object_register_event(VK_OBJECT(filler),
+        VK_EVENT_ON_RESIZE, _vk_filler_on_repaint, NULL);
+    vk_object_register_event(VK_OBJECT(filler),
+        VK_EVENT_ON_RECREATE, _vk_filler_on_repaint, NULL);
+
     return 0;
 }
 
@@ -79,6 +88,24 @@ _vk_filler_dtor(vk_object_t *object)
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
+
+    return 0;
+}
+
+static int
+_vk_filler_on_repaint(vk_object_t *object, int event, void *data)
+{
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    (void)event;
+    (void)data;
+
+    if(widget->fg >= 0 && widget->bg >= 0)
+    {
+        int colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
+            | widget->attrs;
+        vk_widget_fill(widget, ' ' | colors);
+    }
 
     return 0;
 }

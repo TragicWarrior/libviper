@@ -135,6 +135,30 @@ vk_deck_update(vk_deck_t *deck)
     return deck->_update(deck);
 }
 
+inline vk_widget_t*
+vk_deck_hit_test(vk_deck_t *deck, int x, int y)
+{
+    struct list_head    *pos;
+    vk_widget_t         *child;
+
+    if(deck == NULL) return NULL;
+
+    list_for_each(pos, &deck->widget_list)
+    {
+        child = list_entry(pos, vk_widget_t, list);
+
+        if(!(child->state & VK_STATE_VISIBLE)) continue;
+
+        if(x >= child->x && x < child->x + child->width &&
+            y >= child->y && y < child->y + child->height)
+        {
+            return child;
+        }
+    }
+
+    return NULL;
+}
+
 inline void
 vk_deck_destroy(vk_deck_t *deck)
 {
@@ -306,7 +330,7 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 
             mvwin_wch(surface, sy, sx, &cc);
             getcchar(&cc, wch, &attrs, &color, NULL);
-            setcchar(&cc, wch, A_NORMAL, VK_SHADOW_PAIR, NULL);
+            setcchar(&cc, wch, (attrs & A_ALTCHARSET), VK_SHADOW_PAIR, NULL);
             mvwadd_wch(surface, sy, sx, &cc);
         }
     }
@@ -321,7 +345,7 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 
             mvwin_wch(surface, sy, sx, &cc);
             getcchar(&cc, wch, &attrs, &color, NULL);
-            setcchar(&cc, wch, A_NORMAL, VK_SHADOW_PAIR, NULL);
+            setcchar(&cc, wch, (attrs & A_ALTCHARSET), VK_SHADOW_PAIR, NULL);
             mvwadd_wch(surface, sy, sx, &cc);
         }
     }

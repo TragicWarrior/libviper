@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#undef  NCURSES_OPAQUE
 #define NCURSES_OPAQUE 0
 #include <ncursesw/curses.h>
 
@@ -134,6 +135,7 @@ typedef struct  _vk_button_s        vk_button_t;
 typedef struct  _vk_filler_s        vk_filler_t;
 typedef struct  _vk_input_s         vk_input_t;
 typedef struct  _vk_activity_s      vk_activity_t;
+typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 
 /* callback typedefs */
@@ -168,6 +170,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_FILLER(x)            ((vk_filler_t *)x)
 #define VK_INPUT(x)             ((vk_input_t *)x)
 #define VK_ACTIVITY(x)          ((vk_activity_t *)x)
+#define VK_MENUBAR(x)           ((vk_menubar_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 
 /* vk_object */
@@ -179,6 +182,7 @@ int             vk_object_register_event(vk_object_t *object,
                     int event, VkEventFunc func, void *data);
 int             vk_object_unregister_event(vk_object_t *object,
                     int event, VkEventFunc func);
+int             vk_object_emit(vk_object_t *object, int event);
 int             vk_object_destroy(vk_object_t *object);
 
 /* vk_screen */
@@ -210,6 +214,8 @@ void            vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs);
 attr_t          vk_widget_get_attrs(vk_widget_t *widget);
 int             vk_widget_get_metrics(vk_widget_t *widget,
                     int *width, int *height);
+int             vk_widget_get_position(vk_widget_t *widget,
+                    int *x, int *y);
 int             vk_widget_erase(vk_widget_t *widget);
 int             vk_widget_resize(vk_widget_t *widget, int width, int height);
 int             vk_widget_recreate(vk_widget_t *widget);
@@ -230,6 +236,8 @@ void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
 #define         vk_widget_set_expand(w) \
                     vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_EXPAND)
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
+void            vk_widget_set_userptr(vk_widget_t *widget, void *ptr);
+void*           vk_widget_get_userptr(vk_widget_t *widget);
 void            vk_widget_destroy(vk_widget_t *widget);
 
 /* vk_container */
@@ -427,6 +435,7 @@ vk_widget_t*    vk_deck_get_top(vk_deck_t *deck);
 int             vk_deck_cycle(vk_deck_t *deck, int vector);
 int             vk_deck_set_shadow(vk_deck_t *deck, bool enabled);
 int             vk_deck_update(vk_deck_t *deck);
+vk_widget_t*    vk_deck_hit_test(vk_deck_t *deck, int x, int y);
 void            vk_deck_destroy(vk_deck_t *deck);
 
 /* vk_button */
@@ -473,6 +482,27 @@ int             vk_activity_stop(vk_activity_t *activity);
 bool            vk_activity_is_running(vk_activity_t *activity);
 int             vk_activity_run(vk_activity_t *activity);
 void            vk_activity_destroy(vk_activity_t *activity);
+
+/* vk_menubar */
+vk_menubar_t*   vk_menubar_create(int width);
+int             vk_menubar_add_item(vk_menubar_t *menubar,
+                    char *name, VkWidgetFunc func, void *anything);
+int             vk_menubar_get_item_count(vk_menubar_t *menubar);
+int             vk_menubar_get_curr(vk_menubar_t *menubar);
+int             vk_menubar_set_curr(vk_menubar_t *menubar, int idx);
+int             vk_menubar_set_next(vk_menubar_t *menubar);
+int             vk_menubar_set_prev(vk_menubar_t *menubar);
+int             vk_menubar_exec_curr(vk_menubar_t *menubar);
+int             vk_menubar_set_highlight(vk_menubar_t *menubar,
+                    int fg, int bg);
+int             vk_menubar_set_focused(vk_menubar_t *menubar, bool focused);
+bool            vk_menubar_get_focused(vk_menubar_t *menubar);
+int             vk_menubar_hit_test(vk_menubar_t *menubar, int x);
+int             vk_menubar_get_item_position(vk_menubar_t *menubar,
+                    int idx, int *x);
+int             vk_menubar_update(vk_menubar_t *menubar);
+int             vk_menubar_reset(vk_menubar_t *menubar);
+void            vk_menubar_destroy(vk_menubar_t *menubar);
 
 /* vk_filedialog */
 vk_filedialog_t* vk_filedialog_create(int width, int height,

@@ -37,7 +37,7 @@ endif()
 set(PROJECT_VERSION 4.0.0)
 set(VDK_VERSION 1.0.0)
 
-include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk)
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
 set(VDK_SOURCES
     vdk/vdk_color.c
@@ -60,6 +60,11 @@ set(VDK_SOURCES
     vdk/vk_activity.c
     vdk/vk_input.c
     vdk/vk_filedialog.c
+    vdk/vk_menubar.c
+    )
+
+set(VKMIO_SOURCES
+    vkmio/vk_kmio.c
     )
 
 set(VIPER_SOURCES
@@ -93,21 +98,25 @@ set(VIPER_SOURCES
 
 # --- libvdk (standalone VDK widget toolkit) ---
 
-add_library(vdk.o OBJECT ${VDK_SOURCES})
+add_library(vdk.o OBJECT ${VDK_SOURCES} ${VKMIO_SOURCES})
 
 add_library(vdk-static STATIC $<TARGET_OBJECTS:vdk.o>)
 add_library(vdk-shared SHARED $<TARGET_OBJECTS:vdk.o>)
 
+if (GPM_FOUND)
+target_link_libraries(vdk-shared ${CURSES_LIBRARIES} ${GPM_LIBRARIES})
+else()
 target_link_libraries(vdk-shared ${CURSES_LIBRARIES})
+endif()
 
 SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
 SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${VDK_VERSION} SOVERSION 1)
 
 # --- libviper (legacy + VDK) ---
 
-add_library(viper-static STATIC ${VIPER_SOURCES} ${VDK_SOURCES})
+add_library(viper-static STATIC ${VIPER_SOURCES} ${VDK_SOURCES} ${VKMIO_SOURCES})
 
-add_library(viper.o OBJECT ${VIPER_SOURCES} ${VDK_SOURCES})
+add_library(viper.o OBJECT ${VIPER_SOURCES} ${VDK_SOURCES} ${VKMIO_SOURCES})
 
 add_library(viper-shared SHARED $<TARGET_OBJECTS:viper.o>)
 
@@ -131,7 +140,7 @@ configure_file(
 )
 
 install (TARGETS vdk-static vdk-shared viper-static viper-shared DESTINATION lib)
-install (FILES viper.h vdk.h DESTINATION include)
+install (FILES viper.h vdk.h vkmio.h DESTINATION include)
 
 # Install pkgconfig files to libdata on BSD, otherwise lib
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")

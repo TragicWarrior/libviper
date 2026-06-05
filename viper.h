@@ -14,6 +14,7 @@
 
 /* VDK public header (included for backwards compatibility) */
 #include "vdk.h"
+#include "vkmio.h"
 
 /* legacy widget state flags (used by vwnd_t window_state) */
 #define STATE_VISIBLE               VK_STATE_VISIBLE
@@ -42,9 +43,7 @@
 #define WPOS_DEFAULT                (WPOS_STAGGERED)
 #define WPOS_CENTERED               -3
 
-#define KMIO_HANDLED                0
-#define KMIO_ERROR                  -1
-#define KMIO_NONE                   -1
+/* KMIO_HANDLED, KMIO_ERROR, KMIO_NONE now provided by vk_kmio.h */
 
 #define CURS_RIGHT                  0x1U        /*  0001    */
 #define CURS_LEFT                   0x2U        /*  0010    */
@@ -218,11 +217,13 @@ void            viper_window_set_border_agent(vwnd_t *wnd,
 void            viper_window_touch(vwnd_t *wnd);
 void            viper_window_redraw(vwnd_t *wnd);
 
-/* kmio faclilities (keyboard & mouse i/o)   */
-int32_t         viper_kmio_fetch(MEVENT *mouse_event);
+/* kmio facilities (keyboard & mouse i/o) */
 void            viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event);
-MEVENT*         viper_kmio_get_mouse_event(void);
 void            viper_window_set_key_func(vwnd_t *wnd, ViperWkeyFunc func);
+
+/* backward compat — generic KMIO moved to vk_kmio.h */
+#define         viper_kmio_fetch            vk_kmio_fetch
+#define         viper_kmio_get_mouse_event  vk_kmio_get_mouse_event
 
 /* event handling */
 int             viper_event_set(vwnd_t *wnd, char *event,

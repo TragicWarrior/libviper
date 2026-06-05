@@ -1,87 +1,10 @@
-#include <poll.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <time.h>
 #include <inttypes.h>
 #include "viper.h"
 #include "private.h"
 #include "viper_kmio.h"
 
-#if !defined(_NO_GPM) && defined(__linux)
-
-#define  X_GPM(a,b,c,d)    a,
-uint16_t x_gpm_mode[]={
-#include "viper_gpm.def"
-};
-#undef   X_GPM
-
-#define  X_GPM(a,b,c,d)    b,
-mmask_t x_ncurses_state[]={
-#include "viper_gpm.def"
-};
-#undef   X_GPM
-
-#define  X_GPM(a,b,c,d)    c,
-short x_gpm_button[]={
-#include "viper_gpm.def"
-};
-#undef   X_GPM
-
-#define  X_GPM(a,b,c,d)    d,
-unsigned short x_gpm_event[]={
-#include "viper_gpm.def"
-};
-#undef   X_GPM
-
-#endif
-
 static void viper_kmio_show_mouse(MEVENT *mouse_event);
-
-int32_t
-viper_kmio_fetch(MEVENT *mouse_event)
-{
-    int32_t         keystroke = -1;
-    int32_t         key_code = 0;
-    uint8_t         shift_op = 4;
-
-#if !defined(_NO_GPM) && defined(__linux)
-    if(viper_kmio_gpm(mouse_event, 0) == 0)
-        return KEY_MOUSE;
-#endif
-
-    key_code = getch();
-
-    if(key_code != -1)
-    {
-        if(key_code != 27)
-        {
-            if(key_code == KEY_MOUSE) getmouse(mouse_event);
-            return key_code;
-        }
-
-        keystroke = 27;
-        do
-        {
-            shift_op = shift_op << 1;
-            key_code = getch();
-            if(key_code == -1) break;
-            keystroke |= (key_code << shift_op);
-        }
-        while(shift_op < 24);
-    }
-
-    return keystroke;
-}
-
-
-static MEVENT *last_mouse_event = NULL;
-
-MEVENT*
-viper_kmio_get_mouse_event(void)
-{
-    return last_mouse_event;
-}
 
 void
 viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
@@ -101,8 +24,6 @@ viper_kmio_dispatch(int32_t keystroke, MEVENT *mouse_event)
 
     // invalid / no keystroke
     if(keystroke == KMIO_NONE) return;
-
-    last_mouse_event = mouse_event;
 
     // the unmanaged window deck always has priority
     if(keystroke != KEY_RESIZE && keystroke != KEY_MOUSE)
@@ -339,122 +260,3 @@ viper_kmio_show_mouse(MEVENT *mouse_event)
 
     return;
 }
-
-#if !defined(_NO_GPM) && defined(__linux)
-int
-viper_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
-{
-    extern uint32_t     viper_global_flags;
-    extern int          gpm_tried;
-    extern int          gpm_fd;
-    struct pollfd       mio_poll;
-    static int          mio_fd = -1;
-    Gpm_Connect         gpm_connect;
-    Gpm_Event           g_event;
-    int                 array_sz;
-    int                 i;
-	int					fflags;
-
-    if(cmd == CMD_GPM_CLOSE)
-    {
-        if(mio_fd > 0) Gpm_Close();
-        mio_fd = -1;
-        return 0;
-    }
-
-    if(mouse_event == NULL) return -1;
-
-    /* could not connect to the GPM server.   */
-    if(gpm_fd == -2 || (gpm_fd == -1 && gpm_tried == TRUE)) return -1;
-
-    memset(&g_event,0,sizeof(g_event));
-
-    if(mio_fd == -1)
-    {
-        // tear down ncurses' GPM connection so our eventMask takes effect
-        if(gpm_fd >= 0) Gpm_Close();
-
-        memset(&gpm_connect, 0, sizeof(gpm_connect));
-        gpm_connect.defaultMask = 0;
-        gpm_connect.eventMask = GPM_MOVE | GPM_UP | GPM_DOWN | GPM_DRAG;
-        gpm_connect.maxMod = ~0;
-        mio_fd = Gpm_Open(&gpm_connect, 0);
-
-		if(mio_fd > 0 && (viper_global_flags & VIPER_GPM_SIGIO))
-		{
-            fcntl(mio_fd, F_SETOWN, getpid());
-            fflags = fcntl(mio_fd,F_GETFL);
-   		    fcntl(mio_fd,F_SETFL,fflags | FASYNC);
-		}
-    }
-
-    if(mio_fd == -1) return -1;
-
-    memset(&mio_poll, 0, sizeof(mio_poll));
-    mio_poll.events = POLLIN;
-    mio_poll.fd = mio_fd;
-
-    if(poll(&mio_poll, 1, 1) < 1) return -1;
-    if(Gpm_GetEvent(&g_event) < 1) return -1;
-
-    memset(mouse_event,0,sizeof(MEVENT));
-    mouse_event->bstate=g_event.modifiers;
-    mouse_event->x=g_event.x-1;
-    mouse_event->y=g_event.y-1;
-
-    array_sz = sizeof(x_ncurses_state) / sizeof(x_ncurses_state[0]);
-
-    if(!(GPM_CLICK_STRICT(g_event.type)))
-    {
-        for(i = 0;i < array_sz;i++)
-        {
-            /* sift by mode... ignore COOKED table entries        */
-            if(x_gpm_mode[i] == X_GPM_COOKED) continue;
-
-            /* sift raw event... GPM_UP, GPM_DOWN, etc.           */
-            if(!(g_event.type & x_gpm_event[i])) continue;
-
-            /* sift which physical button... GPM_B_LEFT, etc.     */
-            if(g_event.buttons != x_gpm_button[i]) continue;
-
-            mouse_event->bstate |= x_ncurses_state[i];
-            break;
-        }
-    }
-
-    if(GPM_CLICK_STRICT(g_event.type))
-    {
-        for(i = 0;i < array_sz;i++)
-        {
-            /* sift by mode... ignore RAW table entries           */
-            if(x_gpm_mode[i] == X_GPM_RAW) continue;
-
-            /* sift cooked event... GPM_SINGLE, GPM_DOUBLE, etc.  */
-            if(!(g_event.type & x_gpm_event[i])) continue;
-
-            /* sift which physical button... GPM_B_LEFT, etc.     */
-            if(g_event.buttons != x_gpm_button[i]) continue;
-
-            mouse_event->bstate = x_ncurses_state[i];
-            break;
-        }
-    }
-
-    if(g_event.buttons == GPM_B_UP || g_event.buttons == GPM_B_FOURTH)
-    {
-        mouse_event->bstate = BUTTON4_PRESSED;
-    }
-    else if(g_event.buttons == GPM_B_DOWN)
-    {
-        mouse_event->bstate = BUTTON5_PRESSED;
-    }
-    else if((g_event.type & GPM_DRAG) || (g_event.type & GPM_MOVE))
-    {
-        mouse_event->bstate = REPORT_MOUSE_POSITION;
-    }
-
-    if(mouse_event->bstate == 0) return -1;
-
-    return 0;
-}
-#endif

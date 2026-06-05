@@ -178,6 +178,17 @@ vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
 }
 
 inline int
+vk_widget_get_position(vk_widget_t *widget, int *x, int *y)
+{
+    if(widget == NULL) return -1;
+
+    if(x != NULL) *x = widget->x;
+    if(y != NULL) *y = widget->y;
+
+    return 0;
+}
+
+inline int
 vk_widget_resize(vk_widget_t *widget, int width, int height)
 {
     int retval;
@@ -256,6 +267,22 @@ vk_widget_recreate(vk_widget_t *widget)
         vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RECREATE);
 
     return retval;
+}
+
+inline void
+vk_widget_set_userptr(vk_widget_t *widget, void *ptr)
+{
+    if(widget == NULL) return;
+
+    widget->userptr = ptr;
+}
+
+inline void*
+vk_widget_get_userptr(vk_widget_t *widget)
+{
+    if(widget == NULL) return NULL;
+
+    return widget->userptr;
 }
 
 inline void

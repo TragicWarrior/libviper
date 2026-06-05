@@ -42,10 +42,10 @@ viper_init(uint32_t init_flags)
     viper_screen_t              *viper_screen = NULL;
     int                         width, height;
     char                        *env;
-    mmask_t                     mouse_mask = ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION;
     extern uint32_t             viper_global_flags;
     struct termios              term_desc;
     int                         i;
+    uint32_t                    kmio_flags;
 
     if(viper == NULL)
     {
@@ -68,12 +68,11 @@ viper_init(uint32_t init_flags)
         getmaxyx(SCREEN_WINDOW, height, width);
         viper->border_agent[0] = viper_default_border_agent_unfocus;
         viper->border_agent[1] = viper_default_border_agent_focus;
-        mousemask(mouse_mask, NULL);
-        if(mouse_mask & REPORT_MOUSE_POSITION)
-        {
-            printf("\033[?1003h");
-            fflush(stdout);
-        }
+
+        kmio_flags = VK_KMIO_MOUSE | VK_KMIO_MOUSE_HOVER;
+        if(init_flags & VIPER_GPM_SIGIO)
+            kmio_flags |= VK_KMIO_GPM_SIGIO;
+        vk_kmio_init(kmio_flags);
 
         for(i = 0; i < MAX_SCREENS; i++)
         {
@@ -120,9 +119,7 @@ viper_end(void)
     extern WINDOW       *SCREEN_WINDOW;
     struct termios      term_desc;
 
-#if !defined(_NO_GPM) && defined(__linux)
-    viper_kmio_gpm(NULL,CMD_GPM_CLOSE);
-#endif
+    vk_kmio_shutdown();
 
     if(viper != NULL)
     {
@@ -130,8 +127,6 @@ viper_end(void)
         viper = NULL;
     }
 
-    printf("\033[?1003l");
-    fflush(stdout);
     curs_set(1);
     endwin();
     SCREEN_WINDOW = NULL;
