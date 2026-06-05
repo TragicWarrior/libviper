@@ -411,8 +411,7 @@ _vk_selectbox_update(vk_listbox_t *listbox)
 
             if(item->separator_style == VK_SEPARATOR_SINGLE)
             {
-                mvwhline(widget->canvas, y, 0, ACS_HLINE, paint_width);
-                highlight_attr = A_ALTCHARSET;
+                mvwhline_set(widget->canvas, y, 0, WACS_HLINE, paint_width);
             }
         }
         else

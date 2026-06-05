@@ -36,6 +36,9 @@ _vk_frame_recreate(vk_widget_t *widget);
 static int
 _vk_frame_update(vk_frame_t *frame);
 
+static void
+_vk_frame_build_cchar(cchar_t *dest, const cchar_t *src, short pair);
+
 
 require_klass(VK_CONTAINER_KLASS);
 
@@ -247,6 +250,17 @@ _vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
     return 0;
 }
 
+static void
+_vk_frame_build_cchar(cchar_t *dest, const cchar_t *src, short pair)
+{
+    wchar_t     wch[CCHARW_MAX];
+    attr_t      attrs;
+    short       dummy;
+
+    getcchar(src, wch, &attrs, &dummy, NULL);
+    setcchar(dest, wch, attrs, pair, NULL);
+}
+
 static int
 _vk_frame_draw_border(vk_frame_t *frame)
 {
@@ -278,35 +292,36 @@ _vk_frame_draw_border(vk_frame_t *frame)
 
         case VK_FRAME_SINGLE:
         {
-            wborder(widget->canvas, 0, 0, 0, 0, 0, 0, 0, 0);
+            cchar_t ls, rs, ts, bs, tl, tr, bl, br;
+            short   pair = viper_color_pair(fg, bg);
+
+            _vk_frame_build_cchar(&ls, WACS_VLINE, pair);
+            _vk_frame_build_cchar(&rs, WACS_VLINE, pair);
+            _vk_frame_build_cchar(&ts, WACS_HLINE, pair);
+            _vk_frame_build_cchar(&bs, WACS_HLINE, pair);
+            _vk_frame_build_cchar(&tl, WACS_ULCORNER, pair);
+            _vk_frame_build_cchar(&tr, WACS_URCORNER, pair);
+            _vk_frame_build_cchar(&bl, WACS_LLCORNER, pair);
+            _vk_frame_build_cchar(&br, WACS_LRCORNER, pair);
+
+            wborder_set(widget->canvas,
+                &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br);
             break;
         }
 
         case VK_FRAME_DOUBLE:
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
-            wchar_t wch[2] = {0, 0};
             short   pair = viper_color_pair(fg, bg);
 
-            wch[0] = 0x2551;
-            setcchar(&ls, wch, A_NORMAL, pair, NULL);
-            setcchar(&rs, wch, A_NORMAL, pair, NULL);
-
-            wch[0] = 0x2550;
-            setcchar(&ts, wch, A_NORMAL, pair, NULL);
-            setcchar(&bs, wch, A_NORMAL, pair, NULL);
-
-            wch[0] = 0x2554;
-            setcchar(&tl, wch, A_NORMAL, pair, NULL);
-
-            wch[0] = 0x2557;
-            setcchar(&tr, wch, A_NORMAL, pair, NULL);
-
-            wch[0] = 0x255A;
-            setcchar(&bl, wch, A_NORMAL, pair, NULL);
-
-            wch[0] = 0x255D;
-            setcchar(&br, wch, A_NORMAL, pair, NULL);
+            _vk_frame_build_cchar(&ls, WACS_D_VLINE, pair);
+            _vk_frame_build_cchar(&rs, WACS_D_VLINE, pair);
+            _vk_frame_build_cchar(&ts, WACS_D_HLINE, pair);
+            _vk_frame_build_cchar(&bs, WACS_D_HLINE, pair);
+            _vk_frame_build_cchar(&tl, WACS_D_ULCORNER, pair);
+            _vk_frame_build_cchar(&tr, WACS_D_URCORNER, pair);
+            _vk_frame_build_cchar(&bl, WACS_D_LLCORNER, pair);
+            _vk_frame_build_cchar(&br, WACS_D_LRCORNER, pair);
 
             wborder_set(widget->canvas,
                 &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br);

@@ -723,8 +723,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
             if(item->separator_style == VK_SEPARATOR_SINGLE)
             {
-                mvwhline(widget->canvas, y, x, ACS_HLINE, paint_width);
-                highlight_attr = A_ALTCHARSET;
+                mvwhline_set(widget->canvas, y, x, WACS_HLINE, paint_width);
             }
         }
         else
