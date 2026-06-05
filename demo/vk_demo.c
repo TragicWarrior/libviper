@@ -19,13 +19,15 @@
 #include "vk_selectbox.h"
 #include "vk_screen.h"
 
-#define NUM_SURFACES    3
+#define NUM_SURFACES    5
 
 static const char *surface_names[] =
 {
     "Widgets",
     "Languages",
-    "About",
+    "Selectbox",
+    "Dotfield",
+    "Shade",
 };
 
 static int
@@ -81,6 +83,99 @@ textbox_scroll_info(vk_widget_t *child,
     if(content_w) *content_w = 0;
     if(scroll_y) *scroll_y = tb->scroll_top;
     if(scroll_x) *scroll_x = 0;
+}
+
+static void
+wallpaper_callback(vk_screen_t *screen, int surface_id, WINDOW *canvas)
+{
+    int     max_y, max_x;
+    int     x, y;
+    int     colors;
+
+    (void)screen;
+
+    getmaxyx(canvas, max_y, max_x);
+
+    switch(surface_id)
+    {
+        case 0:
+        {
+            colors = VIPER_COLORS(COLOR_GREEN, COLOR_BLACK);
+            wbkgd(canvas, ' ' | colors);
+            wattron(canvas, colors);
+
+            for(y = 0; y < max_y; y++)
+                for(x = 0; x < max_x; x++)
+                    mvwaddch(canvas, y, x, ((x + y) % 4 == 0) ? '+' : ' ');
+
+            wattroff(canvas, colors);
+            break;
+        }
+
+        case 1:
+        {
+            colors = VIPER_COLORS(COLOR_YELLOW, COLOR_BLACK);
+            wbkgd(canvas, ' ' | colors);
+            wattron(canvas, colors);
+
+            for(y = 0; y < max_y; y++)
+                for(x = 0; x < max_x; x++)
+                    mvwaddch(canvas, y, x, (y % 2 == 0) ? '-' : ' ');
+
+            wattroff(canvas, colors);
+            break;
+        }
+
+        case 2:
+        {
+            colors = VIPER_COLORS(COLOR_RED, COLOR_BLACK);
+            wbkgd(canvas, ' ' | colors);
+            wattron(canvas, colors);
+
+            for(y = 0; y < max_y; y++)
+                for(x = 0; x < max_x; x++)
+                    mvwaddch(canvas, y, x, ((x % 6 == 0) || (y % 3 == 0)) ? '.' : ' ');
+
+            wattroff(canvas, colors);
+            break;
+        }
+
+        case 3:
+        {
+            colors = VIPER_COLORS(COLOR_BLUE, COLOR_BLACK);
+            wbkgd(canvas, ' ' | colors);
+            wattron(canvas, colors);
+
+            for(y = 0; y < max_y; y++)
+            {
+                for(x = 0; x < max_x; x++)
+                {
+                    if((x + y) % 2 == 0)
+                        mvwaddch(canvas, y, x, '.');
+                    else
+                        mvwaddch(canvas, y, x, ' ');
+                }
+            }
+
+            wattroff(canvas, colors);
+            break;
+        }
+
+        case 4:
+        {
+            cchar_t shade;
+            wchar_t wch[2] = {0x2591, 0};
+            short   pair = viper_color_pair(COLOR_CYAN, COLOR_BLACK);
+
+            setcchar(&shade, wch, A_NORMAL, pair, NULL);
+
+            for(y = 0; y < max_y; y++)
+                for(x = 0; x < max_x; x++)
+                    mvwadd_wch(canvas, y, x, &shade);
+
+            break;
+        }
+    }
 }
 
 static vk_textbox_t*
@@ -508,6 +603,8 @@ int main(void)
     inner_w = slot_w - 2;
     inner_h = box_h - 2;
 
+    vk_screen_set_wallpaper(vk_screen, wallpaper_callback);
+
     // --- marquee (shared across surfaces) ---
 
     marquee = vk_marquee_create(max_x);
@@ -693,11 +790,18 @@ int main(void)
 
     vk_box_update(box2);
 
+    // --- surface 3: dotfield wallpaper ---
+
+    vk_screen_add_surface(vk_screen);
+
+    // --- surface 4: shade wallpaper ---
+
+    vk_screen_add_surface(vk_screen);
+
     // --- initial draw and event loop ---
 
-    vk_widget_draw(VK_WIDGET(box));
+    vk_box_update(box);
     vk_marquee_run(marquee);
-    vk_widget_draw(VK_WIDGET(marquee));
     vk_screen_refresh(vk_screen);
 
     wtimeout(stdscr, 100);
@@ -799,27 +903,30 @@ int main(void)
                 wtimeout(stdscr, 100);
             }
         }
-        else if(key == KEY_SRIGHT && current_surface == 0)
+        else if(key == KEY_SRIGHT || key == KEY_SLEFT
+            || key == '+' || key == '-')
         {
-            vk_widget_resize(VK_WIDGET(box),
-                VK_WIDGET(box)->width + 1, WSIZE_UNCHANGED);
-        }
-        else if(key == KEY_SLEFT && current_surface == 0)
-        {
-            if(VK_WIDGET(box)->width > 12)
-                vk_widget_resize(VK_WIDGET(box),
-                    VK_WIDGET(box)->width - 1, WSIZE_UNCHANGED);
-        }
-        else if(key == '+' && current_surface == 0)
-        {
-            vk_widget_resize(VK_WIDGET(box),
-                WSIZE_UNCHANGED, VK_WIDGET(box)->height + 1);
-        }
-        else if(key == '-' && current_surface == 0)
-        {
-            if(VK_WIDGET(box)->height > 6)
-                vk_widget_resize(VK_WIDGET(box),
-                    WSIZE_UNCHANGED, VK_WIDGET(box)->height - 1);
+            vk_widget_t *target = NULL;
+
+            if(current_surface == 0) target = VK_WIDGET(box);
+            else if(current_surface == 1) target = VK_WIDGET(lang_frame);
+            else if(current_surface == 2) target = VK_WIDGET(box2);
+
+            if(target != NULL)
+            {
+                if(key == KEY_SRIGHT)
+                    vk_widget_resize(target,
+                        target->width + 1, WSIZE_UNCHANGED);
+                else if(key == KEY_SLEFT && target->width > 12)
+                    vk_widget_resize(target,
+                        target->width - 1, WSIZE_UNCHANGED);
+                else if(key == '+')
+                    vk_widget_resize(target,
+                        WSIZE_UNCHANGED, target->height + 1);
+                else if(key == '-' && target->height > 6)
+                    vk_widget_resize(target,
+                        WSIZE_UNCHANGED, target->height - 1);
+            }
         }
         else if(key != ERR)
         {
@@ -830,9 +937,6 @@ int main(void)
             else if(current_surface == 2)
                 vk_object_push_keystroke(VK_OBJECT(box2), key);
         }
-
-        screen = vk_screen_get_window(vk_screen);
-        werase(screen);
 
         if(current_surface == 0)
         {
@@ -856,13 +960,11 @@ int main(void)
             vk_window_update(window3);
 
             vk_box_update(box);
-            vk_widget_draw(VK_WIDGET(box));
         }
         else if(current_surface == 1)
         {
             vk_listbox_update(lang_listbox);
             vk_frame_update(lang_frame);
-            vk_widget_draw(VK_WIDGET(lang_frame));
         }
         else if(current_surface == 2)
         {
@@ -882,11 +984,9 @@ int main(void)
             vk_window_update(about_window);
 
             vk_box_update(box2);
-            vk_widget_draw(VK_WIDGET(box2));
         }
 
         vk_marquee_run(marquee);
-        vk_widget_draw(VK_WIDGET(marquee));
         vk_screen_refresh(vk_screen);
     }
 

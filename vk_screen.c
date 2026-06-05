@@ -268,9 +268,45 @@ vk_screen_poll_resize(vk_screen_t *screen)
 }
 
 int
+vk_screen_set_wallpaper(vk_screen_t *screen, VkSurfaceBkgdFunc func)
+{
+    if(screen == NULL) return -1;
+
+    if(!vk_object_assert(screen, vk_screen_t)) return -1;
+
+    screen->wallpaper_func = func;
+
+    return 0;
+}
+
+int
+vk_screen_paint_wallpaper(vk_screen_t *screen)
+{
+    vk_surface_t    *surface;
+
+    if(screen == NULL) return -1;
+
+    if(!vk_object_assert(screen, vk_screen_t)) return -1;
+
+    if(screen->wallpaper_func == NULL) return 0;
+
+    if(screen->active_surface < 0 ||
+        screen->active_surface >= screen->surface_count)
+        return -1;
+
+    surface = screen->surfaces[screen->active_surface];
+
+    screen->wallpaper_func(screen, screen->active_surface,
+        surface->canvas);
+
+    return 0;
+}
+
+int
 vk_screen_refresh(vk_screen_t *screen)
 {
     vk_surface_t    *surface;
+    int             i;
 
     if(screen == NULL) return -1;
 
@@ -281,6 +317,15 @@ vk_screen_refresh(vk_screen_t *screen)
         return -1;
 
     surface = screen->surfaces[screen->active_surface];
+
+    werase(surface->canvas);
+
+    if(screen->wallpaper_func != NULL)
+        screen->wallpaper_func(screen, screen->active_surface,
+            surface->canvas);
+
+    for(i = 0; i < surface->widget_count; i++)
+        vk_widget_draw(surface->widgets[i]);
 
     overwrite(surface->canvas, stdscr);
     wrefresh(stdscr);

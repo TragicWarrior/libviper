@@ -19,6 +19,14 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Add vk_selectbox_t derived from vk_listbox_t with checkbox
   (multi-select) and radio (single-select) modes, ASCII and Unicode glyph
   styles, and scroller attachment support.
+* [Bryan Christ] Use WACS_* wide chars for borders and separators instead of
+  ACS_* and hardcoded Unicode codepoints (fixes rendering after teleport to
+  Linux console TTY).
+* [Bryan Christ] Add wallpaper callback support to vk_screen_t.
+  vk_screen_refresh now composites automatically: erase, wallpaper, widget
+  blit, refresh.
+* [Bryan Christ] Fix vk_box_t initial layout not sizing last slot to absorb
+  remainder pixels.
 
 Version 3.1.1
 

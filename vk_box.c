@@ -75,8 +75,36 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
 
     if(widget != NULL)
     {
+        vk_widget_t *bw = VK_WIDGET(box);
+        int         pos = 0;
+        int         slot_size;
+        int         j;
+
         container->add_widget(container, widget);
-        vk_widget_set_surface(widget, VK_WIDGET(box)->canvas);
+        vk_widget_set_surface(widget, bw->canvas);
+
+        for(j = 0; j <= slot; j++)
+        {
+            if(box->orientation == VK_BOX_HORIZONTAL)
+            {
+                slot_size = bw->width / box->slots;
+                if(j == box->slots - 1)
+                    slot_size = bw->width - pos;
+            }
+            else
+            {
+                slot_size = bw->height / box->slots;
+                if(j == box->slots - 1)
+                    slot_size = bw->height - pos;
+            }
+
+            if(j < slot) pos += slot_size;
+        }
+
+        if(box->orientation == VK_BOX_HORIZONTAL)
+            vk_widget_resize(widget, slot_size, bw->height);
+        else
+            vk_widget_resize(widget, bw->width, slot_size);
     }
 
     return 0;

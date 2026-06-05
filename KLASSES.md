@@ -218,8 +218,35 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 | `vk_screen_resize` | Handle terminal resize (updates all surface canvases) |
 | `vk_screen_poll_resize` | Poll actual terminal size via ioctl; calls resize if changed |
 | `vk_screen_teleport` | Migrate the entire UI to a different PTY |
-| `vk_screen_refresh` | Blit the active surface canvas to stdscr and refresh |
+| `vk_screen_set_wallpaper` | Register a wallpaper callback (`VkSurfaceBkgdFunc`) |
+| `vk_screen_paint_wallpaper` | Manually invoke the wallpaper callback on the active surface |
+| `vk_screen_refresh` | Composite the active surface: erase, wallpaper, widget blit, refresh |
 | `vk_screen_destroy` | Tear down screen, restore evicted terminal, free resources |
+
+### Wallpaper
+
+A wallpaper callback can be registered via `vk_screen_set_wallpaper()`.
+The callback signature is:
+
+```c
+void callback(vk_screen_t *screen, int surface_id, WINDOW *canvas);
+```
+
+The callback receives the surface id so it can paint different backgrounds
+per surface. `vk_screen_refresh()` calls the wallpaper automatically as
+part of its composite sequence:
+
+1. Erase the active surface canvas
+2. Fire the wallpaper callback (if set) — paints on the surface canvas
+3. Blit all attached widgets on top (opaque, fully covering wallpaper)
+4. Overwrite to stdscr and refresh
+
+This means the caller only needs to update widget state and call
+`vk_screen_refresh()` — no manual erase, widget draw, or wallpaper
+calls required. The wallpaper shows through wherever widgets don't cover.
+
+`vk_screen_paint_wallpaper()` is also available for callers who need to
+invoke the wallpaper outside the normal refresh cycle.
 
 ### Teleport
 

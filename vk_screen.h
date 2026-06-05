@@ -35,6 +35,8 @@ struct _vk_screen_s
     int                 width;
     int                 height;
 
+    VkSurfaceBkgdFunc   wallpaper_func;
+
     pid_t               evicted_pid;
     struct termios      saved_termios;
     bool                has_saved_termios;

@@ -143,6 +143,8 @@ typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
 typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
                         int *content_h, int *content_w,
                         int *scroll_y, int *scroll_x);
+typedef void        (*VkSurfaceBkgdFunc)(vk_screen_t *screen,
+                        int surface_id, WINDOW *canvas);
 typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
                         WINDOW *canvas, void *data);
 
@@ -335,6 +337,9 @@ int             vk_screen_detach_widget(vk_screen_t *screen,
 int             vk_screen_resize(vk_screen_t *screen);
 int             vk_screen_poll_resize(vk_screen_t *screen);
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
+int             vk_screen_set_wallpaper(vk_screen_t *screen,
+                    VkSurfaceBkgdFunc func);
+int             vk_screen_paint_wallpaper(vk_screen_t *screen);
 int             vk_screen_refresh(vk_screen_t *screen);
 void            vk_screen_destroy(vk_screen_t *screen);
 
