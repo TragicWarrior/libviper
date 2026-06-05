@@ -27,7 +27,7 @@ static const char *surface_names[] =
     "Languages",
     "Selectbox",
     "Dotfield",
-    "Deck",
+    "Shade",
 };
 
 static int
@@ -512,7 +512,7 @@ set_marquee_text(vk_marquee_t *marquee, int surface)
         "  VK Klass Reference Demo"
         "  |  Built: " __DATE__ " " __TIME__
         "  |  TAB:focus  \xE2\x86\x91\xE2\x86\x93:nav  Enter:sel"
-        "  d:surface  f:freeze  h:marquee  t:teleport  q:quit",
+        "  d:surface  f:freeze  h:marquee  t:teleport  w:deck  q:quit",
         surface + 1, surface_names[surface]);
 
     vk_marquee_set_text(marquee, text);
@@ -675,15 +675,16 @@ about_on_recreate(vk_widget_t *widget)
     mvwprintw(widget->canvas, 8,  4, "f ........... freeze marquee");
     mvwprintw(widget->canvas, 9,  4, "h ........... toggle marquee");
     mvwprintw(widget->canvas, 10, 4, "t ........... teleport to PTY");
-    mvwprintw(widget->canvas, 11, 4, "q ........... quit");
+    mvwprintw(widget->canvas, 11, 4, "w ........... toggle deck overlay");
+    mvwprintw(widget->canvas, 12, 4, "q ........... quit");
 
-    mvwprintw(widget->canvas, 13, 2, "Features:");
-    mvwprintw(widget->canvas, 14, 4, "- Virtual surfaces");
-    mvwprintw(widget->canvas, 15, 4, "- Terminal migration (teleport)");
-    mvwprintw(widget->canvas, 16, 4, "- Scrollable containers");
-    mvwprintw(widget->canvas, 17, 4, "- Marquee text ticker");
-    mvwprintw(widget->canvas, 18, 4, "- Frame border styles");
-    mvwprintw(widget->canvas, 19, 4, "- Menu with separators");
+    mvwprintw(widget->canvas, 14, 2, "Features:");
+    mvwprintw(widget->canvas, 15, 4, "- Virtual surfaces");
+    mvwprintw(widget->canvas, 16, 4, "- Terminal migration (teleport)");
+    mvwprintw(widget->canvas, 17, 4, "- Scrollable containers");
+    mvwprintw(widget->canvas, 18, 4, "- Marquee text ticker");
+    mvwprintw(widget->canvas, 19, 4, "- Frame border styles");
+    mvwprintw(widget->canvas, 20, 4, "- Deck with shadows");
 
     return 0;
 }
@@ -816,6 +817,7 @@ int main(void)
     int             box_h;
     int             slot_w, inner_w, inner_h;
     int             current_surface = 0;
+    int             deck_surface = -1;
     int32_t         key;
 
     // surface 0: widgets
@@ -1090,13 +1092,15 @@ int main(void)
 
     vk_screen_add_surface(vk_screen);
 
-    // --- surface 4: deck ---
+    // --- surface 4: shade ---
 
     vk_screen_add_surface(vk_screen);
 
+    // --- deck (floating, toggled with 'w') ---
+
     deck = vk_deck_create();
     vk_object_set_kmio(VK_OBJECT(deck), deck_kmio);
-    vk_screen_attach_widget(vk_screen, 4, VK_WIDGET(deck));
+    vk_deck_set_shadow(deck, TRUE);
 
     deck_win1 = vk_window_create(35, 10);
     vk_window_set_title(deck_win1, " Notes ");
@@ -1247,6 +1251,25 @@ int main(void)
             else
                 vk_widget_freeze(VK_WIDGET(marquee));
         }
+        else if(key == 'w')
+        {
+            if(deck_surface == current_surface)
+            {
+                vk_screen_detach_widget(vk_screen, deck_surface,
+                    VK_WIDGET(deck));
+                deck_surface = -1;
+            }
+            else
+            {
+                if(deck_surface >= 0)
+                    vk_screen_detach_widget(vk_screen, deck_surface,
+                        VK_WIDGET(deck));
+
+                vk_screen_attach_widget(vk_screen, current_surface,
+                    VK_WIDGET(deck));
+                deck_surface = current_surface;
+            }
+        }
         else if(key == KEY_SRIGHT || key == KEY_SLEFT
             || key == '+' || key == '-')
         {
@@ -1274,14 +1297,14 @@ int main(void)
         }
         else if(key != ERR)
         {
-            if(current_surface == 0)
+            if(deck_surface == current_surface)
+                vk_object_push_keystroke(VK_OBJECT(deck), key);
+            else if(current_surface == 0)
                 vk_object_push_keystroke(VK_OBJECT(box), key);
             else if(current_surface == 1)
                 vk_object_push_keystroke(VK_OBJECT(lang_frame), key);
             else if(current_surface == 2)
                 vk_object_push_keystroke(VK_OBJECT(box2), key);
-            else if(current_surface == 4)
-                vk_object_push_keystroke(VK_OBJECT(deck), key);
         }
 
         if(current_surface == 0)
@@ -1331,7 +1354,7 @@ int main(void)
 
             vk_box_update(box2);
         }
-        else if(current_surface == 4)
+        if(deck_surface == current_surface)
         {
             vk_widget_t *top = vk_deck_get_top(deck);
 

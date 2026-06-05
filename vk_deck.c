@@ -5,6 +5,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_deck.h"
+#include "vdk_color.h"
 
 static int
 _vk_deck_ctor(vk_object_t *object, va_list *argp, ...);
@@ -26,6 +27,9 @@ _vk_deck_recreate(vk_widget_t *widget);
 
 static int
 _vk_deck_update(vk_deck_t *deck);
+
+static void
+_vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface);
 
 
 require_klass(VK_WIDGET_KLASS);
@@ -117,6 +121,18 @@ vk_deck_cycle(vk_deck_t *deck, int vector)
         list_rotate_left(&deck->widget_list);
     else
         list_rotate_right(&deck->widget_list);
+
+    return 0;
+}
+
+inline int
+vk_deck_set_shadow(vk_deck_t *deck, bool enabled)
+{
+    if(deck == NULL) return -1;
+
+    if(!vk_object_assert(deck, vk_deck_t)) return -1;
+
+    deck->shadows = enabled;
 
     return 0;
 }
@@ -222,6 +238,10 @@ _vk_deck_draw(vk_widget_t *widget)
     {
         child = list_entry(pos, vk_widget_t, list);
         child->surface = widget->surface;
+
+        if(deck->shadows)
+            _vk_deck_draw_shadow(child, widget->surface);
+
         vk_widget_draw(child);
     }
 
@@ -260,6 +280,51 @@ _vk_deck_recreate(vk_widget_t *widget)
     }
 
     return 0;
+}
+
+static void
+_vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
+{
+    int         sx, sy;
+    int         max_y, max_x;
+    short       pair;
+    cchar_t     cc;
+    wchar_t     wch[CCHARW_MAX];
+    attr_t      attrs;
+    short       color;
+
+    getmaxyx(surface, max_y, max_x);
+    pair = vdk_color_pair(COLOR_WHITE, COLOR_BLACK);
+
+    // right edge: 1 column at (x + width), rows [y+1 .. y+height]
+    sx = child->x + child->width;
+    if(sx < max_x)
+    {
+        for(sy = child->y + 1; sy <= child->y + child->height; sy++)
+        {
+            if(sy < 0 || sy >= max_y) continue;
+
+            mvwin_wch(surface, sy, sx, &cc);
+            getcchar(&cc, wch, &attrs, &color, NULL);
+            setcchar(&cc, wch, A_NORMAL, pair, NULL);
+            mvwadd_wch(surface, sy, sx, &cc);
+        }
+    }
+
+    // bottom edge: 1 row at (y + height), cols [x+1 .. x+width-1]
+    sy = child->y + child->height;
+    if(sy < max_y)
+    {
+        for(sx = child->x + 1; sx < child->x + child->width; sx++)
+        {
+            if(sx < 0 || sx >= max_x) continue;
+
+            mvwin_wch(surface, sy, sx, &cc);
+            getcchar(&cc, wch, &attrs, &color, NULL);
+            setcchar(&cc, wch, A_NORMAL, pair, NULL);
+            mvwadd_wch(surface, sy, sx, &cc);
+        }
+    }
 }
 
 static int

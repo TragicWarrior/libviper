@@ -482,12 +482,23 @@ Because the deck has no canvas, `_erase` and `_resize` are no-ops, and
 | `vk_deck_set_top(deck, widget)` | Move a widget already in the deck to the top |
 | `vk_deck_get_top(deck)` | Return the topmost widget (or NULL) |
 | `vk_deck_cycle(deck, vector)` | Rotate the stack (`VK_VECTOR_LEFT` / `VK_VECTOR_RIGHT`) |
+| `vk_deck_set_shadow(deck, enabled)` | Enable or disable drop shadows on all children |
 | `vk_deck_update(deck)` | Manually composite children (delegates to `_draw`) |
 | `vk_deck_destroy(deck)` | Detach all children and destroy |
 
 The deck's `_draw` sets each child's `surface` pointer to `deck->surface`
 before drawing. This means children do not need a valid surface at add time —
-the binding happens lazily during the screen refresh cycle.
+the binding happens lazily during the screen refresh cycle. The deck can be
+attached and detached from surfaces at runtime, acting as a floating overlay.
+
+### Shadows
+
+When shadows are enabled via `vk_deck_set_shadow(deck, TRUE)`, each child
+widget casts a drop shadow — an L-shaped strip (right edge + bottom edge,
+offset by 1 cell) rendered in white-on-black. The shadow reads the existing
+characters from the surface and recolors them, preserving the glyph beneath.
+Shadows are drawn before each widget during bottom-to-top compositing, so
+higher widgets correctly occlude the shadows of lower ones.
 
 `_recreate` (teleport) propagates `vk_widget_recreate()` to all children so
 they rebuild their canvases on the new SCREEN. The deck itself has nothing

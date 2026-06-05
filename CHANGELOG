@@ -47,6 +47,9 @@ Version 4.0.0 (in progress)
 * [Bryan Christ] Make VDK widgets IO-agnostic. Remove built-in kmio handlers
   from all klasses. Add vk_object_set_kmio() and VkKmioFunc typedef so
   applications install their own keystroke handlers at runtime.
+* [Bryan Christ] Add optional drop shadows to vk_deck_t via
+  vk_deck_set_shadow(). Shadow is an L-shaped strip (right + bottom edge)
+  rendered white-on-black, composited per-child in z-order.
 
 Version 3.1.1
 
