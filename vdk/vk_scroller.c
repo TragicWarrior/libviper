@@ -285,7 +285,6 @@ _vk_scroller_update(vk_scroller_t *scroller)
             return 0;
     }
 
-    sw->_erase(sw);
     scroller->_draw_scrollbar(scroller);
 
     return 1;
@@ -313,6 +312,9 @@ _vk_scroller_draw_scrollbar(vk_scroller_t *scroller)
     bg = (scroller->border_bg == -1) ? sw->bg : scroller->border_bg;
     color_pair = vdk_color_pair(fg, bg);
     border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
+
+    wattron(sw->canvas, border_colors);
+    vk_widget_fill(sw, ' ');
 
     if(scroller->scrollbar_flags & VK_SCROLLBAR_VERTICAL)
     {

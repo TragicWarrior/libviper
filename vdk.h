@@ -35,6 +35,12 @@ short           vdk_color_pair(short fg, short bg);
 /* button relief styles (in addition to VK_FRAME_SINGLE / VK_FRAME_ASCII) */
 #define VK_BUTTON_BASIC             4
 
+/* activity indicator styles */
+#define VK_ACTIVITY_SPINNER         0
+#define VK_ACTIVITY_DOTS            1
+#define VK_ACTIVITY_CIRCLES         2
+#define VK_ACTIVITY_BAR             3
+
 /* separator styles */
 #define VK_SEPARATOR_BLANK          1
 #define VK_SEPARATOR_SINGLE         2
@@ -62,6 +68,7 @@ short           vdk_color_pair(short fg, short bg);
 
 /* listbox flags */
 #define VK_FLAG_ALLOW_WRAP          (1 << 1)
+#define VK_FLAG_FULL_WIDTH          (1 << 2)
 
 /* item flags */
 #define VK_ITEM_CHECKED             (1 << 0)
@@ -126,6 +133,7 @@ typedef struct  _vk_deck_s          vk_deck_t;
 typedef struct  _vk_button_s        vk_button_t;
 typedef struct  _vk_filler_s        vk_filler_t;
 typedef struct  _vk_input_s         vk_input_t;
+typedef struct  _vk_activity_s      vk_activity_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 
 /* callback typedefs */
@@ -159,6 +167,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_BUTTON(x)            ((vk_button_t *)x)
 #define VK_FILLER(x)            ((vk_filler_t *)x)
 #define VK_INPUT(x)             ((vk_input_t *)x)
+#define VK_ACTIVITY(x)          ((vk_activity_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 
 /* vk_object */
@@ -453,6 +462,17 @@ int             vk_input_end(vk_input_t *input);
 int             vk_input_clear(vk_input_t *input);
 int             vk_input_update(vk_input_t *input);
 void            vk_input_destroy(vk_input_t *input);
+
+/* vk_activity */
+vk_activity_t*  vk_activity_create(void);
+int             vk_activity_set_style(vk_activity_t *activity, int style);
+int             vk_activity_get_style(vk_activity_t *activity);
+int             vk_activity_set_speed(vk_activity_t *activity, int interval);
+int             vk_activity_start(vk_activity_t *activity);
+int             vk_activity_stop(vk_activity_t *activity);
+bool            vk_activity_is_running(vk_activity_t *activity);
+int             vk_activity_run(vk_activity_t *activity);
+void            vk_activity_destroy(vk_activity_t *activity);
 
 /* vk_filedialog */
 vk_filedialog_t* vk_filedialog_create(int width, int height,

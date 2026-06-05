@@ -57,6 +57,7 @@ set(VDK_SOURCES
     vdk/vk_marquee.c
     vdk/vk_deck.c
     vdk/vk_filler.c
+    vdk/vk_activity.c
     vdk/vk_input.c
     vdk/vk_filedialog.c
     )

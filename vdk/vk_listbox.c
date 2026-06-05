@@ -691,12 +691,17 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
     widget = VK_WIDGET(listbox);
 
-    widget->_erase(widget);
     paint_width = widget->width;
     paint_height = widget->height;
 
     if(widget->vscroller != NULL) paint_width--;
     if(widget->hscroller != NULL) paint_height--;
+
+    if(!(listbox->flags & VK_FLAG_FULL_WIDTH))
+    {
+        x = 1;
+        paint_width -= 2;
+    }
 
     // if highlight colors net set, use inverted widget colors
     if(listbox->highlight_fg == -1) listbox->highlight_fg = widget->bg;
@@ -706,6 +711,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
     highlight = COLOR_PAIR(vdk_color_pair(listbox->highlight_fg, listbox->highlight_bg));
 
     wattron(widget->canvas, paint_colors);
+    vk_widget_fill(widget, ' ');
 
     // if the title exists we need to show it and account for it
     if(listbox->title != NULL)

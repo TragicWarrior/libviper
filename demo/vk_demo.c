@@ -397,7 +397,7 @@ deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
     mvwadd_wch(canvas, 0, max_x - 7, &cc);
 
     setcchar(&cc, wch_square, A_REVERSE, pair, NULL);
-    mvwadd_wch(canvas, 0, max_x - 6, &cc);
+    mvwadd_wch(canvas, 0, max_x - 4, &cc);
 
     setcchar(&cc, wch_block, A_REVERSE, pair, NULL);
     mvwadd_wch(canvas, 0, max_x - 5, &cc);
@@ -712,8 +712,13 @@ build_listbox(int width, int height)
     vk_listbox_set_wrap(listbox, TRUE);
 
     for(i = 0; i < item_count; i++)
+    {
         vk_listbox_add_item(listbox, (char *)items[i],
             on_item_activate, (void *)items[i]);
+
+        if(i == 23 || i == 33 || i == 43)
+            vk_listbox_add_separator(listbox, VK_SEPARATOR_SINGLE);
+    }
 
     return listbox;
 }
@@ -1036,6 +1041,7 @@ int main(void)
 
     // shared
     vk_marquee_t    *marquee;
+    vk_activity_t   *activity[4];
 
     vk_screen = vk_screen_create();
     if(vk_screen == NULL)
@@ -1069,7 +1075,7 @@ int main(void)
 
     // --- marquee (shared across surfaces) ---
 
-    marquee = vk_marquee_create(max_x);
+    marquee = vk_marquee_create(max_x - 4);
     vk_widget_set_colors(VK_WIDGET(marquee), COLOR_WHITE, COLOR_BLUE);
     vk_widget_set_attrs(VK_WIDGET(marquee), A_BOLD);
     set_marquee_text(marquee, 0);
@@ -1077,6 +1083,33 @@ int main(void)
     vk_marquee_set_speed(marquee, 2);
     vk_screen_attach_widget(vk_screen, 0, VK_WIDGET(marquee));
     vk_widget_move(VK_WIDGET(marquee), 0, 0);
+
+    // --- activity indicators (shared across surfaces) ---
+
+    {
+        int i;
+        int styles[] = { VK_ACTIVITY_SPINNER, VK_ACTIVITY_DOTS,
+                         VK_ACTIVITY_CIRCLES, VK_ACTIVITY_BAR };
+        short colors[] = { COLOR_YELLOW, COLOR_WHITE,
+                           COLOR_CYAN, COLOR_RED };
+        int speeds[] = { 1, 2, 3, 1 };
+
+        for(i = 0; i < 4; i++)
+        {
+            activity[i] = vk_activity_create();
+            vk_widget_set_colors(VK_WIDGET(activity[i]),
+                colors[i], COLOR_BLUE);
+            vk_activity_set_style(activity[i], styles[i]);
+            vk_activity_set_speed(activity[i], speeds[i]);
+            if(styles[i] == VK_ACTIVITY_DOTS)
+                vk_widget_set_attrs(VK_WIDGET(activity[i]), A_BOLD);
+            vk_activity_start(activity[i]);
+            vk_screen_attach_widget(vk_screen, 0,
+                VK_WIDGET(activity[i]));
+            vk_widget_move(VK_WIDGET(activity[i]),
+                max_x - 4 + i, 0);
+        }
+    }
 
     // --- surface 0: widgets ---
 
@@ -1102,7 +1135,7 @@ int main(void)
     vk_scroller_set_border_colors(vscroller1, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller1, VK_WIDGET(listbox));
     vk_scroller_set_scroll_info(vscroller1, listbox_scroll_info);
-    vk_widget_attach_scroller(VK_WIDGET(window1), vscroller1);
+    vk_widget_attach_scroller(VK_WIDGET(listbox), vscroller1);
 
     hscroller1 = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
     vk_scroller_set_border_style(hscroller1, VK_FRAME_SINGLE);
@@ -1471,6 +1504,11 @@ int main(void)
     // --- initial draw and event loop ---
 
     vk_box_update(box);
+    {
+        int i;
+        for(i = 0; i < 4; i++)
+            vk_activity_run(activity[i]);
+    }
     vk_marquee_run(marquee);
     vk_screen_refresh(vk_screen);
 
@@ -1488,7 +1526,15 @@ int main(void)
             box_h = max_y - 1;
             slot_w = max_x / 3;
 
-            vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
+            vk_widget_resize(VK_WIDGET(marquee), max_x - 4, 1);
+
+            {
+                int i;
+                for(i = 0; i < 4; i++)
+                    vk_widget_move(VK_WIDGET(activity[i]),
+                        max_x - 4 + i, 0);
+            }
+
             vk_widget_resize(VK_WIDGET(box), max_x, box_h);
             vk_widget_resize(VK_WIDGET(lang_frame), max_x, box_h);
             vk_widget_resize(VK_WIDGET(box2), max_x, box_h);
@@ -1496,13 +1542,26 @@ int main(void)
         else if(key == 'd')
         {
             int old = current_surface;
+            int i;
             current_surface = (current_surface + 1) % NUM_SURFACES;
 
             vk_screen_detach_widget(vk_screen, old, VK_WIDGET(marquee));
+            for(i = 0; i < 4; i++)
+                vk_screen_detach_widget(vk_screen, old,
+                    VK_WIDGET(activity[i]));
+
             vk_screen_set_surface(vk_screen, current_surface);
             vk_screen_attach_widget(vk_screen, current_surface,
                 VK_WIDGET(marquee));
             vk_widget_move(VK_WIDGET(marquee), 0, 0);
+
+            for(i = 0; i < 4; i++)
+            {
+                vk_screen_attach_widget(vk_screen, current_surface,
+                    VK_WIDGET(activity[i]));
+                vk_widget_move(VK_WIDGET(activity[i]),
+                    max_x - 4 + i, 0);
+            }
 
             set_marquee_text(marquee, current_surface);
         }
@@ -1565,11 +1624,19 @@ int main(void)
                 box_h = max_y - 1;
                 slot_w = max_x / 3;
 
-                vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
+                vk_widget_resize(VK_WIDGET(marquee), max_x - 4, 1);
+
+                {
+                    int i;
+                    for(i = 0; i < 4; i++)
+                        vk_widget_move(VK_WIDGET(activity[i]),
+                            max_x - 4 + i, 0);
+                }
+
                 vk_widget_resize(VK_WIDGET(box), max_x, box_h);
                 vk_widget_resize(VK_WIDGET(lang_frame), max_x, box_h);
                 vk_widget_resize(VK_WIDGET(box2), max_x, box_h);
-    
+
                 wtimeout(stdscr, 100);
             }
         }
@@ -1706,10 +1773,20 @@ int main(void)
             vk_window_update(deck_win6);
         }
 
+        {
+            int i;
+            for(i = 0; i < 4; i++)
+                vk_activity_run(activity[i]);
+        }
         vk_marquee_run(marquee);
         vk_screen_refresh(vk_screen);
     }
 
+    {
+        int i;
+        for(i = 0; i < 4; i++)
+            vk_activity_destroy(activity[i]);
+    }
     vk_marquee_destroy(marquee);
     vk_box_destroy(box);
 

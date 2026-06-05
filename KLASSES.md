@@ -35,7 +35,7 @@ vk_object_t
    │
    ├─ vk_filler_t
    │
-   ├─ vk_spinner (todo)
+   ├─ vk_activity_t
    │
    └─ vk_listbox_t
       │
@@ -993,6 +993,35 @@ boxes to push other widgets apart.
 |-----|-------------|
 | `vk_filler_create()` | Create a 1x1 filler with expand enabled |
 | `vk_filler_destroy(filler)` | Destroy the filler |
+
+## Activity Indicators
+
+`vk_activity_t` is a 1x1 widget derived from `vk_widget_t` that animates
+a spinning/cycling indicator. It supports four animation styles:
+
+| Style | Constant | Frames |
+|-------|----------|--------|
+| Spinner | `VK_ACTIVITY_SPINNER` | ASCII `\|/-\` (4 frames) |
+| Dots | `VK_ACTIVITY_DOTS` | Braille characters U+280B series (10 frames) |
+| Circles | `VK_ACTIVITY_CIRCLES` | Quarter-circle U+25D0 series (4 frames) |
+| Bar | `VK_ACTIVITY_BAR` | Growing block U+2581 series (8 frames) |
+
+The widget uses a caller-driven tick model like `vk_marquee_t`: the
+application calls `vk_activity_run()` each iteration of the event loop.
+A `speed` parameter controls how many ticks elapse before advancing to
+the next frame (default 1 = advance every tick).
+
+| API | Description |
+|-----|-------------|
+| `vk_activity_create()` | Create a 1x1 activity indicator (default: spinner, stopped) |
+| `vk_activity_set_style(a, style)` | Set animation style; resets frame counter |
+| `vk_activity_get_style(a)` | Return current style constant |
+| `vk_activity_set_speed(a, interval)` | Set tick interval between frame advances |
+| `vk_activity_start(a)` | Begin animating |
+| `vk_activity_stop(a)` | Stop animating (clears to blank) |
+| `vk_activity_is_running(a)` | Return whether the indicator is active |
+| `vk_activity_run(a)` | Tick function — call once per event loop iteration |
+| `vk_activity_destroy(a)` | Destroy the indicator |
 
 ## File Dialogs
 
