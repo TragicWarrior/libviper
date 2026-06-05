@@ -3,6 +3,7 @@
 
 #include <inttypes.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #include "list.h"
 
@@ -25,9 +26,21 @@ struct _vk_listbox_s
     char                *title;
     unsigned int        flags;
 
-    int                 highlight_fg;       // fg color of selected item
-    int                 highlight_bg;       // bg color of selected item
+    int                 highlight_fg;       // fg color of selected item (active)
+    int                 highlight_bg;       // bg color of selected item (active)
     attr_t              highlight_attrs;
+
+    /*
+        Focus-aware highlight pairs.  set_highlight stores into focus_*;
+        set_blur_highlight stores into blur_*; set_focused() copies one of
+        them into highlight_fg/bg above.  When blur_* is -1 (unset),
+        set_focused(false) is a no-op so legacy consumers see no change.
+    */
+    int                 focus_hl_fg;
+    int                 focus_hl_bg;
+    int                 blur_hl_fg;
+    int                 blur_hl_bg;
+    bool                is_focused;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

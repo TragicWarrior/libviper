@@ -129,8 +129,61 @@ vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg)
 {
     if(listbox == NULL) return -1;
 
-    listbox->highlight_fg = fg;
-    listbox->highlight_bg = bg;
+    /*
+        store as the focus-state pair, and copy to the active fields too
+        so the call has immediate effect (matches legacy behavior).  When
+        the listbox is in the blur state, the blur pair takes precedence.
+    */
+    listbox->focus_hl_fg = fg;
+    listbox->focus_hl_bg = bg;
+
+    if(listbox->is_focused)
+    {
+        listbox->highlight_fg = fg;
+        listbox->highlight_bg = bg;
+    }
+
+    return 0;
+}
+
+inline int
+vk_listbox_set_unfocused(vk_listbox_t *listbox, int fg, int bg)
+{
+    if(listbox == NULL) return -1;
+
+    listbox->blur_hl_fg = fg;
+    listbox->blur_hl_bg = bg;
+
+    if(!listbox->is_focused)
+    {
+        listbox->highlight_fg = fg;
+        listbox->highlight_bg = bg;
+    }
+
+    return 0;
+}
+
+inline int
+vk_listbox_set_focused(vk_listbox_t *listbox, bool focused)
+{
+    if(listbox == NULL) return -1;
+
+    listbox->is_focused = focused;
+
+    if(focused)
+    {
+        listbox->highlight_fg = listbox->focus_hl_fg;
+        listbox->highlight_bg = listbox->focus_hl_bg;
+    }
+    else
+    {
+        /* if blur not set, keep current colors (back-compat) */
+        if(listbox->blur_hl_fg != -1 || listbox->blur_hl_bg != -1)
+        {
+            listbox->highlight_fg = listbox->blur_hl_fg;
+            listbox->highlight_bg = listbox->blur_hl_bg;
+        }
+    }
 
     return 0;
 }
@@ -441,6 +494,12 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
 
     listbox->highlight_fg = -1;
     listbox->highlight_bg = -1;
+
+    listbox->focus_hl_fg = -1;
+    listbox->focus_hl_bg = -1;
+    listbox->blur_hl_fg  = -1;
+    listbox->blur_hl_bg  = -1;
+    listbox->is_focused  = true;        /* default: behave as focused */
 
     listbox->ctor = _vk_listbox_ctor;
     listbox->dtor = _vk_listbox_dtor;

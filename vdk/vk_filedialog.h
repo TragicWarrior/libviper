@@ -7,6 +7,7 @@
 #include "vdk.h"
 #include "vk_object.h"
 #include "vk_box.h"
+#include "vk_frame.h"
 #include "vk_input.h"
 #include "vk_listbox.h"
 #include "vk_scroller.h"
@@ -19,8 +20,10 @@ struct _vk_filedialog_s
     int                 style;
     bool                multiselect;
     char                *path;
+    char                *exts;          /* comma-separated, no dots; NULL = all */
 
     vk_input_t          *path_input;
+    vk_frame_t          *list_frame;    /* sunken-relief frame around file_list */
     vk_listbox_t        *file_list;
     vk_scroller_t       *scroller;
     vk_box_t            *button_bar;

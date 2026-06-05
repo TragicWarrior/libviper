@@ -9,12 +9,74 @@
 #include "vk_widget.h"
 #include "vk_container.h"
 #include "vk_box.h"
+#include "vk_frame.h"
 #include "vk_input.h"
 #include "vk_listbox.h"
 #include "vk_scroller.h"
 #include "vk_button.h"
 #include "vk_item.h"
 #include "vk_filedialog.h"
+
+/*
+    Case-insensitive ASCII compare of two byte ranges of length n.
+    Inlined so this file doesn't have to depend on strncasecmp (which
+    needs the right feature-test macro to be exposed through <strings.h>
+    and was getting shadowed somewhere in the libviper header chain).
+*/
+static int
+_vk_filedialog_icmp(const char *a, const char *b, int n)
+{
+    int     i;
+    int     ca;
+    int     cb;
+
+    for(i = 0; i < n; i++)
+    {
+        ca = (unsigned char)a[i];
+        cb = (unsigned char)b[i];
+        if(ca >= 'A' && ca <= 'Z') ca += 32;
+        if(cb >= 'A' && cb <= 'Z') cb += 32;
+        if(ca != cb) return ca - cb;
+    }
+    return 0;
+}
+
+/*
+    Match the part of `filename` after its final '.' against a
+    comma-separated list of extensions (no leading dots).  Comparison is
+    case-insensitive.  exts == NULL or "" means "match anything".  Files
+    with no extension never match a non-empty list.
+*/
+static bool
+_vk_filedialog_ext_match(const char *filename, const char *exts)
+{
+    const char  *dot;
+    const char  *p;
+    int          ext_len;
+
+    if(exts == NULL || *exts == '\0') return true;
+
+    dot = strrchr(filename, '.');
+    if(dot == NULL || dot == filename) return false;
+
+    dot++;
+    ext_len = (int)strlen(dot);
+
+    p = exts;
+    while(*p != '\0')
+    {
+        const char *end = strchr(p, ',');
+        int         len = (end != NULL) ? (int)(end - p) : (int)strlen(p);
+
+        if(len == ext_len && _vk_filedialog_icmp(p, dot, len) == 0)
+            return true;
+
+        if(end == NULL) break;
+        p = end + 1;
+    }
+
+    return false;
+}
 
 static int
 _vk_filedialog_ctor(vk_object_t *object, va_list *argp, ...);
@@ -144,8 +206,22 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
     vk_box_set_widget(dialog->button_bar, 0, VK_WIDGET(dialog->btn_ok));
     vk_box_set_widget(dialog->button_bar, 1, VK_WIDGET(dialog->btn_cancel));
 
+    /*
+        Wrap the file_list in a sunken-relief frame for visual
+        consistency with the rest of the picker tools.  The frame
+        occupies slot 1 of the filedialog box; the file_list becomes
+        the frame's expanding child.  Costs two rows + two columns
+        from the visible listing.
+    */
+    dialog->list_frame = vk_frame_create(width, height - btn_h * 2);
+    vk_frame_set_border_style(dialog->list_frame,
+        VK_BORDER_SINGLE | VK_RELIEF_SUNKEN);
+    vk_frame_set_border_attrs(dialog->list_frame, A_BOLD);
+    vk_widget_set_expand(VK_WIDGET(dialog->list_frame));
+    vk_frame_set_child(dialog->list_frame, VK_WIDGET(dialog->file_list));
+
     _vk_filedialog_set_child(dialog, 0, VK_WIDGET(dialog->path_input));
-    _vk_filedialog_set_child(dialog, 1, VK_WIDGET(dialog->file_list));
+    _vk_filedialog_set_child(dialog, 1, VK_WIDGET(dialog->list_frame));
     _vk_filedialog_set_child(dialog, 2, VK_WIDGET(dialog->button_bar));
 
     VK_BOX(dialog)->focused_slot = 1;
@@ -158,6 +234,26 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
     }
 
     return dialog;
+}
+
+inline void
+vk_filedialog_set_filter(vk_filedialog_t *dialog, const char *exts)
+{
+    if(dialog == NULL) return;
+
+    if(dialog->exts != NULL)
+    {
+        free(dialog->exts);
+        dialog->exts = NULL;
+    }
+
+    if(exts != NULL && *exts != '\0')
+        dialog->exts = strdup(exts);
+
+    /* refresh the listing so an already-open dialog reflects the new
+       filter immediately on the next update. */
+    if(dialog->path != NULL)
+        _vk_filedialog_populate(dialog);
 }
 
 inline int
@@ -216,6 +312,14 @@ vk_filedialog_set_colors(vk_filedialog_t *dialog, short fg, short bg)
     vk_widget_set_colors(VK_WIDGET(dialog), fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->path_input), fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->file_list), fg, bg);
+    if(dialog->list_frame != NULL)
+    {
+        /* widget bg shows briefly between the border and the file_list
+           on erase, so keep it in the dialog's theme.  border_bg is the
+           background each relief cell paints against. */
+        vk_widget_set_colors(VK_WIDGET(dialog->list_frame), fg, bg);
+        vk_frame_set_border_colors(dialog->list_frame, fg, bg);
+    }
     if(dialog->scroller != NULL)
         vk_scroller_set_border_colors(dialog->scroller, fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->btn_ok), fg, bg);
@@ -288,7 +392,17 @@ vk_filedialog_update(vk_filedialog_t *dialog)
     if(dialog == NULL) return -1;
 
     vk_input_update(dialog->path_input);
+
+    /*
+        Render the file_list content into its own canvas FIRST, then run
+        the frame update.  vk_frame_update erases the frame canvas and
+        draws the sunken border on it, then blits the child's pre-
+        rendered canvas inside.  Swap the order and the listbox content
+        gets wiped by the frame's erase.
+    */
     dialog->file_list->_update(dialog->file_list);
+    if(dialog->list_frame != NULL)
+        vk_frame_update(dialog->list_frame);
 
     if(dialog->scroller != NULL)
     {
@@ -338,7 +452,9 @@ _vk_filedialog_ctor(vk_object_t *object, va_list *argp, ...)
     va_end(args);
 
     dialog->path = NULL;
+    dialog->exts = NULL;
     dialog->path_input = NULL;
+    dialog->list_frame = NULL;
     dialog->file_list = NULL;
     dialog->scroller = NULL;
     dialog->button_bar = NULL;
@@ -385,6 +501,9 @@ _vk_filedialog_dtor(vk_object_t *object)
     if(dialog->path != NULL)
         free(dialog->path);
 
+    if(dialog->exts != NULL)
+        free(dialog->exts);
+
     for(i = 0; i < box->slots; i++)
     {
         if(box->slot_widgets[i] != NULL)
@@ -400,6 +519,11 @@ _vk_filedialog_dtor(vk_object_t *object)
     vk_box_destroy(button_bar);
     vk_button_destroy(btn_ok);
     vk_button_destroy(btn_cancel);
+
+    /* destroy the frame first: it removes file_list from its container
+       but does not free file_list; we free file_list explicitly next. */
+    if(dialog->list_frame != NULL)
+        vk_frame_destroy(dialog->list_frame);
 
     if(multiselect)
         vk_selectbox_destroy(VK_SELECTBOX(file_list));
@@ -455,7 +579,15 @@ _vk_filedialog_populate(vk_filedialog_t *dialog)
             dialog->path, namelist[i]->d_name);
 
         if(stat(fullpath, &st) != 0 || !S_ISDIR(st.st_mode))
+        {
+            /* directories already added in the first pass; this pass
+               handles regular files only, and is where the extension
+               filter applies. */
+            if(!_vk_filedialog_ext_match(namelist[i]->d_name, dialog->exts))
+                continue;
+
             lb->_add_item(lb, namelist[i]->d_name, NULL, NULL);
+        }
     }
 
     for(i = 0; i < n; i++)

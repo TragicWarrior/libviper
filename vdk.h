@@ -280,6 +280,9 @@ int             vk_listbox_set_title(vk_listbox_t *listbox, char *title);
 int             vk_listbox_get_title(vk_listbox_t *listbox,
                     char *buf, int buf_sz);
 int             vk_listbox_set_highlight(vk_listbox_t *listbox, int fg, int bg);
+int             vk_listbox_set_unfocused(vk_listbox_t *listbox,
+                    int fg, int bg);
+int             vk_listbox_set_focused(vk_listbox_t *listbox, bool focused);
 int             vk_listbox_set_highlight_attrs(vk_listbox_t *listbox,
                     attr_t attrs);
 int             vk_listbox_add_item(vk_listbox_t *listbox,
@@ -573,6 +576,8 @@ void            vk_menubar_destroy(vk_menubar_t *menubar);
 /* vk_filedialog */
 vk_filedialog_t* vk_filedialog_create(int width, int height,
                     int style, bool multiselect);
+void            vk_filedialog_set_filter(vk_filedialog_t *dialog,
+                    const char *exts);
 int             vk_filedialog_set_path(vk_filedialog_t *dialog,
                     const char *path);
 const char*     vk_filedialog_get_path(vk_filedialog_t *dialog);
