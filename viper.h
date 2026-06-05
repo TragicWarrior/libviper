@@ -180,10 +180,6 @@ int             viper_wresize_rel(vwnd_t *wind, int vector_x, int vector_y);
 #define         TOPMOST_UNMANAGED   (viper_window_get_top(-1, FALSE))
 
 /* window search facilities */
-vwnd_t*         viper_window_find_by_class(int screen_id, bool managed,
-                    void *classid);
-vwnd_t*         viper_window_find_by_title(int screen_id, bool managed,
-                    char *title);
 
 /* window display and state modification */
 uint32_t        viper_window_get_state(vwnd_t *wnd);
