@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <termios.h>
 
 #include <ncursesw/curses.h>
 
@@ -33,6 +34,10 @@ struct _vk_screen_s
 
     int                 width;
     int                 height;
+
+    pid_t               evicted_pid;
+    struct termios      saved_termios;
+    bool                has_saved_termios;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

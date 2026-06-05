@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <utmpx.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <dirent.h>
 
 #include "viper.h"
 #include "viper_color.h"
@@ -22,6 +25,9 @@ _vk_desktop_create(SCREEN *term, int width, int height);
 
 static void
 _vk_desktop_destroy(vk_desktop_t *desktop);
+
+static pid_t
+_vk_screen_evict_pty(const char *pty);
 
 
 
@@ -215,11 +221,18 @@ int
 vk_screen_resize(vk_screen_t *screen)
 {
     vk_desktop_t    *desktop;
+    struct winsize  ws;
     int             i;
 
     if(screen == NULL) return -1;
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
+
+    if(screen->fd_out != NULL &&
+        ioctl(fileno(screen->fd_out), TIOCGWINSZ, &ws) == 0)
+    {
+        resize_term(ws.ws_row, ws.ws_col);
+    }
 
     getmaxyx(stdscr, screen->height, screen->width);
 
@@ -231,6 +244,27 @@ vk_screen_resize(vk_screen_t *screen)
     }
 
     return 0;
+}
+
+int
+vk_screen_poll_resize(vk_screen_t *screen)
+{
+    struct winsize  ws;
+
+    if(screen == NULL) return 0;
+
+    if(!vk_object_assert(screen, vk_screen_t)) return 0;
+
+    if(screen->fd_out == NULL) return 0;
+
+    if(ioctl(fileno(screen->fd_out), TIOCGWINSZ, &ws) < 0) return 0;
+
+    if(ws.ws_col == screen->width && ws.ws_row == screen->height)
+        return 0;
+
+    vk_screen_resize(screen);
+
+    return 1;
 }
 
 int
@@ -271,6 +305,18 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
 
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
+    if(screen->evicted_pid > 0)
+    {
+        if(screen->has_saved_termios && screen->fd_out != NULL)
+            tcsetattr(fileno(screen->fd_out), TCSANOW,
+                &screen->saved_termios);
+
+        kill(screen->evicted_pid, SIGCONT);
+        kill(screen->evicted_pid, SIGINT);
+    }
+
+    screen->evicted_pid = _vk_screen_evict_pty(pty);
+
     new_out = fopen(pty, "w");
     if(new_out == NULL) return -1;
 
@@ -280,6 +326,11 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
         fclose(new_out);
         return -1;
     }
+
+    if(tcgetattr(fileno(new_out), &screen->saved_termios) == 0)
+        screen->has_saved_termios = true;
+    else
+        screen->has_saved_termios = false;
 
     new_term = newterm(NULL, new_out, new_in);
     if(new_term == NULL)
@@ -343,14 +394,9 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
 }
 
 static pid_t
-_vk_find_session_leader(const char *pty)
+_vk_find_session_leader_utmpx(const char *line)
 {
     struct utmpx    *entry;
-    const char      *line;
-
-    if(pty == NULL) return -1;
-
-    line = (strncmp(pty, "/dev/", 5) == 0) ? pty + 5 : pty;
 
     setutxent();
 
@@ -358,7 +404,7 @@ _vk_find_session_leader(const char *pty)
     {
         if(entry->ut_type != USER_PROCESS) continue;
 
-        if(strcmp(entry->ut_line, line) == 0)
+        if(strncmp(entry->ut_line, line, sizeof(entry->ut_line)) == 0)
         {
             pid_t pid = entry->ut_pid;
             endutxent();
@@ -370,8 +416,80 @@ _vk_find_session_leader(const char *pty)
     return -1;
 }
 
-pid_t
-vk_screen_evict_pty(const char *pty)
+static pid_t
+_vk_find_session_leader_proc(const char *pty)
+{
+    struct stat     pty_stat;
+    DIR             *proc;
+    struct dirent   *entry;
+    char            path[280];
+    char            buf[512];
+    char            *cp;
+    FILE            *fp;
+    int             tty_nr;
+    int             session;
+    pid_t           pid;
+
+    if(stat(pty, &pty_stat) < 0) return -1;
+
+    proc = opendir("/proc");
+    if(proc == NULL) return -1;
+
+    while((entry = readdir(proc)) != NULL)
+    {
+        if(entry->d_name[0] < '0' || entry->d_name[0] > '9')
+            continue;
+
+        snprintf(path, sizeof(path), "/proc/%s/stat", entry->d_name);
+
+        fp = fopen(path, "r");
+        if(fp == NULL) continue;
+
+        if(fgets(buf, sizeof(buf), fp) == NULL)
+        {
+            fclose(fp);
+            continue;
+        }
+
+        fclose(fp);
+
+        cp = strrchr(buf, ')');
+        if(cp == NULL) continue;
+
+        if(sscanf(cp + 1, " %*c %*d %*d %d %d", &session, &tty_nr) != 2)
+            continue;
+
+        pid = (pid_t)atoi(entry->d_name);
+
+        if((dev_t)tty_nr == pty_stat.st_rdev && pid == (pid_t)session)
+        {
+            closedir(proc);
+            return pid;
+        }
+    }
+
+    closedir(proc);
+    return -1;
+}
+
+static pid_t
+_vk_find_session_leader(const char *pty)
+{
+    const char  *line;
+    pid_t       pid;
+
+    if(pty == NULL) return -1;
+
+    line = (strncmp(pty, "/dev/", 5) == 0) ? pty + 5 : pty;
+
+    pid = _vk_find_session_leader_utmpx(line);
+    if(pid > 0) return pid;
+
+    return _vk_find_session_leader_proc(pty);
+}
+
+static pid_t
+_vk_screen_evict_pty(const char *pty)
 {
     pid_t   sid;
 
@@ -428,6 +546,8 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
     screen->desktops = NULL;
     screen->desktop_count = 0;
     screen->active_desktop = 0;
+    screen->evicted_pid = -1;
+    screen->has_saved_termios = false;
 
     screen->ctor = _vk_screen_ctor;
     screen->dtor = _vk_screen_dtor;
@@ -466,7 +586,19 @@ _vk_screen_dtor(vk_object_t *object)
         fclose(screen->fd_in);
 
     if(screen->fd_out != stdout && screen->fd_out != NULL)
+    {
+        if(screen->has_saved_termios)
+            tcsetattr(fileno(screen->fd_out), TCSANOW,
+                &screen->saved_termios);
+
         fclose(screen->fd_out);
+    }
+
+    if(screen->evicted_pid > 0)
+    {
+        kill(screen->evicted_pid, SIGCONT);
+        kill(screen->evicted_pid, SIGINT);
+    }
 
     vk_object_demote(object, vk_object_t);
     vk_object_destroy(object);

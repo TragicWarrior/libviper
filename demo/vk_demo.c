@@ -1,7 +1,7 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
-#include <signal.h>
 
 #include "viper.h"
 #include "vk_object.h"
@@ -16,6 +16,15 @@
 #include "vk_label.h"
 #include "vk_marquee.h"
 #include "vk_screen.h"
+
+#define NUM_DESKTOPS    3
+
+static const char *desktop_names[] =
+{
+    "Widgets",
+    "Languages",
+    "About",
+};
 
 static int
 on_item_activate(vk_widget_t *widget, void *anything)
@@ -70,6 +79,22 @@ menu_scroll_info(vk_widget_t *child,
     if(content_w) *content_w = listbox_max_item_width(lb);
     if(scroll_y) *scroll_y = lb->scroll_top;
     if(scroll_x) *scroll_x = 0;
+}
+
+static void
+set_marquee_text(vk_marquee_t *marquee, int desktop)
+{
+    char text[512];
+
+    snprintf(text, sizeof(text),
+        "[Desktop %d: %s]"
+        "  VK Klass Reference Demo"
+        "  |  Built: " __DATE__ " " __TIME__
+        "  |  TAB:focus  \xE2\x86\x91\xE2\x86\x93:nav  Enter:sel"
+        "  d:desktop  t:teleport  q:quit",
+        desktop + 1, desktop_names[desktop]);
+
+    vk_marquee_set_text(marquee, text);
 }
 
 static void
@@ -244,10 +269,99 @@ build_plain_widget(int width, int height)
     return widget;
 }
 
+static vk_listbox_t*
+build_lang_listbox(int width, int height)
+{
+    vk_listbox_t    *listbox;
+    int             i;
+
+    const char *items[] = {
+        "C",            "Python",       "JavaScript",
+        "Java",         "Rust",         "Go",
+        "TypeScript",   "C++",          "Swift",
+        "Kotlin",       "Ruby",         "PHP",
+        "Scala",        "Haskell",      "Lua",
+        "Perl",         "R",            "Julia",
+        "Dart",         "Elixir",       "Clojure",
+        "Erlang",       "F#",           "OCaml",
+        "Zig",          "Nim",          "Ada",
+        "Fortran",      "COBOL",        "Pascal",
+        "Scheme",       "Prolog",       "Smalltalk",
+        "Tcl",          "VHDL",         "Verilog",
+    };
+    int item_count = sizeof(items) / sizeof(items[0]);
+
+    listbox = vk_listbox_create(width, height);
+    if(listbox == NULL) return NULL;
+
+    vk_widget_set_colors(VK_WIDGET(listbox), COLOR_WHITE, COLOR_BLACK);
+    vk_listbox_set_highlight(listbox, COLOR_BLACK, COLOR_YELLOW);
+    vk_listbox_set_wrap(listbox, TRUE);
+
+    for(i = 0; i < item_count; i++)
+        vk_listbox_add_item(listbox, (char *)items[i],
+            on_item_activate, (void *)items[i]);
+
+    return listbox;
+}
+
+static int
+about_on_recreate(vk_widget_t *widget)
+{
+    int attr;
+
+    attr = VIPER_COLORS(COLOR_CYAN, COLOR_BLACK);
+    wbkgd(widget->canvas, ' ' | VIPER_COLORS(COLOR_WHITE, COLOR_BLACK));
+
+    wattron(widget->canvas, attr | A_BOLD);
+    mvwprintw(widget->canvas, 1, 2, "VK Widget Toolkit");
+    wattroff(widget->canvas, attr | A_BOLD);
+
+    mvwprintw(widget->canvas, 3,  2, "Keyboard:");
+    mvwprintw(widget->canvas, 4,  4, "TAB ......... cycle focus");
+    mvwprintw(widget->canvas, 5,  4, "Up/Down ..... navigate items");
+    mvwprintw(widget->canvas, 6,  4, "Enter ....... select item");
+    mvwprintw(widget->canvas, 7,  4, "d ........... switch desktop");
+    mvwprintw(widget->canvas, 8,  4, "t ........... teleport to PTY");
+    mvwprintw(widget->canvas, 9,  4, "q ........... quit");
+
+    mvwprintw(widget->canvas, 11, 2, "Features:");
+    mvwprintw(widget->canvas, 12, 4, "- Virtual desktops");
+    mvwprintw(widget->canvas, 13, 4, "- Terminal migration (teleport)");
+    mvwprintw(widget->canvas, 14, 4, "- Scrollable containers");
+    mvwprintw(widget->canvas, 15, 4, "- Marquee text ticker");
+    mvwprintw(widget->canvas, 16, 4, "- Frame border styles");
+    mvwprintw(widget->canvas, 17, 4, "- Menu with separators");
+
+    return 0;
+}
+
+static vk_widget_t*
+build_about_widget(int width, int height)
+{
+    vk_widget_t *widget;
+
+    widget = vk_widget_create(width, height);
+    if(widget == NULL) return NULL;
+
+    vk_widget_set_colors(widget, COLOR_WHITE, COLOR_BLACK);
+    widget->_on_recreate = about_on_recreate;
+    about_on_recreate(widget);
+
+    return widget;
+}
+
 int main(void)
 {
     vk_screen_t     *vk_screen;
     WINDOW          *screen;
+    int             max_y, max_x;
+    int             box_h;
+    int             slot_w, inner_w, inner_h;
+    int             current_desktop = 0;
+    int32_t         key;
+
+    // desktop 0: widgets
     vk_box_t        *box;
     vk_scroller_t   *scroller1;
     vk_scroller_t   *scroller2;
@@ -255,12 +369,17 @@ int main(void)
     vk_listbox_t    *listbox;
     vk_menu_t       *menu;
     vk_widget_t     *plain;
+
+    // desktop 1: languages
+    vk_scroller_t   *lang_scroller;
+    vk_listbox_t    *lang_listbox;
+
+    // desktop 2: about
+    vk_frame_t      *about_frame;
+    vk_widget_t     *about;
+
+    // shared
     vk_marquee_t    *marquee;
-    int             max_y, max_x;
-    int             box_h;
-    int             slot_w, inner_w, inner_h;
-    pid_t           evicted_pid = -1;
-    int32_t         key;
 
     setlocale(LC_ALL, "");
 
@@ -272,7 +391,6 @@ int main(void)
     }
 
     screen = vk_screen_get_window(vk_screen);
-
     getmaxyx(screen, max_y, max_x);
 
     if(max_x < 60 || max_y < 14)
@@ -289,18 +407,18 @@ int main(void)
     inner_w = slot_w - 2;
     inner_h = box_h - 2;
 
+    // --- marquee (shared across desktops) ---
+
     marquee = vk_marquee_create(max_x);
     vk_widget_set_colors(VK_WIDGET(marquee), COLOR_WHITE, COLOR_BLUE);
     vk_widget_set_attrs(VK_WIDGET(marquee), A_BOLD);
-    vk_marquee_set_text(marquee,
-        "VK Klass Reference Demo"
-        "  |  Built: " __DATE__ " " __TIME__
-        "  |  TAB:focus  \xE2\x86\x91\xE2\x86\x93:nav  Enter:sel"
-        "  S-\xE2\x86\x90\xE2\x86\x92:width  +/-:height  q:quit");
+    set_marquee_text(marquee, 0);
     vk_marquee_set_direction(marquee, VK_SCROLL_LOOP);
     vk_marquee_set_speed(marquee, 2);
     vk_screen_attach_widget(vk_screen, 0, VK_WIDGET(marquee));
     vk_widget_move(VK_WIDGET(marquee), 0, 0);
+
+    // --- desktop 0: widgets ---
 
     box = vk_box_create(max_x, box_h, VK_BOX_HORIZONTAL, 3);
     vk_screen_attach_widget(vk_screen, 0, VK_WIDGET(box));
@@ -345,11 +463,47 @@ int main(void)
     vk_frame_update(frame3);
 
     vk_box_update(box);
-    vk_widget_draw(VK_WIDGET(box));
 
+    // --- desktop 1: languages ---
+
+    vk_screen_add_desktop(vk_screen);
+
+    lang_scroller = vk_scroller_create(max_x, box_h);
+    vk_scroller_set_border_style(lang_scroller, VK_FRAME_DOUBLE);
+    vk_scroller_set_border_colors(lang_scroller, COLOR_YELLOW, COLOR_BLACK);
+    vk_scroller_set_scrollbar(lang_scroller, VK_SCROLLBAR_BOTH);
+    vk_scroller_set_scroll_info(lang_scroller, listbox_scroll_info);
+
+    lang_listbox = build_lang_listbox(max_x - 2, box_h - 2);
+    vk_scroller_set_child(lang_scroller, VK_WIDGET(lang_listbox));
+
+    vk_screen_attach_widget(vk_screen, 1, VK_WIDGET(lang_scroller));
+    vk_widget_move(VK_WIDGET(lang_scroller), 0, 2);
+
+    vk_listbox_update(lang_listbox);
+    vk_scroller_update(lang_scroller);
+
+    // --- desktop 2: about ---
+
+    vk_screen_add_desktop(vk_screen);
+
+    about_frame = vk_frame_create(max_x, box_h);
+    vk_frame_set_border_style(about_frame, VK_FRAME_SINGLE);
+    vk_frame_set_border_colors(about_frame, COLOR_CYAN, COLOR_BLACK);
+
+    about = build_about_widget(max_x - 2, box_h - 2);
+    vk_frame_set_child(about_frame, about);
+
+    vk_screen_attach_widget(vk_screen, 2, VK_WIDGET(about_frame));
+    vk_widget_move(VK_WIDGET(about_frame), 0, 2);
+
+    vk_frame_update(about_frame);
+
+    // --- initial draw and event loop ---
+
+    vk_widget_draw(VK_WIDGET(box));
     vk_marquee_run(marquee);
     vk_widget_draw(VK_WIDGET(marquee));
-
     draw_chrome(screen, max_x, slot_w, box->focused_slot);
     vk_screen_refresh(vk_screen);
 
@@ -357,9 +511,10 @@ int main(void)
 
     while((key = wgetch(stdscr)) != 'q')
     {
-        if(key == KEY_RESIZE)
+        if(key == KEY_RESIZE || vk_screen_poll_resize(vk_screen))
         {
-            vk_screen_resize(vk_screen);
+            if(key == KEY_RESIZE) vk_screen_resize(vk_screen);
+
             screen = vk_screen_get_window(vk_screen);
             getmaxyx(screen, max_y, max_x);
 
@@ -368,6 +523,21 @@ int main(void)
 
             vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
             vk_widget_resize(VK_WIDGET(box), max_x, box_h);
+            vk_widget_resize(VK_WIDGET(lang_scroller), max_x, box_h);
+            vk_widget_resize(VK_WIDGET(about_frame), max_x, box_h);
+        }
+        else if(key == 'd')
+        {
+            int old = current_desktop;
+            current_desktop = (current_desktop + 1) % NUM_DESKTOPS;
+
+            vk_screen_detach_widget(vk_screen, old, VK_WIDGET(marquee));
+            vk_screen_switch_desktop(vk_screen, current_desktop);
+            vk_screen_attach_widget(vk_screen, current_desktop,
+                VK_WIDGET(marquee));
+            vk_widget_move(VK_WIDGET(marquee), 0, 0);
+
+            set_marquee_text(marquee, current_desktop);
         }
         else if(key == 't')
         {
@@ -376,6 +546,7 @@ int main(void)
             int     colors;
             int     ch;
 
+            screen = vk_screen_get_window(vk_screen);
             colors = VIPER_COLORS(COLOR_WHITE, COLOR_BLUE) | A_BOLD;
             werase(screen);
             wattron(screen, colors);
@@ -420,8 +591,6 @@ int main(void)
 
             if(pos > 0)
             {
-                if(evicted_pid > 0) kill(evicted_pid, SIGCONT);
-                evicted_pid = vk_screen_evict_pty(pty_path);
                 vk_screen_teleport(vk_screen, pty_path);
                 screen = vk_screen_get_window(vk_screen);
                 getmaxyx(screen, max_y, max_x);
@@ -431,27 +600,29 @@ int main(void)
 
                 vk_widget_resize(VK_WIDGET(marquee), max_x, 1);
                 vk_widget_resize(VK_WIDGET(box), max_x, box_h);
+                vk_widget_resize(VK_WIDGET(lang_scroller), max_x, box_h);
+                vk_widget_resize(VK_WIDGET(about_frame), max_x, box_h);
 
                 wtimeout(stdscr, 100);
             }
         }
-        else if(key == KEY_SRIGHT)
+        else if(key == KEY_SRIGHT && current_desktop == 0)
         {
             vk_widget_resize(VK_WIDGET(box),
                 VK_WIDGET(box)->width + 1, WSIZE_UNCHANGED);
         }
-        else if(key == KEY_SLEFT)
+        else if(key == KEY_SLEFT && current_desktop == 0)
         {
             if(VK_WIDGET(box)->width > 12)
                 vk_widget_resize(VK_WIDGET(box),
                     VK_WIDGET(box)->width - 1, WSIZE_UNCHANGED);
         }
-        else if(key == '+')
+        else if(key == '+' && current_desktop == 0)
         {
             vk_widget_resize(VK_WIDGET(box),
                 WSIZE_UNCHANGED, VK_WIDGET(box)->height + 1);
         }
-        else if(key == '-')
+        else if(key == '-' && current_desktop == 0)
         {
             if(VK_WIDGET(box)->height > 6)
                 vk_widget_resize(VK_WIDGET(box),
@@ -459,35 +630,50 @@ int main(void)
         }
         else if(key != ERR)
         {
-            vk_object_push_keystroke(VK_OBJECT(box), key);
+            if(current_desktop == 0)
+                vk_object_push_keystroke(VK_OBJECT(box), key);
+            else if(current_desktop == 1)
+                vk_object_push_keystroke(VK_OBJECT(lang_scroller), key);
         }
 
+        screen = vk_screen_get_window(vk_screen);
         werase(screen);
 
-        short s1_fg = (box->focused_slot == 0) ? COLOR_CYAN : COLOR_WHITE;
-        short s2_fg = (box->focused_slot == 1) ? COLOR_GREEN : COLOR_WHITE;
-        short f3_fg = (box->focused_slot == 2) ? COLOR_YELLOW : COLOR_WHITE;
+        if(current_desktop == 0)
+        {
+            short s1_fg = (box->focused_slot == 0) ? COLOR_CYAN : COLOR_WHITE;
+            short s2_fg = (box->focused_slot == 1) ? COLOR_GREEN : COLOR_WHITE;
+            short f3_fg = (box->focused_slot == 2) ? COLOR_YELLOW : COLOR_WHITE;
 
-        vk_scroller_set_border_colors(scroller1, s1_fg, COLOR_BLACK);
-        vk_scroller_update(scroller1);
+            vk_scroller_set_border_colors(scroller1, s1_fg, COLOR_BLACK);
+            vk_scroller_update(scroller1);
 
-        vk_scroller_set_border_colors(scroller2, s2_fg, COLOR_BLACK);
-        vk_scroller_update(scroller2);
+            vk_scroller_set_border_colors(scroller2, s2_fg, COLOR_BLACK);
+            vk_scroller_update(scroller2);
 
-        vk_frame_set_border_colors(frame3, f3_fg, COLOR_BLACK);
-        vk_frame_update(frame3);
+            vk_frame_set_border_colors(frame3, f3_fg, COLOR_BLACK);
+            vk_frame_update(frame3);
 
-        vk_box_update(box);
-        vk_widget_draw(VK_WIDGET(box));
+            vk_box_update(box);
+            vk_widget_draw(VK_WIDGET(box));
+            draw_chrome(screen, max_x, slot_w, box->focused_slot);
+        }
+        else if(current_desktop == 1)
+        {
+            vk_listbox_update(lang_listbox);
+            vk_scroller_update(lang_scroller);
+            vk_widget_draw(VK_WIDGET(lang_scroller));
+        }
+        else if(current_desktop == 2)
+        {
+            vk_frame_update(about_frame);
+            vk_widget_draw(VK_WIDGET(about_frame));
+        }
 
         vk_marquee_run(marquee);
         vk_widget_draw(VK_WIDGET(marquee));
-
-        draw_chrome(screen, max_x, slot_w, box->focused_slot);
         vk_screen_refresh(vk_screen);
     }
-
-    if(evicted_pid > 0) kill(evicted_pid, SIGCONT);
 
     vk_marquee_destroy(marquee);
     vk_box_destroy(box);
@@ -499,6 +685,12 @@ int main(void)
     vk_listbox_destroy(listbox);
     vk_menu_destroy(menu);
     vk_widget_destroy(plain);
+
+    vk_scroller_destroy(lang_scroller);
+    vk_listbox_destroy(lang_listbox);
+
+    vk_frame_destroy(about_frame);
+    vk_widget_destroy(about);
 
     vk_screen_destroy(vk_screen);
 
