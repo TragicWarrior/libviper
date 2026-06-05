@@ -78,9 +78,8 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
 `VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`.
-The template carries the type's size, name, constructor, destructor, and
-optional kmio handler. It serves as both the type descriptor and the vtable
-seed.
+The template carries the type's size, name, constructor, and destructor.
+It serves as both the type descriptor and the vtable seed.
 
 ## Allocation and Construction
 
@@ -332,24 +331,29 @@ of their event loop (the demo does this alongside `KEY_RESIZE` checks).
 
 ## KMIO (Keyboard/Mouse I/O)
 
-The `kmio` function pointer on `vk_object_t` is the input handler. Keystrokes
-are pushed to an object via `vk_object_push_keystroke()`.
+VDK widgets are IO-agnostic. No klass ships with a built-in `kmio` handler.
+The `kmio` function pointer on `vk_object_t` is a slot that the application
+fills at runtime via `vk_object_set_kmio(object, func)`. Keystrokes are
+dispatched through it via `vk_object_push_keystroke()`, which calls
+`object->kmio(object, keystroke)` if the slot is non-NULL.
 
-- **vk_container_t** -- forwards keystrokes to the focused child widget in
-  its list. `KEY_TAB` rotates focus.
-- **vk_box_t** -- `KEY_TAB` cycles focused slot; all other keystrokes
-  forward to the widget in the focused slot.
-- **vk_frame_t** -- forwards keystrokes to its child widget.
-- **vk_window_t** -- forwards keystrokes to its child widget.
-- **vk_listbox_t** -- handles `KEY_UP`, `KEY_DOWN`, and `Enter` (execute item).
-  Skips separators during navigation.
-- **vk_selectbox_t** -- intercepts `Enter` and `Space` to toggle the current
-  item's checked state. All other keystrokes delegate to `VK_LISTBOX_KLASS->kmio`
-  for standard navigation. In radio mode, toggling unchecks all items first.
-- **vk_textbox_t** -- handles `KEY_UP`, `KEY_DOWN`, `KEY_PPAGE`, `KEY_NPAGE`,
-  `KEY_HOME`, `KEY_END` for scrolling.
-- **vk_deck_t** -- `KEY_TAB` rotates the z-order stack (top moves to
-  bottom); all other keystrokes forward to the topmost widget.
+The application is responsible for defining handlers that map keystrokes to
+widget API calls and installing them on each widget that should accept input.
+Typical patterns include:
+
+- **Forwarding** — a frame or window handler that pushes the keystroke to
+  its child via `vk_object_push_keystroke(VK_OBJECT(frame->child), key)`.
+- **Focus rotation** — a box or container handler that uses `KEY_TAB` to
+  cycle the focused slot/child, then forwards other keys to the focused
+  widget.
+- **Navigation** — a listbox handler that moves `curr_item` on arrow keys,
+  skips separators, and calls `_exec_item` on Enter.
+- **Scrolling** — a textbox handler that adjusts `scroll_top` on arrow/page
+  keys and calls `_update` to repaint.
+- **Toggle** — a selectbox handler that calls `vk_selectbox_toggle_item()`
+  on Enter/Space and delegates navigation to the listbox handler.
+- **Stack cycling** — a deck handler that calls `vk_deck_cycle()` on
+  `KEY_TAB` and forwards other keys to the topmost widget.
 
 ## Frames and Scrollers
 
@@ -617,16 +621,9 @@ breaks long lines at word boundaries (spaces/tabs) when word wrap is
 enabled. If no word boundary exists within the paint width, the line is
 hard-broken at the column limit.
 
-Scrolling is handled internally by `_vk_textbox_kmio`:
-
-| Key | Action |
-|-----|--------|
-| `KEY_UP` | Scroll up one line |
-| `KEY_DOWN` | Scroll down one line |
-| `KEY_PPAGE` | Scroll up one page |
-| `KEY_NPAGE` | Scroll down one page |
-| `KEY_HOME` | Jump to top |
-| `KEY_END` | Jump to bottom |
+Scrolling is controlled by the application via a user-installed `kmio`
+handler that manipulates `textbox->scroll_top` and calls
+`textbox->_update(textbox)`. The textbox itself is IO-agnostic.
 
 The textbox supports attached scrollers the same way `vk_listbox_t` does
 (borderless host pattern). When a vertical scroller is attached, the
@@ -697,11 +694,11 @@ the checked state. The selectbox provides `check_item`, `uncheck_item`,
 `toggle_item`, `uncheck_all`, and `item_is_checked` APIs. Separators
 cannot be checked.
 
-### KMIO
+### Input Handling
 
-`Enter` and `Space` toggle the current item. In radio mode, all items are
-unchecked first, then the current item is checked. All other keystrokes
-(navigation, wrapping) delegate to `VK_LISTBOX_KLASS->kmio`.
+The selectbox is IO-agnostic. The application installs a `kmio` handler that
+calls `vk_selectbox_toggle_item()` on Enter/Space and delegates navigation
+keystrokes (arrow keys, wrapping) to a listbox-style handler.
 
 ### Wrapper Functions
 

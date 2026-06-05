@@ -270,6 +270,238 @@ deck_help_decorate(vk_window_t *window, WINDOW *canvas, void *data)
     mvwprintw(canvas, 6, 2, "and keyboard input.");
 }
 
+static int
+item_is_separator(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 i = 0;
+
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx)
+        {
+            item = list_entry(pos, vk_item_t, list);
+            return (item->separator_style > 0) ? 1 : 0;
+        }
+        i++;
+    }
+
+    return 0;
+}
+
+static int
+listbox_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_listbox_t    *listbox;
+    int             saved_item;
+    int             direction = 0;
+    int             attempts;
+
+    listbox = VK_LISTBOX(object);
+
+    if(list_empty(&listbox->item_list)) return 0;
+
+    saved_item = listbox->curr_item;
+
+    switch(keystroke)
+    {
+        case KEY_UP:
+            listbox->curr_item--;
+            direction = -1;
+            break;
+
+        case KEY_DOWN:
+            listbox->curr_item++;
+            direction = 1;
+            break;
+
+        case KEY_CRLF:
+            return listbox->_exec_item(listbox);
+    }
+
+    if(listbox->curr_item < 0)
+    {
+        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+            listbox->curr_item = listbox->item_count - 1;
+        else
+            listbox->curr_item = 0;
+    }
+
+    if(listbox->curr_item > (listbox->item_count - 1))
+    {
+        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+            listbox->curr_item = 0;
+        else
+            listbox->curr_item--;
+    }
+
+    attempts = 0;
+    while(direction != 0
+        && item_is_separator(listbox, listbox->curr_item)
+        && attempts < listbox->item_count)
+    {
+        listbox->curr_item += direction;
+
+        if(listbox->curr_item < 0)
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                listbox->curr_item = listbox->item_count - 1;
+            else
+            {
+                listbox->curr_item = saved_item;
+                break;
+            }
+        }
+
+        if(listbox->curr_item > (listbox->item_count - 1))
+        {
+            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
+                listbox->curr_item = 0;
+            else
+            {
+                listbox->curr_item = saved_item;
+                break;
+            }
+        }
+
+        attempts++;
+    }
+
+    if(attempts >= listbox->item_count)
+        listbox->curr_item = saved_item;
+
+    listbox->_update(listbox);
+    VK_WIDGET(object)->_draw(VK_WIDGET(object));
+
+    return 0;
+}
+
+static int
+textbox_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_textbox_t    *textbox;
+    vk_widget_t     *widget;
+    int             paint_height;
+    int             max_top;
+
+    textbox = VK_TEXTBOX(object);
+    widget = VK_WIDGET(object);
+
+    paint_height = widget->height;
+    if(widget->hscroller != NULL) paint_height--;
+
+    max_top = textbox->line_count - paint_height;
+    if(max_top < 0) max_top = 0;
+
+    switch(keystroke)
+    {
+        case KEY_UP:
+            if(textbox->scroll_top > 0) textbox->scroll_top--;
+            break;
+
+        case KEY_DOWN:
+            if(textbox->scroll_top < max_top) textbox->scroll_top++;
+            break;
+
+        case KEY_PPAGE:
+            textbox->scroll_top -= paint_height;
+            if(textbox->scroll_top < 0) textbox->scroll_top = 0;
+            break;
+
+        case KEY_NPAGE:
+            textbox->scroll_top += paint_height;
+            if(textbox->scroll_top > max_top) textbox->scroll_top = max_top;
+            break;
+
+        case KEY_HOME:
+            textbox->scroll_top = 0;
+            break;
+
+        case KEY_END:
+            textbox->scroll_top = max_top;
+            break;
+
+        default:
+            return 0;
+    }
+
+    textbox->_update(textbox);
+
+    return 0;
+}
+
+static int
+selectbox_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_listbox_t    *listbox;
+
+    listbox = VK_LISTBOX(object);
+
+    switch(keystroke)
+    {
+        case KEY_CRLF:
+        case ' ':
+            vk_selectbox_toggle_item(VK_SELECTBOX(object),
+                listbox->curr_item);
+            listbox->_update(listbox);
+            VK_WIDGET(object)->_draw(VK_WIDGET(object));
+            return 0;
+
+        default:
+            return listbox_kmio(object, keystroke);
+    }
+}
+
+static int
+frame_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_frame_t *frame = VK_FRAME(object);
+
+    if(frame->child == NULL) return 0;
+
+    return vk_object_push_keystroke(VK_OBJECT(frame->child), keystroke);
+}
+
+static int
+box_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_box_t *box = VK_BOX(object);
+
+    if(keystroke == KEY_TAB)
+    {
+        box->focused_slot = (box->focused_slot + 1) % box->slots;
+        return 0;
+    }
+
+    if(box->slot_widgets[box->focused_slot] != NULL)
+    {
+        return vk_object_push_keystroke(
+            VK_OBJECT(box->slot_widgets[box->focused_slot]), keystroke);
+    }
+
+    return 0;
+}
+
+static int
+deck_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_deck_t   *deck = VK_DECK(object);
+    vk_widget_t *top;
+
+    if(keystroke == KEY_TAB)
+    {
+        vk_deck_cycle(deck, VK_VECTOR_LEFT);
+        return 0;
+    }
+
+    top = vk_deck_get_top(deck);
+    if(top != NULL)
+        return vk_object_push_keystroke(VK_OBJECT(top), keystroke);
+
+    return 0;
+}
+
 static void
 set_marquee_text(vk_marquee_t *marquee, int surface)
 {
@@ -668,16 +900,19 @@ int main(void)
     // --- surface 0: widgets ---
 
     box = vk_box_create(max_x, box_h, VK_BOX_HORIZONTAL, 3);
+    vk_object_set_kmio(VK_OBJECT(box), box_kmio);
     vk_screen_attach_widget(vk_screen, 0, VK_WIDGET(box));
     vk_widget_move(VK_WIDGET(box), 0, 1);
 
     // panel 1: window with listbox + scrollers
     window1 = vk_window_create(slot_w, box_h);
+    vk_object_set_kmio(VK_OBJECT(window1), frame_kmio);
     vk_window_set_title(window1, " Listbox ");
     vk_window_set_title_justify(window1, VK_JUSTIFY_LEFT);
     vk_window_set_border_colors(window1, COLOR_CYAN, COLOR_BLACK);
 
     listbox = build_listbox(inner_w, inner_h);
+    vk_object_set_kmio(VK_OBJECT(listbox), listbox_kmio);
     vk_window_set_child(window1, VK_WIDGET(listbox));
 
     vscroller1 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -696,11 +931,13 @@ int main(void)
 
     // panel 2: window with menu + scrollers
     window2 = vk_window_create(slot_w, box_h);
+    vk_object_set_kmio(VK_OBJECT(window2), frame_kmio);
     vk_window_set_title(window2, " Menu ");
     vk_window_set_title_justify(window2, VK_JUSTIFY_CENTER);
     vk_window_set_border_colors(window2, COLOR_WHITE, COLOR_BLACK);
 
     menu = build_menu(inner_w, inner_h);
+    vk_object_set_kmio(VK_OBJECT(menu), listbox_kmio);
     vk_window_set_child(window2, VK_WIDGET(menu));
 
     vscroller2 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -719,11 +956,13 @@ int main(void)
 
     // panel 3: window with textbox + scroller attached to textbox
     window3 = vk_window_create(slot_w, box_h);
+    vk_object_set_kmio(VK_OBJECT(window3), frame_kmio);
     vk_window_set_title(window3, " Textbox ");
     vk_window_set_title_justify(window3, VK_JUSTIFY_RIGHT);
     vk_window_set_border_colors(window3, COLOR_WHITE, COLOR_BLACK);
 
     textbox3 = build_textbox(inner_w, inner_h);
+    vk_object_set_kmio(VK_OBJECT(textbox3), textbox_kmio);
     vk_window_set_child(window3, VK_WIDGET(textbox3));
 
     vscroller3 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -751,10 +990,12 @@ int main(void)
     vk_screen_add_surface(vk_screen);
 
     lang_frame = vk_frame_create(max_x, box_h);
+    vk_object_set_kmio(VK_OBJECT(lang_frame), frame_kmio);
     vk_frame_set_border_style(lang_frame, VK_FRAME_DOUBLE);
     vk_frame_set_border_colors(lang_frame, COLOR_YELLOW, COLOR_BLACK);
 
     lang_listbox = build_lang_listbox(max_x - 2, box_h - 2);
+    vk_object_set_kmio(VK_OBJECT(lang_listbox), listbox_kmio);
     vk_frame_set_child(lang_frame, VK_WIDGET(lang_listbox));
 
     lang_vscroller = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -782,16 +1023,19 @@ int main(void)
     vk_screen_add_surface(vk_screen);
 
     box2 = vk_box_create(max_x, box_h, VK_BOX_HORIZONTAL, 3);
+    vk_object_set_kmio(VK_OBJECT(box2), box_kmio);
     vk_screen_attach_widget(vk_screen, 2, VK_WIDGET(box2));
     vk_widget_move(VK_WIDGET(box2), 0, 1);
 
     // pane 1: checkbox selectbox
     window4 = vk_window_create(slot_w, box_h);
+    vk_object_set_kmio(VK_OBJECT(window4), frame_kmio);
     vk_window_set_title(window4, " Checkbox ");
     vk_window_set_title_justify(window4, VK_JUSTIFY_LEFT);
     vk_window_set_border_colors(window4, COLOR_CYAN, COLOR_BLACK);
 
     checkbox = build_checkbox(inner_w, inner_h);
+    vk_object_set_kmio(VK_OBJECT(checkbox), selectbox_kmio);
     vk_window_set_child(window4, VK_WIDGET(checkbox));
 
     vscroller4 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -803,11 +1047,13 @@ int main(void)
 
     // pane 2: radio selectbox
     window5 = vk_window_create(slot_w, box_h);
+    vk_object_set_kmio(VK_OBJECT(window5), frame_kmio);
     vk_window_set_title(window5, " Radio ");
     vk_window_set_title_justify(window5, VK_JUSTIFY_CENTER);
     vk_window_set_border_colors(window5, COLOR_WHITE, COLOR_BLACK);
 
     radio = build_radio(inner_w, inner_h);
+    vk_object_set_kmio(VK_OBJECT(radio), selectbox_kmio);
     vk_window_set_child(window5, VK_WIDGET(radio));
 
     vscroller5 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
@@ -819,6 +1065,7 @@ int main(void)
 
     // pane 3: about
     about_window = vk_window_create(slot_w, box_h);
+    vk_object_set_kmio(VK_OBJECT(about_window), frame_kmio);
     vk_window_set_border_style(about_window, VK_FRAME_SINGLE);
     vk_window_set_border_colors(about_window, COLOR_WHITE, COLOR_BLACK);
     vk_window_set_title(about_window, " About ");
@@ -848,6 +1095,7 @@ int main(void)
     vk_screen_add_surface(vk_screen);
 
     deck = vk_deck_create();
+    vk_object_set_kmio(VK_OBJECT(deck), deck_kmio);
     vk_screen_attach_widget(vk_screen, 4, VK_WIDGET(deck));
 
     deck_win1 = vk_window_create(35, 10);

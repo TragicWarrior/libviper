@@ -14,10 +14,6 @@ _vk_container_ctor(vk_object_t *object, va_list *argp, ...);
 static int
 _vk_container_dtor(vk_object_t *object);
 
-static int
-_vk_container_kmio(vk_object_t *object, int32_t keystroke);
-
-
 // super klass methods
 static int
 _vk_container_add_widget(vk_container_t *container, vk_widget_t *widget);
@@ -40,7 +36,6 @@ declare_klass(VK_CONTAINER_KLASS)
     .name = KLASS_NAME(vk_container_t),
     .ctor = _vk_container_ctor,
     .dtor = _vk_container_dtor,
-    .kmio = _vk_container_kmio,
 };
 
 
@@ -152,34 +147,6 @@ _vk_container_dtor(vk_object_t *object)
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
-
-    return 0;
-}
-
-static int
-_vk_container_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_container_t  *container;
-    vk_widget_t     *widget;
-
-    container = VK_CONTAINER(object);
-
-    if(list_empty(&container->widget_list)) return 0;
-
-    // the "tab" key changes focus by rotating the list
-    if(keystroke == KEY_TAB)
-    {
-        container->rotate(container, VK_VECTOR_LEFT);
-    }
-
-    widget = list_first_entry(&container->widget_list, vk_widget_t, list);
-
-    // does object have a kmio method?
-    object = VK_OBJECT(widget);
-    if(object->kmio != NULL)
-    {
-        object->kmio(object, keystroke);
-    }
 
     return 0;
 }

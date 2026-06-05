@@ -16,9 +16,6 @@ static int
 _vk_selectbox_dtor(vk_object_t *object);
 
 static int
-_vk_selectbox_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
 _vk_selectbox_update(vk_listbox_t *listbox);
 
 static int
@@ -42,7 +39,6 @@ declare_klass(VK_SELECTBOX_KLASS)
     .name = KLASS_NAME(vk_selectbox_t),
     .ctor = _vk_selectbox_ctor,
     .dtor = _vk_selectbox_dtor,
-    .kmio = _vk_selectbox_kmio,
 };
 
 
@@ -279,47 +275,6 @@ _vk_selectbox_dtor(vk_object_t *object)
     VK_LISTBOX(object)->dtor(object);
 
     return 0;
-}
-
-static int
-_vk_selectbox_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_selectbox_t  *selectbox;
-    vk_listbox_t    *listbox;
-
-    selectbox = VK_SELECTBOX(object);
-    listbox = VK_LISTBOX(object);
-
-    switch(keystroke)
-    {
-        case 10:
-        case ' ':
-        {
-            vk_item_t *item;
-
-            item = _vk_selectbox_get_item_at(selectbox, listbox->curr_item);
-            if(item == NULL) return 0;
-            if(item->separator_style > 0) return 0;
-
-            if(selectbox->mode == VK_SELECTBOX_RADIO)
-            {
-                vk_selectbox_uncheck_all(selectbox);
-                item->flags |= VK_ITEM_CHECKED;
-            }
-            else
-            {
-                item->flags ^= VK_ITEM_CHECKED;
-            }
-
-            listbox->_update(listbox);
-            VK_WIDGET(object)->_draw(VK_WIDGET(object));
-
-            return 0;
-        }
-
-        default:
-            return VK_LISTBOX_KLASS->kmio(object, keystroke);
-    }
 }
 
 static int

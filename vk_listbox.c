@@ -15,9 +15,6 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...);
 static int
 _vk_listbox_dtor(vk_object_t *object);
 
-static int
-_vk_listbox_kmio(vk_object_t *object, int32_t keystroke);
-
 // super klass methods
 static int
 _vk_listbox_add_item(vk_listbox_t *listbox, char *name,
@@ -46,9 +43,6 @@ static int
 _vk_listbox_add_separator(vk_listbox_t *listbox, int style);
 
 static int
-_vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx);
-
-static int
 _vk_listbox_update(vk_listbox_t *listbox);
 
 static int
@@ -68,7 +62,6 @@ declare_klass(VK_LISTBOX_KLASS)
     .name = KLASS_NAME(vk_listbox_t),
     .ctor = _vk_listbox_ctor,
     .dtor = _vk_listbox_dtor,
-    .kmio = _vk_listbox_kmio,
 };
 
 
@@ -329,98 +322,6 @@ _vk_listbox_dtor(vk_object_t *object)
 }
 
 static int
-_vk_listbox_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_listbox_t    *listbox;
-    int             retval;
-    int             saved_item;
-    int             direction = 0;
-    int             attempts;
-
-    listbox = VK_LISTBOX(object);
-
-    if(list_empty(&listbox->item_list)) return 0;
-
-    saved_item = listbox->curr_item;
-
-    switch(keystroke)
-    {
-        case KEY_UP:
-            listbox->curr_item--;
-            direction = -1;
-            break;
-
-        case KEY_DOWN:
-            listbox->curr_item++;
-            direction = 1;
-            break;
-
-        case 10:
-        {
-            retval = listbox->_exec_item(listbox);
-            return retval;
-        }
-    }
-
-    if(listbox->curr_item < 0)
-    {
-        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-            listbox->curr_item = listbox->item_count - 1;
-        else
-            listbox->curr_item = 0;
-    }
-
-    if(listbox->curr_item > (listbox->item_count - 1))
-    {
-        if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-            listbox->curr_item = 0;
-        else
-            listbox->curr_item--;
-    }
-
-    attempts = 0;
-    while(direction != 0
-        && _vk_listbox_item_is_separator(listbox, listbox->curr_item)
-        && attempts < listbox->item_count)
-    {
-        listbox->curr_item += direction;
-
-        if(listbox->curr_item < 0)
-        {
-            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-                listbox->curr_item = listbox->item_count - 1;
-            else
-            {
-                listbox->curr_item = saved_item;
-                break;
-            }
-        }
-
-        if(listbox->curr_item > (listbox->item_count - 1))
-        {
-            if(listbox->flags & VK_FLAG_ALLOW_WRAP)
-                listbox->curr_item = 0;
-            else
-            {
-                listbox->curr_item = saved_item;
-                break;
-            }
-        }
-
-        attempts++;
-    }
-
-    if(attempts >= listbox->item_count)
-        listbox->curr_item = saved_item;
-
-    // now cause the widget to redraw
-    listbox->_update(listbox);
-    VK_WIDGET(object)->_draw(VK_WIDGET(object));
-
-    return 0;
-}
-
-static int
 _vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything)
 {
@@ -454,26 +355,6 @@ _vk_listbox_add_separator(vk_listbox_t *listbox, int style)
 
     list_add_tail(&item->list, &listbox->item_list);
     listbox->item_count++;
-
-    return 0;
-}
-
-static int
-_vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx)
-{
-    vk_item_t           *item;
-    struct list_head    *pos;
-    int                 i = 0;
-
-    list_for_each(pos, &listbox->item_list)
-    {
-        if(i == idx)
-        {
-            item = list_entry(pos, vk_item_t, list);
-            return (item->separator_style > 0) ? 1 : 0;
-        }
-        i++;
-    }
 
     return 0;
 }

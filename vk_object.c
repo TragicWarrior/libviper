@@ -43,6 +43,16 @@ vk_object_construct(const void *klass, ...)
 }
 
 inline int
+vk_object_set_kmio(vk_object_t *object, VkKmioFunc func)
+{
+    if(object == NULL) return -1;
+
+    object->kmio = func;
+
+    return 0;
+}
+
+inline int
 vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
 {
     int retval;

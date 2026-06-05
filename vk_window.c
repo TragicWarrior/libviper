@@ -16,9 +16,6 @@ static int
 _vk_window_dtor(vk_object_t *object);
 
 static int
-_vk_window_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
 _vk_window_update(vk_frame_t *frame);
 
 static int
@@ -36,7 +33,6 @@ declare_klass(VK_WINDOW_KLASS)
     .name = KLASS_NAME(vk_window_t),
     .ctor = _vk_window_ctor,
     .dtor = _vk_window_dtor,
-    .kmio = _vk_window_kmio,
 };
 
 
@@ -170,18 +166,6 @@ vk_window_destroy(vk_window_t *window)
     return;
 }
 
-
-static int
-_vk_window_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_frame_t  *frame;
-
-    frame = VK_FRAME(object);
-
-    if(frame->child == NULL) return 0;
-
-    return vk_object_push_keystroke(VK_OBJECT(frame->child), keystroke);
-}
 
 static int
 _vk_window_ctor(vk_object_t *object, va_list *argp, ...)

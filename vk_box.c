@@ -14,9 +14,6 @@ static int
 _vk_box_dtor(vk_object_t *object);
 
 static int
-_vk_box_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
 _vk_box_on_resize(vk_widget_t *widget);
 
 static int
@@ -34,7 +31,6 @@ declare_klass(VK_BOX_KLASS)
     .name = KLASS_NAME(vk_box_t),
     .ctor = _vk_box_ctor,
     .dtor = _vk_box_dtor,
-    .kmio = _vk_box_kmio,
 };
 
 
@@ -212,28 +208,6 @@ _vk_box_dtor(vk_object_t *object)
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
-
-    return 0;
-}
-
-static int
-_vk_box_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_box_t    *box;
-
-    box = VK_BOX(object);
-
-    if(keystroke == KEY_TAB)
-    {
-        box->focused_slot = (box->focused_slot + 1) % box->slots;
-        return 0;
-    }
-
-    if(box->slot_widgets[box->focused_slot] != NULL)
-    {
-        return vk_object_push_keystroke(
-            VK_OBJECT(box->slot_widgets[box->focused_slot]), keystroke);
-    }
 
     return 0;
 }

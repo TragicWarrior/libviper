@@ -15,9 +15,6 @@ static int
 _vk_frame_dtor(vk_object_t *object);
 
 static int
-_vk_frame_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
 _vk_frame_set_border_style(vk_frame_t *frame, int style);
 
 static int
@@ -47,7 +44,6 @@ declare_klass(VK_FRAME_KLASS)
     .name = KLASS_NAME(vk_frame_t),
     .ctor = _vk_frame_ctor,
     .dtor = _vk_frame_dtor,
-    .kmio = _vk_frame_kmio,
 };
 
 
@@ -194,18 +190,6 @@ _vk_frame_dtor(vk_object_t *object)
     vk_widget_destroy(VK_WIDGET(object));
 
     return 0;
-}
-
-static int
-_vk_frame_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_frame_t  *frame;
-
-    frame = VK_FRAME(object);
-
-    if(frame->child == NULL) return 0;
-
-    return vk_object_push_keystroke(VK_OBJECT(frame->child), keystroke);
 }
 
 static int

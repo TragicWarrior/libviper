@@ -14,9 +14,6 @@ static int
 _vk_textbox_dtor(vk_object_t *object);
 
 static int
-_vk_textbox_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
 _vk_textbox_update(vk_textbox_t *textbox);
 
 static int
@@ -40,7 +37,6 @@ declare_klass(VK_TEXTBOX_KLASS)
     .name = KLASS_NAME(vk_textbox_t),
     .ctor = _vk_textbox_ctor,
     .dtor = _vk_textbox_dtor,
-    .kmio = _vk_textbox_kmio,
 };
 
 
@@ -190,60 +186,6 @@ _vk_textbox_dtor(vk_object_t *object)
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
-
-    return 0;
-}
-
-static int
-_vk_textbox_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_textbox_t    *textbox;
-    vk_widget_t     *widget;
-    int             paint_height;
-    int             max_top;
-
-    textbox = VK_TEXTBOX(object);
-    widget = VK_WIDGET(object);
-
-    paint_height = widget->height;
-    if(widget->hscroller != NULL) paint_height--;
-
-    max_top = textbox->line_count - paint_height;
-    if(max_top < 0) max_top = 0;
-
-    switch(keystroke)
-    {
-        case KEY_UP:
-            if(textbox->scroll_top > 0) textbox->scroll_top--;
-            break;
-
-        case KEY_DOWN:
-            if(textbox->scroll_top < max_top) textbox->scroll_top++;
-            break;
-
-        case KEY_PPAGE:
-            textbox->scroll_top -= paint_height;
-            if(textbox->scroll_top < 0) textbox->scroll_top = 0;
-            break;
-
-        case KEY_NPAGE:
-            textbox->scroll_top += paint_height;
-            if(textbox->scroll_top > max_top) textbox->scroll_top = max_top;
-            break;
-
-        case KEY_HOME:
-            textbox->scroll_top = 0;
-            break;
-
-        case KEY_END:
-            textbox->scroll_top = max_top;
-            break;
-
-        default:
-            return 0;
-    }
-
-    textbox->_update(textbox);
 
     return 0;
 }

@@ -95,6 +95,7 @@ typedef struct  _vk_deck_s          vk_deck_t;
 
 /* callback typedefs */
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
+typedef int         (*VkKmioFunc)(vk_object_t *object, int32_t keystroke);
 typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
                         int *content_h, int *content_w,
                         int *scroll_y, int *scroll_x);
@@ -121,6 +122,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
+int             vk_object_set_kmio(vk_object_t *object, VkKmioFunc func);
 int             vk_object_push_keystroke(vk_object_t *object,
                     int32_t keystroke);
 int             vk_object_destroy(vk_object_t *object);

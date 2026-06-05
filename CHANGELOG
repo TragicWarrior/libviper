@@ -44,6 +44,9 @@ Version 4.0.0 (in progress)
   start_color() and init_pair() themselves. Widgets use COLOR_PAIR() with
   vdk_color_pair() internally (ncurses-native). viper.h includes vdk.h for
   backwards compatibility.
+* [Bryan Christ] Make VDK widgets IO-agnostic. Remove built-in kmio handlers
+  from all klasses. Add vk_object_set_kmio() and VkKmioFunc typedef so
+  applications install their own keystroke handlers at runtime.
 
 Version 3.1.1
 

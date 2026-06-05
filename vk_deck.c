@@ -13,9 +13,6 @@ static int
 _vk_deck_dtor(vk_object_t *object);
 
 static int
-_vk_deck_kmio(vk_object_t *object, int32_t keystroke);
-
-static int
 _vk_deck_draw(vk_widget_t *widget);
 
 static int
@@ -39,7 +36,6 @@ declare_klass(VK_DECK_KLASS)
     .name = KLASS_NAME(vk_deck_t),
     .ctor = _vk_deck_ctor,
     .dtor = _vk_deck_dtor,
-    .kmio = _vk_deck_kmio,
 };
 
 
@@ -208,27 +204,6 @@ _vk_deck_dtor(vk_object_t *object)
     vk_widget_destroy(VK_WIDGET(object));
 
     return 0;
-}
-
-static int
-_vk_deck_kmio(vk_object_t *object, int32_t keystroke)
-{
-    vk_deck_t   *deck;
-    vk_widget_t *top;
-
-    deck = VK_DECK(object);
-
-    if(list_empty(&deck->widget_list)) return 0;
-
-    if(keystroke == KEY_TAB)
-    {
-        list_rotate_left(&deck->widget_list);
-        return 0;
-    }
-
-    top = list_first_entry(&deck->widget_list, vk_widget_t, list);
-
-    return vk_object_push_keystroke(VK_OBJECT(top), keystroke);
 }
 
 static int
