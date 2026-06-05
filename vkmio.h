@@ -21,8 +21,8 @@
 #define VK_GPM_CMD_CLOSE       (1 << 1)
 #define VK_GPM_CMD_DRAIN       (1 << 2)
 
-int         vk_kmio_init(uint32_t flags);
-void        vk_kmio_shutdown(void);
+int         vk_kmio_init(int fd, uint32_t flags);
+void        vk_kmio_shutdown(int fd);
 int32_t     vk_kmio_fetch(MEVENT *mouse_event);
 MEVENT*     vk_kmio_get_mouse_event(void);
 

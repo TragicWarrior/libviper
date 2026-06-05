@@ -48,8 +48,18 @@ static unsigned short x_gpm_event[] = {
 static uint32_t     vk_kmio_flags = 0;
 static MEVENT       *last_mouse_event = NULL;
 
+static void
+_vk_kmio_write(int fd, const char *esc)
+{
+    if(fd < 0 || esc == NULL) return;
+
+    /* short, blocking write to a tty fd; ignore short-write since
+       these escapes are tiny and partial delivery is unrecoverable. */
+    (void)!write(fd, esc, strlen(esc));
+}
+
 int
-vk_kmio_init(uint32_t flags)
+vk_kmio_init(int fd, uint32_t flags)
 {
     vk_kmio_flags = flags;
 
@@ -65,8 +75,7 @@ vk_kmio_init(uint32_t flags)
         if(flags & VK_KMIO_MOUSE_HOVER)
         {
             mouseinterval(0);
-            printf("\033[?1003h");
-            fflush(stdout);
+            _vk_kmio_write(fd, "\033[?1003h");
         }
     }
 
@@ -74,17 +83,14 @@ vk_kmio_init(uint32_t flags)
 }
 
 void
-vk_kmio_shutdown(void)
+vk_kmio_shutdown(int fd)
 {
 #if !defined(_NO_GPM) && defined(__linux)
     vk_kmio_gpm(NULL, VK_GPM_CMD_CLOSE);
 #endif
 
     if(vk_kmio_flags & VK_KMIO_MOUSE_HOVER)
-    {
-        printf("\033[?1003l");
-        fflush(stdout);
-    }
+        _vk_kmio_write(fd, "\033[?1003l");
 
     vk_kmio_flags = 0;
 }
