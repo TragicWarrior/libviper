@@ -126,6 +126,7 @@ typedef struct  _vk_widget_s        vk_widget_t;
 typedef struct  _vk_container_s     vk_container_t;
 typedef struct  _vk_listbox_s       vk_listbox_t;
 typedef struct  _vk_selectbox_s     vk_selectbox_t;
+typedef struct  _vk_dropdown_s      vk_dropdown_t;
 typedef struct  _vk_frame_s         vk_frame_t;
 typedef struct  _vk_scroller_s      vk_scroller_t;
 typedef struct  _vk_window_s        vk_window_t;
@@ -162,6 +163,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_CONTAINER(x)         ((vk_container_t *)x)
 #define VK_LISTBOX(x)           ((vk_listbox_t *)x)
 #define VK_SELECTBOX(x)         ((vk_selectbox_t *)x)
+#define VK_DROPDOWN(x)          ((vk_dropdown_t *)x)
 #define VK_FRAME(x)             ((vk_frame_t *)x)
 #define VK_SCROLLER(x)          ((vk_scroller_t *)x)
 #define VK_WINDOW(x)            ((vk_window_t *)x)
@@ -330,12 +332,47 @@ int             vk_selectbox_uncheck_all(vk_selectbox_t *selectbox);
                     vk_listbox_update(VK_LISTBOX(sb))
 void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
+/* vk_dropdown */
+vk_dropdown_t*  vk_dropdown_create(int width, int max_visible);
+int             vk_dropdown_set_relief_style(vk_dropdown_t *dropdown,
+                    int style);
+int             vk_dropdown_set_expanded(vk_dropdown_t *dropdown,
+                    bool expanded);
+bool            vk_dropdown_get_expanded(vk_dropdown_t *dropdown);
+vk_widget_t*    vk_dropdown_get_popup(vk_dropdown_t *dropdown);
+int             vk_dropdown_popup_navigate(vk_dropdown_t *dropdown,
+                    int direction);
+int             vk_dropdown_popup_select(vk_dropdown_t *dropdown);
+#define         vk_dropdown_set_wrap(dd, allowed) \
+                    vk_listbox_set_wrap(VK_LISTBOX(dd), (allowed))
+#define         vk_dropdown_set_highlight(dd, fg, bg) \
+                    vk_listbox_set_highlight(VK_LISTBOX(dd), (fg), (bg))
+#define         vk_dropdown_add_item(dd, item, func, anything) \
+                    vk_listbox_add_item(VK_LISTBOX(dd), (item), (func), (anything))
+#define         vk_dropdown_remove_item(dd, idx) \
+                    vk_listbox_remove_item(VK_LISTBOX(dd), (idx))
+#define         vk_dropdown_get_item(dd, idx, buf, sz) \
+                    vk_listbox_get_item(VK_LISTBOX(dd), (idx), (buf), (sz))
+#define         vk_dropdown_get_item_count(dd) \
+                    vk_listbox_get_item_count(VK_LISTBOX(dd))
+#define         vk_dropdown_get_curr(dd) \
+                    vk_listbox_get_curr(VK_LISTBOX(dd))
+#define         vk_dropdown_set_curr(dd, idx) \
+                    vk_listbox_set_curr(VK_LISTBOX(dd), (idx))
+#define         vk_dropdown_set_next(dd) \
+                    vk_listbox_set_next(VK_LISTBOX(dd))
+#define         vk_dropdown_set_prev(dd) \
+                    vk_listbox_set_prev(VK_LISTBOX(dd))
+int             vk_dropdown_update(vk_dropdown_t *dropdown);
+void            vk_dropdown_destroy(vk_dropdown_t *dropdown);
+
 /* vk_frame */
 vk_frame_t*     vk_frame_create(int width, int height);
 int             vk_frame_set_border_style(vk_frame_t *frame, int style);
 int             vk_frame_get_border_style(vk_frame_t *frame);
 int             vk_frame_set_border_colors(vk_frame_t *frame,
                     short fg, short bg);
+int             vk_frame_set_border_attrs(vk_frame_t *frame, attr_t attrs);
 short           vk_frame_get_border_fg(vk_frame_t *frame);
 short           vk_frame_get_border_bg(vk_frame_t *frame);
 int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child);
@@ -372,6 +409,8 @@ int             vk_window_set_title_justify(vk_window_t *window, int justify);
                     vk_frame_get_border_style(VK_FRAME(w))
 #define         vk_window_set_border_colors(w, fg, bg) \
                     vk_frame_set_border_colors(VK_FRAME(w), (fg), (bg))
+#define         vk_window_set_border_attrs(w, attrs) \
+                    vk_frame_set_border_attrs(VK_FRAME(w), (attrs))
 #define         vk_window_get_border_fg(w) \
                     vk_frame_get_border_fg(VK_FRAME(w))
 #define         vk_window_get_border_bg(w) \
@@ -480,6 +519,7 @@ int             vk_input_move_cursor(vk_input_t *input, int offset);
 int             vk_input_home(vk_input_t *input);
 int             vk_input_end(vk_input_t *input);
 int             vk_input_clear(vk_input_t *input);
+void            vk_input_show_cursor(vk_input_t *input, bool visible);
 int             vk_input_update(vk_input_t *input);
 void            vk_input_destroy(vk_input_t *input);
 

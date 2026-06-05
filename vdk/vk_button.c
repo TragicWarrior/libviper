@@ -366,17 +366,17 @@ _vk_button_update(vk_button_t *button)
                 wattroff(widget->canvas, face_colors);
             }
 
-            _vk_button_build_cchar(&cc, WACS_ULCORNER, hi_pair, 0);
+            _vk_button_build_cchar(&cc, WACS_ULCORNER, hi_pair, widget->attrs);
             mvwadd_wch(widget->canvas, 0, 0, &cc);
 
-            _vk_button_build_cchar(&cc, WACS_HLINE, hi_pair, 0);
+            _vk_button_build_cchar(&cc, WACS_HLINE, hi_pair, widget->attrs);
             for(i = 1; i < right_col; i++)
                 mvwadd_wch(widget->canvas, 0, i, &cc);
 
             _vk_button_build_cchar(&cc, WACS_URCORNER, sh_pair, 0);
             mvwadd_wch(widget->canvas, 0, right_col, &cc);
 
-            _vk_button_build_cchar(&cc, WACS_VLINE, hi_pair, 0);
+            _vk_button_build_cchar(&cc, WACS_VLINE, hi_pair, widget->attrs);
             for(i = 1; i < bottom_row; i++)
                 mvwadd_wch(widget->canvas, i, 0, &cc);
 
@@ -384,7 +384,7 @@ _vk_button_update(vk_button_t *button)
             for(i = 1; i < bottom_row; i++)
                 mvwadd_wch(widget->canvas, i, right_col, &cc);
 
-            _vk_button_build_cchar(&cc, WACS_LLCORNER, hi_pair, 0);
+            _vk_button_build_cchar(&cc, WACS_LLCORNER, hi_pair, widget->attrs);
             mvwadd_wch(widget->canvas, bottom_row, 0, &cc);
 
             _vk_button_build_cchar(&cc, WACS_HLINE, sh_pair, 0);

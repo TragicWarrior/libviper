@@ -271,6 +271,14 @@ vk_input_clear(vk_input_t *input)
     return 0;
 }
 
+inline void
+vk_input_show_cursor(vk_input_t *input, bool visible)
+{
+    if(input == NULL) return;
+
+    input->show_cursor = visible;
+}
+
 inline int
 vk_input_update(vk_input_t *input)
 {
@@ -316,6 +324,7 @@ _vk_input_ctor(vk_object_t *object, va_list *argp, ...)
     input->cursor = 0;
     input->scroll = 0;
     input->relief_style = VK_FRAME_SINGLE;
+    input->show_cursor = false;
 
     input->ctor = _vk_input_ctor;
     input->dtor = _vk_input_dtor;
@@ -497,7 +506,7 @@ _vk_input_update(vk_input_t *input)
         ch = (text_idx < input->text_len) ? input->text[text_idx] : ' ';
         attrs = face_colors;
 
-        if(i == cursor_col)
+        if(i == cursor_col && input->show_cursor)
             attrs |= A_REVERSE;
 
         wattron(widget->canvas, attrs);

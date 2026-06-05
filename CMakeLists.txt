@@ -47,6 +47,7 @@ set(VDK_SOURCES
     vdk/vk_container.c
     vdk/vk_listbox.c
     vdk/vk_selectbox.c
+    vdk/vk_dropdown.c
     vdk/vk_frame.c
     vdk/vk_scroller.c
     vdk/vk_window.c

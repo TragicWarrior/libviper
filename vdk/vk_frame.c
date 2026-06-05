@@ -88,6 +88,16 @@ vk_frame_set_border_colors(vk_frame_t *frame, short fg, short bg)
     return 0;
 }
 
+inline int
+vk_frame_set_border_attrs(vk_frame_t *frame, attr_t attrs)
+{
+    if(frame == NULL) return -1;
+
+    frame->border_attrs = attrs;
+
+    return 0;
+}
+
 inline short
 vk_frame_get_border_fg(vk_frame_t *frame)
 {
@@ -166,6 +176,7 @@ _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
     frame->border_style = VK_FRAME_SINGLE;
     frame->border_fg = -1;
     frame->border_bg = -1;
+    frame->border_attrs = 0;
     frame->child = NULL;
 
     frame->ctor = _vk_frame_ctor;
@@ -291,7 +302,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
     bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
     border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
 
-    wattron(widget->canvas, border_colors | rev);
+    wattron(widget->canvas, border_colors | rev | frame->border_attrs);
 
     switch(base_style)
     {
@@ -306,15 +317,16 @@ _vk_frame_draw_border(vk_frame_t *frame)
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
             short   pair = vdk_color_pair(fg, bg);
+            attr_t  extra = rev | frame->border_attrs;
 
-            _vk_frame_build_cchar(&ls, WACS_VLINE, pair, rev);
-            _vk_frame_build_cchar(&rs, WACS_VLINE, pair, rev);
-            _vk_frame_build_cchar(&ts, WACS_HLINE, pair, rev);
-            _vk_frame_build_cchar(&bs, WACS_HLINE, pair, rev);
-            _vk_frame_build_cchar(&tl, WACS_ULCORNER, pair, rev);
-            _vk_frame_build_cchar(&tr, WACS_URCORNER, pair, rev);
-            _vk_frame_build_cchar(&bl, WACS_LLCORNER, pair, rev);
-            _vk_frame_build_cchar(&br, WACS_LRCORNER, pair, rev);
+            _vk_frame_build_cchar(&ls, WACS_VLINE, pair, extra);
+            _vk_frame_build_cchar(&rs, WACS_VLINE, pair, extra);
+            _vk_frame_build_cchar(&ts, WACS_HLINE, pair, extra);
+            _vk_frame_build_cchar(&bs, WACS_HLINE, pair, extra);
+            _vk_frame_build_cchar(&tl, WACS_ULCORNER, pair, extra);
+            _vk_frame_build_cchar(&tr, WACS_URCORNER, pair, extra);
+            _vk_frame_build_cchar(&bl, WACS_LLCORNER, pair, extra);
+            _vk_frame_build_cchar(&br, WACS_LRCORNER, pair, extra);
 
             wborder_set(widget->canvas,
                 &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br);
@@ -325,15 +337,16 @@ _vk_frame_draw_border(vk_frame_t *frame)
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
             short   pair = vdk_color_pair(fg, bg);
+            attr_t  extra = rev | frame->border_attrs;
 
-            _vk_frame_build_cchar(&ls, WACS_D_VLINE, pair, rev);
-            _vk_frame_build_cchar(&rs, WACS_D_VLINE, pair, rev);
-            _vk_frame_build_cchar(&ts, WACS_D_HLINE, pair, rev);
-            _vk_frame_build_cchar(&bs, WACS_D_HLINE, pair, rev);
-            _vk_frame_build_cchar(&tl, WACS_D_ULCORNER, pair, rev);
-            _vk_frame_build_cchar(&tr, WACS_D_URCORNER, pair, rev);
-            _vk_frame_build_cchar(&bl, WACS_D_LLCORNER, pair, rev);
-            _vk_frame_build_cchar(&br, WACS_D_LRCORNER, pair, rev);
+            _vk_frame_build_cchar(&ls, WACS_D_VLINE, pair, extra);
+            _vk_frame_build_cchar(&rs, WACS_D_VLINE, pair, extra);
+            _vk_frame_build_cchar(&ts, WACS_D_HLINE, pair, extra);
+            _vk_frame_build_cchar(&bs, WACS_D_HLINE, pair, extra);
+            _vk_frame_build_cchar(&tl, WACS_D_ULCORNER, pair, extra);
+            _vk_frame_build_cchar(&tr, WACS_D_URCORNER, pair, extra);
+            _vk_frame_build_cchar(&bl, WACS_D_LLCORNER, pair, extra);
+            _vk_frame_build_cchar(&br, WACS_D_LRCORNER, pair, extra);
 
             wborder_set(widget->canvas,
                 &ls, &rs, &ts, &bs, &tl, &tr, &bl, &br);
@@ -341,7 +354,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
         }
     }
 
-    wattroff(widget->canvas, border_colors | rev);
+    wattroff(widget->canvas, border_colors | rev | frame->border_attrs);
 
     return 0;
 }

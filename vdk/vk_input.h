@@ -18,6 +18,7 @@ struct _vk_input_s
     int                 cursor;
     int                 scroll;
     int                 relief_style;
+    bool                show_cursor;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

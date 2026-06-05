@@ -600,14 +600,34 @@ _vk_listbox_get_curr(vk_listbox_t *listbox)
 static int
 _vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
 {
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 i = 0;
+
     if(listbox == NULL) return -1;
     if(idx < 0) return -1;
     if(idx >= listbox->item_count) return -1;
 
-    list_del(&listbox->item_list);
-    listbox->item_count--;
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx)
+        {
+            item = list_entry(pos, vk_item_t, list);
+            list_del(pos);
+            if(item->name != NULL) free(item->name);
+            free(item);
+            listbox->item_count--;
 
-    return 0;
+            if(listbox->curr_item >= listbox->item_count &&
+               listbox->item_count > 0)
+                listbox->curr_item = listbox->item_count - 1;
+
+            return 0;
+        }
+        i++;
+    }
+
+    return -1;
 }
 
 static int

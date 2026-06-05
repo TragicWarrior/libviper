@@ -16,6 +16,7 @@ struct _vk_frame_s
     int                 border_style;
     short               border_fg;
     short               border_bg;
+    attr_t              border_attrs;
 
     vk_widget_t         *child;
 
