@@ -34,9 +34,34 @@ if (!GPM_FOUND)
 add_definitions("-D_NO_GPM")
 endif()
 
+set(PROJECT_VERSION 4.0.0)
+set(VDK_VERSION 1.0.0)
+
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk)
 
-add_library(viper-static STATIC
+set(VDK_SOURCES
+    vdk/vdk_color.c
+    vdk/vk_object.c
+    vdk/vk_screen.c
+    vdk/vk_widget.c
+    vdk/vk_container.c
+    vdk/vk_listbox.c
+    vdk/vk_selectbox.c
+    vdk/vk_frame.c
+    vdk/vk_scroller.c
+    vdk/vk_window.c
+    vdk/vk_box.c
+    vdk/vk_label.c
+    vdk/vk_button.c
+    vdk/vk_textbox.c
+    vdk/vk_marquee.c
+    vdk/vk_deck.c
+    vdk/vk_filler.c
+    vdk/vk_input.c
+    vdk/vk_filedialog.c
+    )
+
+set(VIPER_SOURCES
     strings.c
     viper_private.c
     viper_callbacks.c
@@ -63,79 +88,27 @@ add_library(viper-static STATIC
     w_metrics.c
     w_move.c
     w_shadow.c
-    vdk/vdk_color.c
-    vdk/vk_object.c
-    vdk/vk_screen.c
-    vdk/vk_widget.c
-    vdk/vk_container.c
-    vdk/vk_listbox.c
-    vdk/vk_selectbox.c
-    vdk/vk_frame.c
-    vdk/vk_scroller.c
-    vdk/vk_window.c
-    vdk/vk_box.c
-    vdk/vk_label.c
-    vdk/vk_button.c
-    vdk/vk_textbox.c
-    vdk/vk_marquee.c
-    vdk/vk_deck.c
-    vdk/vk_filler.c
-    vdk/vk_input.c
-    vdk/vk_filedialog.c
     )
 
-add_library(viper.o OBJECT
-    strings.c
-    viper_private.c
-    viper_callbacks.c
-    viper_color.c
-    viper_deck.c
-    viper_events.c
-    viper_keyboard.c
-    viper_kmio.c
-    viper_msgbox.c
-    viper_screen.c
-    viper_states.c
-    viper_userptr.c
-    viper_wclose.c
-    viper_wcreate.c
-    viper_wdecorate.c
-    viper_wdestroy.c
-    viper_wfind.c
-    viper_wmove.c
-    viper_wresize.c
-    viper_wtraits.c
-    w_create.c
-    w_decorate.c
-    w_fill.c
-    w_metrics.c
-    w_move.c
-    w_shadow.c
-    vdk/vdk_color.c
-    vdk/vk_object.c
-    vdk/vk_screen.c
-    vdk/vk_widget.c
-    vdk/vk_container.c
-    vdk/vk_listbox.c
-    vdk/vk_selectbox.c
-    vdk/vk_frame.c
-    vdk/vk_scroller.c
-    vdk/vk_window.c
-    vdk/vk_box.c
-    vdk/vk_label.c
-    vdk/vk_button.c
-    vdk/vk_textbox.c
-    vdk/vk_marquee.c
-    vdk/vk_deck.c
-    vdk/vk_filler.c
-    vdk/vk_input.c
-    vdk/vk_filedialog.c
-    )
+# --- libvdk (standalone VDK widget toolkit) ---
 
-add_library(viper-shared SHARED
-    $<TARGET_OBJECTS:viper.o>
-    )
+add_library(vdk.o OBJECT ${VDK_SOURCES})
 
+add_library(vdk-static STATIC $<TARGET_OBJECTS:vdk.o>)
+add_library(vdk-shared SHARED $<TARGET_OBJECTS:vdk.o>)
+
+target_link_libraries(vdk-shared ${CURSES_LIBRARIES})
+
+SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
+SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${VDK_VERSION} SOVERSION 1)
+
+# --- libviper (legacy + VDK) ---
+
+add_library(viper-static STATIC ${VIPER_SOURCES} ${VDK_SOURCES})
+
+add_library(viper.o OBJECT ${VIPER_SOURCES} ${VDK_SOURCES})
+
+add_library(viper-shared SHARED $<TARGET_OBJECTS:viper.o>)
 
 if (GPM_FOUND)
 target_link_libraries(viper-shared viper-static -lutil ${GPM_LIBRARIES} ${CURSES_LIBRARIES} )
@@ -147,9 +120,6 @@ endif()
 SET_TARGET_PROPERTIES(viper-static PROPERTIES OUTPUT_NAME viper CLEAN_DIRECT_OUTPUT 1)
 SET_TARGET_PROPERTIES(viper-shared PROPERTIES OUTPUT_NAME viper CLEAN_DIRECT_OUTPUT 1)
 
-# set the subst vars that configure_file() will use
-set(PROJECT_VERSION 1.0)
-
 set(PKG_CONFIG_LIBS
     "-lviper"
 )
@@ -159,7 +129,7 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
 )
 
-install (TARGETS viper-static viper-shared DESTINATION lib)
+install (TARGETS vdk-static vdk-shared viper-static viper-shared DESTINATION lib)
 install (FILES viper.h vdk.h DESTINATION include)
 
 # Install pkgconfig files to libdata on BSD, otherwise lib

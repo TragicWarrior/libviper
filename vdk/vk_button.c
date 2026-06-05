@@ -299,7 +299,7 @@ _vk_button_update(vk_button_t *button)
         ? vdk_color_pair(COLOR_WHITE, bg)
         : vdk_color_pair(COLOR_BLACK, bg);
 
-    wbkgd(widget->canvas, ' ' | face_colors);
+    vk_widget_fill(widget, ' ' | face_colors);
 
     right_col = widget->width - 1;
     bottom_row = widget->height - 1;

@@ -410,7 +410,7 @@ _vk_input_update(vk_input_t *input)
 
     face_colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
 
-    wbkgd(widget->canvas, ' ' | face_colors);
+    vk_widget_fill(widget, ' ' | face_colors);
 
     right_col = widget->width - 1;
     bottom_row = widget->height - 1;

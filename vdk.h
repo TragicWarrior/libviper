@@ -168,10 +168,12 @@ void            vk_screen_destroy(vk_screen_t *screen);
 vk_widget_t*    vk_widget_create(int width, int height);
 int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
 WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
+WINDOW*         vk_widget_get_canvas(vk_widget_t *widget);
 void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
-void            vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs);
 short           vk_widget_get_fg(vk_widget_t *widget);
 short           vk_widget_get_bg(vk_widget_t *widget);
+void            vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs);
+attr_t          vk_widget_get_attrs(vk_widget_t *widget);
 int             vk_widget_get_metrics(vk_widget_t *widget,
                     int *width, int *height);
 int             vk_widget_erase(vk_widget_t *widget);
@@ -221,6 +223,9 @@ int             vk_listbox_get_item(vk_listbox_t *listbox, int idx,
                     char *buf, int buf_sz);
 int             vk_listbox_get_item_count(vk_listbox_t *listbox);
 int             vk_listbox_get_selected(vk_listbox_t *listbox);
+int             vk_listbox_set_selected(vk_listbox_t *listbox, int idx);
+int             vk_listbox_exec_selected(vk_listbox_t *listbox);
+bool            vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx);
 int             vk_listbox_get_metrics(vk_listbox_t *listbox,
                     int *width, int *height);
 int             vk_listbox_update(vk_listbox_t *listbox);
@@ -236,6 +241,19 @@ int             vk_selectbox_set_highlight(vk_selectbox_t *selectbox,
                     int fg, int bg);
 int             vk_selectbox_add_item(vk_selectbox_t *selectbox,
                     char *name, VkWidgetFunc func, void *anything);
+int             vk_selectbox_add_separator(vk_selectbox_t *selectbox,
+                    int style);
+int             vk_selectbox_remove_item(vk_selectbox_t *selectbox, int idx);
+int             vk_selectbox_get_item_count(vk_selectbox_t *selectbox);
+int             vk_selectbox_get_selected(vk_selectbox_t *selectbox);
+int             vk_selectbox_set_selected(vk_selectbox_t *selectbox, int idx);
+int             vk_selectbox_exec_selected(vk_selectbox_t *selectbox);
+int             vk_selectbox_get_item(vk_selectbox_t *selectbox, int idx,
+                    char *buf, int buf_sz);
+int             vk_selectbox_set_item(vk_selectbox_t *selectbox, int idx,
+                    char *name, VkWidgetFunc func, void *anything);
+bool            vk_selectbox_item_is_separator(vk_selectbox_t *selectbox,
+                    int idx);
 int             vk_selectbox_toggle_item(vk_selectbox_t *selectbox, int idx);
 bool            vk_selectbox_item_is_checked(vk_selectbox_t *selectbox,
                     int idx);
@@ -295,6 +313,8 @@ int             vk_box_set_homogeneous(vk_box_t *box, bool homogeneous);
 int             vk_box_set_widget(vk_box_t *box, int slot,
                     vk_widget_t *widget);
 vk_widget_t*    vk_box_get_widget(vk_box_t *box, int slot);
+int             vk_box_set_subfocus(vk_box_t *box, int slot);
+int             vk_box_get_subfocus(vk_box_t *box);
 int             vk_box_update(vk_box_t *box);
 void            vk_box_destroy(vk_box_t *box);
 

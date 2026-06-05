@@ -29,6 +29,9 @@ _vk_deck_recreate(vk_widget_t *widget);
 static int
 _vk_deck_update(vk_deck_t *deck);
 
+static int
+_vk_deck_kmio(vk_object_t *object, int32_t keystroke);
+
 static void
 _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface);
 
@@ -195,7 +198,21 @@ _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)
     widget->_resize = _vk_deck_resize;
     widget->_recreate = _vk_deck_recreate;
 
+    object->kmio = _vk_deck_kmio;
+
     return 0;
+}
+
+static int
+_vk_deck_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_deck_t   *deck = VK_DECK(object);
+    vk_widget_t *top;
+
+    top = vk_deck_get_top(deck);
+    if(top == NULL) return -1;
+
+    return vk_object_push_keystroke(VK_OBJECT(top), keystroke);
 }
 
 static int

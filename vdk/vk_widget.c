@@ -140,6 +140,38 @@ vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
     widget->attrs = attrs;
 }
 
+inline short
+vk_widget_get_fg(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    return widget->fg;
+}
+
+inline short
+vk_widget_get_bg(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    return widget->bg;
+}
+
+inline attr_t
+vk_widget_get_attrs(vk_widget_t *widget)
+{
+    if(widget == NULL) return 0;
+
+    return widget->attrs;
+}
+
+inline WINDOW*
+vk_widget_get_canvas(vk_widget_t *widget)
+{
+    if(widget == NULL) return NULL;
+
+    return widget->canvas;
+}
+
 inline int
 vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
 {
@@ -190,6 +222,9 @@ vk_widget_fill(vk_widget_t *widget, chtype ch)
     long            i;
 
     if(widget == NULL) return;
+    if(widget->canvas == NULL) return;
+
+    wmove(widget->canvas, 0, 0);
 
     i = widget->width * widget->height;
 

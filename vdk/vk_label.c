@@ -171,7 +171,7 @@ _vk_label_update(vk_label_t *label)
     widget->_erase(widget);
 
     colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
-    wbkgd(widget->canvas, ' ' | colors);
+    vk_widget_fill(VK_WIDGET(label), ' ' | colors);
 
     if(label->text == NULL) return 0;
 

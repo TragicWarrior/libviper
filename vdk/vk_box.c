@@ -22,6 +22,9 @@ _vk_box_recreate(vk_widget_t *widget);
 static int
 _vk_box_update(vk_box_t *box);
 
+static int
+_vk_box_kmio(vk_object_t *object, int32_t keystroke);
+
 
 require_klass(VK_CONTAINER_KLASS);
 
@@ -134,6 +137,30 @@ vk_box_get_widget(vk_box_t *box, int slot)
 }
 
 inline int
+vk_box_set_subfocus(vk_box_t *box, int slot)
+{
+    if(box == NULL) return -1;
+
+    if(!vk_object_assert(box, vk_box_t)) return -1;
+
+    if(slot < 0 || slot >= box->slots) return -1;
+
+    box->focused_slot = slot;
+
+    return 0;
+}
+
+inline int
+vk_box_get_subfocus(vk_box_t *box)
+{
+    if(box == NULL) return -1;
+
+    if(!vk_object_assert(box, vk_box_t)) return -1;
+
+    return box->focused_slot;
+}
+
+inline int
 vk_box_update(vk_box_t *box)
 {
     if(box == NULL) return -1;
@@ -193,6 +220,8 @@ _vk_box_ctor(vk_object_t *object, va_list *argp, ...)
 
     VK_WIDGET(box)->_on_resize = _vk_box_on_resize;
     VK_WIDGET(box)->_recreate = _vk_box_recreate;
+
+    object->kmio = _vk_box_kmio;
 
     return 0;
 }
@@ -351,6 +380,21 @@ _vk_box_recreate(vk_widget_t *widget)
 }
 
 static int
+_vk_box_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_box_t    *box = VK_BOX(object);
+    vk_widget_t *child;
+
+    if(box->focused_slot < 0 || box->focused_slot >= box->slots)
+        return -1;
+
+    child = box->slot_widgets[box->focused_slot];
+    if(child == NULL) return -1;
+
+    return vk_object_push_keystroke(VK_OBJECT(child), keystroke);
+}
+
+static int
 _vk_box_update(vk_box_t *box)
 {
     vk_widget_t     *widget;
@@ -363,6 +407,14 @@ _vk_box_update(vk_box_t *box)
 
     widget = VK_WIDGET(box);
     widget->_erase(widget);
+
+    if(widget->fg >= 0 && widget->bg >= 0)
+    {
+        int colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
+            | widget->attrs;
+        vk_widget_fill(widget, ' ' | colors);
+    }
+
     horiz = (box->orientation == VK_BOX_HORIZONTAL);
 
     if(box->homogeneous)

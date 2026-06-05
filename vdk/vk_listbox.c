@@ -177,6 +177,81 @@ vk_listbox_remove_item(vk_listbox_t *listbox, int idx)
 }
 
 inline int
+vk_listbox_get_item_count(vk_listbox_t *listbox)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->_get_item_count(listbox);
+}
+
+inline int
+vk_listbox_get_selected(vk_listbox_t *listbox)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->_get_selected(listbox);
+}
+
+inline int
+vk_listbox_get_item(vk_listbox_t *listbox, int idx, char *buf, int buf_sz)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->_get_item(listbox, idx, buf, buf_sz);
+}
+
+inline int
+vk_listbox_set_item(vk_listbox_t *listbox, int idx, char *name,
+    VkWidgetFunc func, void *anything)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->_set_item(listbox, idx, name, func, anything);
+}
+
+inline int
+vk_listbox_set_selected(vk_listbox_t *listbox, int idx)
+{
+    if(listbox == NULL) return -1;
+    if(idx < 0 || idx >= listbox->item_count) return -1;
+
+    listbox->curr_item = idx;
+
+    return 0;
+}
+
+inline int
+vk_listbox_exec_selected(vk_listbox_t *listbox)
+{
+    if(listbox == NULL) return -1;
+
+    return listbox->_exec_item(listbox);
+}
+
+inline bool
+vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 i = 0;
+
+    if(listbox == NULL) return false;
+    if(idx < 0 || idx >= listbox->item_count) return false;
+
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx)
+        {
+            item = list_entry(pos, vk_item_t, list);
+            return (item->separator_style > 0) ? true : false;
+        }
+        i++;
+    }
+
+    return false;
+}
+
+inline int
 vk_listbox_get_metrics(vk_listbox_t *listbox, int *width, int *height)
 {
     vk_item_t           *item;

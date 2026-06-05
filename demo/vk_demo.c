@@ -809,15 +809,13 @@ build_lang_listbox(int width, int height)
 static int
 about_on_recreate(vk_widget_t *widget)
 {
-    int attr;
+    vk_widget_fill(widget, ' ' | VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
 
-    attr = VDK_COLORS(COLOR_YELLOW, COLOR_BLUE);
-    wbkgd(widget->canvas, ' ' | VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
-
-    wattron(widget->canvas, attr | A_BOLD);
+    wattron(widget->canvas, VDK_COLORS(COLOR_YELLOW, COLOR_BLUE) | A_BOLD);
     mvwprintw(widget->canvas, 1, 2, "VK Widget Toolkit");
-    wattroff(widget->canvas, attr | A_BOLD);
+    wattroff(widget->canvas, VDK_COLORS(COLOR_YELLOW, COLOR_BLUE) | A_BOLD);
 
+    wattron(widget->canvas, VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
     mvwprintw(widget->canvas, 3,  2, "Keyboard:");
     mvwprintw(widget->canvas, 4,  4, "TAB ......... cycle focus");
     mvwprintw(widget->canvas, 5,  4, "Up/Down ..... navigate items");
@@ -836,6 +834,7 @@ about_on_recreate(vk_widget_t *widget)
     mvwprintw(widget->canvas, 18, 4, "- Marquee text ticker");
     mvwprintw(widget->canvas, 19, 4, "- Frame border styles");
     mvwprintw(widget->canvas, 20, 4, "- Deck with shadows");
+    wattroff(widget->canvas, VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
 
     return 0;
 }
@@ -1356,8 +1355,7 @@ int main(void)
         }
 
         deck_box5 = vk_box_create(33, 3, VK_BOX_HORIZONTAL, 5);
-        wbkgd(VK_WIDGET(deck_box5)->canvas,
-            ' ' | COLOR_PAIR(vdk_color_pair(COLOR_WHITE, COLOR_RED)));
+        vk_widget_set_colors(VK_WIDGET(deck_box5), COLOR_WHITE, COLOR_RED);
 
         for(bi = 0; bi < 5; bi++)
             vk_box_set_widget(deck_box5, bi, VK_WIDGET(deck_buttons[bi]));

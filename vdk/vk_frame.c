@@ -32,6 +32,9 @@ _vk_frame_recreate(vk_widget_t *widget);
 static int
 _vk_frame_update(vk_frame_t *frame);
 
+static int
+_vk_frame_kmio(vk_object_t *object, int32_t keystroke);
+
 static void
 _vk_frame_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
     attr_t extra);
@@ -164,6 +167,8 @@ _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
 
     VK_WIDGET(frame)->_on_resize = _vk_frame_on_resize;
     VK_WIDGET(frame)->_recreate = _vk_frame_recreate;
+
+    object->kmio = _vk_frame_kmio;
 
     return 0;
 }
@@ -382,6 +387,16 @@ _vk_frame_recreate(vk_widget_t *widget)
     }
 
     return 0;
+}
+
+static int
+_vk_frame_kmio(vk_object_t *object, int32_t keystroke)
+{
+    vk_frame_t  *frame = VK_FRAME(object);
+
+    if(frame->child == NULL) return -1;
+
+    return vk_object_push_keystroke(VK_OBJECT(frame->child), keystroke);
 }
 
 static int

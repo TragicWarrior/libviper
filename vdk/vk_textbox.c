@@ -214,7 +214,7 @@ _vk_textbox_update(vk_textbox_t *textbox)
     if(widget->hscroller != NULL) paint_height--;
 
     paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
-    wbkgd(widget->canvas, ' ' | paint_colors);
+    vk_widget_fill(widget, ' ' | paint_colors);
     wattron(widget->canvas, paint_colors);
 
     if(textbox->line_count <= paint_height)

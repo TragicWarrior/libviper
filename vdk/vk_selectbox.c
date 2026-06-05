@@ -209,6 +209,109 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
 }
 
 inline int
+vk_selectbox_add_separator(vk_selectbox_t *selectbox, int style)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_add_separator(VK_LISTBOX(selectbox), style);
+}
+
+inline int
+vk_selectbox_remove_item(vk_selectbox_t *selectbox, int idx)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_remove_item(VK_LISTBOX(selectbox), idx);
+}
+
+inline int
+vk_selectbox_get_item_count(vk_selectbox_t *selectbox)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_get_item_count(VK_LISTBOX(selectbox));
+}
+
+inline int
+vk_selectbox_get_selected(vk_selectbox_t *selectbox)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_get_selected(VK_LISTBOX(selectbox));
+}
+
+inline int
+vk_selectbox_set_selected(vk_selectbox_t *selectbox, int idx)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    if(idx < 0 || idx >= VK_LISTBOX(selectbox)->item_count) return -1;
+
+    VK_LISTBOX(selectbox)->curr_item = idx;
+
+    return 0;
+}
+
+inline int
+vk_selectbox_exec_selected(vk_selectbox_t *selectbox)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_exec_item(VK_LISTBOX(selectbox));
+}
+
+inline int
+vk_selectbox_get_item(vk_selectbox_t *selectbox, int idx,
+    char *buf, int buf_sz)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_get_item(VK_LISTBOX(selectbox),
+        idx, buf, buf_sz);
+}
+
+inline int
+vk_selectbox_set_item(vk_selectbox_t *selectbox, int idx, char *name,
+    VkWidgetFunc func, void *anything)
+{
+    if(selectbox == NULL) return -1;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
+
+    return VK_LISTBOX(selectbox)->_set_item(VK_LISTBOX(selectbox),
+        idx, name, func, anything);
+}
+
+inline bool
+vk_selectbox_item_is_separator(vk_selectbox_t *selectbox, int idx)
+{
+    vk_item_t           *item;
+
+    if(selectbox == NULL) return false;
+
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return false;
+
+    item = _vk_selectbox_get_item_at(selectbox, idx);
+    if(item == NULL) return false;
+
+    return (item->separator_style > 0) ? true : false;
+}
+
+inline int
 vk_selectbox_update(vk_selectbox_t *selectbox)
 {
     if(selectbox == NULL) return -1;
@@ -314,7 +417,7 @@ _vk_selectbox_update(vk_listbox_t *listbox)
     paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
     highlight = COLOR_PAIR(vdk_color_pair(listbox->highlight_fg, listbox->highlight_bg));
 
-    wbkgd(widget->canvas, ' ' | paint_colors);
+    vk_widget_fill(widget, ' ' | paint_colors);
     wattron(widget->canvas, paint_colors);
 
     if(listbox->item_count <= paint_height)

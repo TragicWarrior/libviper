@@ -368,28 +368,58 @@ of their event loop (the demo does this alongside `KEY_RESIZE` checks).
 
 ## KMIO (Keyboard/Mouse I/O)
 
-VDK widgets are IO-agnostic. No klass ships with a built-in `kmio` handler
-(except `vk_filedialog_t`, which installs one at creation — see File Dialogs).
-The `kmio` function pointer on `vk_object_t` is a slot that the application
-fills at runtime via `vk_object_set_kmio(object, func)`. Keystrokes are
-dispatched through it via `vk_object_push_keystroke()`, which calls
-`object->kmio(object, keystroke)` if the slot is non-NULL.
+VDK widgets are IO-agnostic by default. The `kmio` function pointer on
+`vk_object_t` is a slot the application can fill via
+`vk_object_set_kmio(object, func)`. Keystrokes are dispatched through it
+via `vk_object_push_keystroke()`, which calls `object->kmio(object, keystroke)`
+if the slot is non-NULL.
 
-The application is responsible for defining handlers that map keystrokes to
-widget API calls and installing them on each widget that should accept input.
-Typical patterns include:
+### Default Container Forwarding
 
-- **Forwarding** — a frame or window handler that pushes the keystroke to
-  its child via `vk_object_push_keystroke(VK_OBJECT(frame->child), key)`.
-- **Focus rotation** — a box or container handler that uses `KEY_TAB` to
-  cycle the focused slot/child, then forwards other keys to the focused
-  widget.
+Container klasses install default `kmio` handlers in their constructors
+that forward keystrokes to children:
+
+- **`vk_frame_t`** — forwards to `frame->child` (inherited by `vk_window_t`)
+- **`vk_box_t`** — forwards to `slot_widgets[focused_slot]`
+- **`vk_deck_t`** — forwards to the topmost widget
+
+These defaults enable keystroke propagation through the widget tree without
+any application code. The application can override any default handler with
+`vk_object_set_kmio()` — the function pointer is simply overwritten.
+
+### Box Focus Cycling
+
+The box default kmio forwards all keystrokes to the child in
+`slot_widgets[focused_slot]`. It does not intercept any keys for focus
+cycling — that policy is left to the application. The scaffolding:
+
+- `box->focused_slot` — public int, initialized to 0. Controls which
+  slot receives forwarded keystrokes.
+- The application installs a custom kmio via `vk_object_set_kmio()` that
+  intercepts a key of its choosing (e.g. TAB, arrow keys) to advance or
+  retreat `focused_slot`, and forwards everything else to the child via
+  `vk_object_push_keystroke()`.
+
+### Composite Widget KMIO
+
+`vk_filedialog_t` installs its own `kmio` handler at creation time because
+its internal navigation (switching between path input and file list,
+directory traversal) requires coordinated keyboard handling across multiple
+child widgets. See File Dialogs.
+
+### Application Handlers
+
+The application installs custom handlers for leaf widgets and any container
+where the default forwarding is insufficient. Typical patterns include:
+
 - **Navigation** — a listbox handler that moves `curr_item` on arrow keys,
   skips separators, and calls `_exec_item` on Enter.
 - **Scrolling** — a textbox handler that adjusts `scroll_top` on arrow/page
   keys and calls `_update` to repaint.
 - **Toggle** — a selectbox handler that calls `vk_selectbox_toggle_item()`
   on Enter/Space and delegates navigation to the listbox handler.
+- **Focus rotation** — a box handler that uses `KEY_TAB` to cycle
+  `focused_slot`, overriding the default forwarding.
 - **Stack cycling** — a deck handler that calls `vk_deck_cycle()` on
   `KEY_TAB` and forwards other keys to the topmost widget.
 

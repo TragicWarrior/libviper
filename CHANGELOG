@@ -1,116 +1,12 @@
 Version 4.0.0 (in progress)
 
-* [Bryan Christ] Add vk_screen_t for terminal migration and virtual surfaces.
-* [Bryan Christ] Add vk_frame_t, vk_scroller_t, vk_box_t, vk_label_t,
-  vk_marquee_t klasses.
-* [Bryan Christ] Add _on_recreate hook so widgets auto-repaint after teleport.
-* [Bryan Christ] Add vk_screen_evict_pty to SIGSTOP the session leader
-  before teleport.
-* [Bryan Christ] Add poll_resize for post-teleport terminal size detection.
-* [Bryan Christ] Redesign vk_scroller_t as an attachment widget (derives
-  from vk_widget_t instead of vk_frame_t). Add vk_window_t. Remove vk_menu_t.
-* [Bryan Christ] Add vk_textbox_t multi-line read-only text display with
-  word wrap, keyboard scrolling, and scroller attachment support.
-* [Bryan Christ] Fix scroller blank canvas overwriting host border when
-  content fits viewport (skip-draw semantics).
-* [Bryan Christ] Add scroller host support to vk_listbox_t and vk_textbox_t
-  (borderless host pattern).
-* [Bryan Christ] Rename vk_desktop_t to vk_surface_t across all APIs and docs.
-* [Bryan Christ] Add vk_selectbox_t derived from vk_listbox_t with checkbox
-  (multi-select) and radio (single-select) modes, ASCII and Unicode glyph
-  styles, and scroller attachment support.
-* [Bryan Christ] Use WACS_* wide chars for borders and separators instead of
-  ACS_* and hardcoded Unicode codepoints (fixes rendering after teleport to
-  Linux console TTY).
-* [Bryan Christ] Add wallpaper callback support to vk_screen_t.
-  vk_screen_refresh now composites automatically: erase, wallpaper, widget
-  blit, refresh.
-* [Bryan Christ] Fix vk_box_t initial layout not sizing last slot to absorb
-  remainder pixels.
-* [Bryan Christ] Add convenience macros for widget state (freeze/thaw,
-  show/hide, is_visible). Declare all public API functions inline across
-  every klass for reduced call overhead.
-* [Bryan Christ] Add widget state flags (STATE_VISIBLE, STATE_FROZEN,
-  STATE_NORESIZE) as a uint32_t bitfield on vk_widget_t. Add get/set API,
-  show/hide convenience functions. Frozen widgets snapshot their canvas
-  into a composer window so the display holds while updates continue.
-  No-resize widgets reject vk_widget_resize calls.
-* [Bryan Christ] Add vk_deck_t z-order manager. Canvas-less widget that
-  composites children directly onto its surface during draw. Supports
-  add-to-top/bottom, set-top, cycle, and TAB-driven focus rotation.
-* [Bryan Christ] Separate VDK from legacy libviper. vdk.h is the single
-  public header; non-public sources live in vdk/. VDK source files no
-  longer include viper.h. vdk_color_init() is optional; callers who skip
-  it handle start_color() and init_pair() themselves. Widgets use
-  COLOR_PAIR() with vdk_color_pair() internally (ncurses-native). viper.h
-  includes vdk.h for backwards compatibility.
-* [Bryan Christ] Make VDK widgets IO-agnostic. Remove built-in kmio handlers
-  from all klasses. Add vk_object_set_kmio() and VkKmioFunc typedef so
-  applications install their own keystroke handlers at runtime.
-* [Bryan Christ] Add optional drop shadows to vk_deck_t via
-  vk_deck_set_shadow(). Shadow is an L-shaped strip (right + bottom edge)
-  rendered white-on-black, composited per-child in z-order.
-* [Bryan Christ] Fix vdk_color_init() pair 0 swap to match legacy libviper
-  strategy. Swap white-on-black into index 0 so it maps to the ncurses
-  default pair. No color pairs are sacrificed.
-* [Bryan Christ] Add VK_FRAME_REVERSE modifier flag for border styles.
-  OR it with VK_FRAME_SINGLE, VK_FRAME_DOUBLE, or VK_FRAME_ASCII to draw
-  borders in reverse video. Supported by frames, windows, and scrollers.
-* [Bryan Christ] Add VkWindowDecorateFunc-based window chrome to demo deck
-  windows: title-bar buttons (─ □ ✕) in reverse video flanked by tees that
-  match the border style, and a horizontal separator under the heading.
-* [Bryan Christ] Fix demo wallpaper callbacks using wbkgd() on the surface
-  canvas, which poisoned ncurses pair 0 and caused deck shadows to inherit
-  the wallpaper color instead of rendering white-on-black. Wallpaper now
-  paints manually with wattron/mvwaddch.
-* [Bryan Christ] Add vk_button_t klass. Push button with Win3.1 / VB DOS
-  beveled style: WACS_* single-line box with white highlight on top/left
-  and black shadow on bottom/right. Bevel inverts on press. Centered
-  text, separate pressed color pair, and a press callback. ASCII fallback
-  uses +, -, | with the same two-tone color split.
-* [Bryan Christ] Add VK_STATE_EXPAND widget state flag (off by default).
-  Containers (vk_box_t, vk_frame_t) only resize a child to fill its slot
-  when VK_STATE_EXPAND is set. Convenience macro: vk_widget_set_expand().
-* [Bryan Christ] Add cascading deck layout to demo. All 5 deck windows
-  now stack in a consistent +col,+row direction. The Transport window
-  contains a 5-slot horizontal vk_box_t with Play, FF, RW, Stop, and
-  Pause buttons. Unicode symbols (▶, », «, ■, ⏸) are prepended when
-  the locale supports UTF-8.
-* [Bryan Christ] Fix vk_button_t width calculation to use display width
-  (wcswidth) instead of byte length so UTF-8 button labels size correctly.
-* [Bryan Christ] Add VK_BUTTON_BASIC relief style for Links-style
-  single-row buttons: [ text ] with reverse-video brackets on press.
-  vk_button_set_relief_style automatically resizes the widget when
-  switching between 3D (height 3) and basic (height 1) styles.
-* [Bryan Christ] Add keyboard navigation to demo transport buttons
-  (Left/Right to move focus, Space to press). Focused button renders
-  with A_BOLD highlight. Pressed state persists until another button
-  is pressed.
-* [Bryan Christ] Add Dialog deck window to demo with OK, Cancel, Help
-  buttons using VK_BUTTON_BASIC relief style.
-* [Bryan Christ] Add homogeneous/non-homogeneous layout modes to
-  vk_box_t. Homogeneous (default) distributes slots evenly and centers
-  children. Non-homogeneous sizes each slot to its child's natural
-  dimension; VK_STATE_EXPAND children absorb leftover space.
-* [Bryan Christ] Add vk_filler_t: a minimal 1x1 blank widget born with
-  VK_STATE_EXPAND. Useful as a spacer in non-homogeneous boxes.
-* [Bryan Christ] Add vk_input_t single-line text input widget. Supports
-  3D sunken relief (VK_FRAME_SINGLE, VK_FRAME_ASCII) and Links-style
-  basic relief (VK_BUTTON_BASIC). Full editing API: insert, backspace,
-  delete, cursor movement, home/end, clear. Dynamic text buffer with
-  optional max length. Horizontal scrolling for text wider than the
-  field width.
-* [Bryan Christ] Add Input deck window to demo showcasing both 3D and
-  basic input styles with a keyboard handler for text editing.
-* [Bryan Christ] Add vk_filedialog_t composite widget derived from
-  vk_box_t. File browser with path input, scrollable file/directory
-  list (listbox or checkbox selectbox for multiselect), vertical
-  scrollbar, OK/Cancel button bar, and built-in keyboard navigation.
-  Supports VK_FRAME_SINGLE, VK_FRAME_ASCII, and VK_BUTTON_BASIC styles.
-* [Bryan Christ] Add vk_filedialog_set_wrap() API for enabling
-  wrap-around navigation on scrollable list widgets.
-* [Bryan Christ] Replace Dialog and Input deck windows in demo with
-  a single Files window showcasing the filedialog widget.
+* [Bryan Christ] Extract VDK widget toolkit as standalone libvdk (static
+  and shared). VDK sources have no dependency on legacy libviper code.
+  vdk.h is the single public header. viper.h includes vdk.h for backwards
+  compatibility. See VDK_CHANGELOG for widget toolkit details.
+* [Bryan Christ] Remove vk_menu_t (replaced by vk_listbox_t in VDK).
+* [Bryan Christ] Build system now produces libvdk.a, libvdk.so, libviper.a,
+  and libviper.so. libviper continues to bundle VDK for backwards compat.
 
 Version 3.1.1
 
