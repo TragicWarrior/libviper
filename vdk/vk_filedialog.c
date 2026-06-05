@@ -249,6 +249,40 @@ vk_filedialog_set_highlight(vk_filedialog_t *dialog, short fg, short bg)
 }
 
 inline int
+vk_filedialog_set_button_colors(vk_filedialog_t *dialog, short fg, short bg)
+{
+    if(dialog == NULL) return -1;
+
+    vk_widget_set_colors(VK_WIDGET(dialog->btn_ok), fg, bg);
+    vk_widget_set_colors(VK_WIDGET(dialog->btn_cancel), fg, bg);
+    vk_widget_set_colors(VK_WIDGET(dialog->button_bar), fg, bg);
+
+    vk_widget_fill(VK_WIDGET(dialog->button_bar),
+        ' ' | COLOR_PAIR(vdk_color_pair(fg, bg)));
+
+    return 0;
+}
+
+inline int
+vk_filedialog_set_button_attrs(vk_filedialog_t *dialog, attr_t attrs)
+{
+    if(dialog == NULL) return -1;
+
+    vk_widget_set_attrs(VK_WIDGET(dialog->btn_ok), attrs);
+    vk_widget_set_attrs(VK_WIDGET(dialog->btn_cancel), attrs);
+
+    return 0;
+}
+
+inline vk_listbox_t*
+vk_filedialog_get_file_list(vk_filedialog_t *dialog)
+{
+    if(dialog == NULL) return NULL;
+
+    return dialog->file_list;
+}
+
+inline int
 vk_filedialog_update(vk_filedialog_t *dialog)
 {
     if(dialog == NULL) return -1;

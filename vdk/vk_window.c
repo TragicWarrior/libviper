@@ -260,9 +260,9 @@ _vk_window_draw_title(vk_window_t *window)
     bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
     border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
 
-    wattron(widget->canvas, border_colors | A_BOLD);
+    wattron(widget->canvas, border_colors | frame->border_attrs);
     mvwprintw(widget->canvas, 0, col, "%.*s", title_len, window->title);
-    wattroff(widget->canvas, border_colors | A_BOLD);
+    wattroff(widget->canvas, border_colors | frame->border_attrs);
 
     return 0;
 }

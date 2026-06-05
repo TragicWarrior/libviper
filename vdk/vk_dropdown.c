@@ -303,8 +303,8 @@ _vk_dropdown_update(vk_listbox_t *listbox)
 
     if(dropdown->relief_style == VK_FRAME_SINGLE)
     {
-        short hi_pair = vdk_color_pair(COLOR_WHITE, widget->bg);
-        short sh_pair = vdk_color_pair(COLOR_BLACK, widget->bg);
+        short hi_pair = vdk_color_pair(widget->relief_hi, widget->bg);
+        short sh_pair = vdk_color_pair(widget->relief_lo, widget->bg);
         int row;
 
         vk_widget_fill(widget, ' ' | paint_colors);

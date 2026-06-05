@@ -223,6 +223,8 @@ int             vk_widget_get_colors(vk_widget_t *widget,
                     short *fg, short *bg);
 void            vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs);
 attr_t          vk_widget_get_attrs(vk_widget_t *widget);
+void            vk_widget_set_relief_colors(vk_widget_t *widget,
+                    short hi, short lo);
 int             vk_widget_get_metrics(vk_widget_t *widget,
                     int *width, int *height);
 int             vk_widget_get_position(vk_widget_t *widget,
@@ -484,6 +486,8 @@ int             vk_deck_set_top(vk_deck_t *deck, vk_widget_t *widget);
 vk_widget_t*    vk_deck_get_top(vk_deck_t *deck);
 int             vk_deck_cycle(vk_deck_t *deck, int vector);
 int             vk_deck_set_shadow(vk_deck_t *deck, bool enabled);
+int             vk_deck_set_shadow_colors(vk_deck_t *deck,
+                    short fg, short bg);
 int             vk_deck_update(vk_deck_t *deck);
 vk_widget_t*    vk_deck_hit_test(vk_deck_t *deck, int x, int y);
 void            vk_deck_destroy(vk_deck_t *deck);
@@ -568,6 +572,11 @@ int             vk_filedialog_set_colors(vk_filedialog_t *dialog,
                     short fg, short bg);
 int             vk_filedialog_set_highlight(vk_filedialog_t *dialog,
                     short fg, short bg);
+int             vk_filedialog_set_button_colors(vk_filedialog_t *dialog,
+                    short fg, short bg);
+int             vk_filedialog_set_button_attrs(vk_filedialog_t *dialog,
+                    attr_t attrs);
+vk_listbox_t*   vk_filedialog_get_file_list(vk_filedialog_t *dialog);
 int             vk_filedialog_update(vk_filedialog_t *dialog);
 void            vk_filedialog_destroy(vk_filedialog_t *dialog);
 

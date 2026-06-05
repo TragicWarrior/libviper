@@ -43,7 +43,9 @@ vk_object_t
    │
    └─ vk_listbox_t
       │
-      └─ vk_selectbox_t
+      ├─ vk_selectbox_t
+      │
+      └─ vk_dropdown_t
 ```
 
 ## Klass Framework Overview
@@ -72,6 +74,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_LISTBOX(x)` | `vk_listbox_t *` |
 | `VK_WINDOW(x)` | `vk_window_t *` |
 | `VK_SELECTBOX(x)` | `vk_selectbox_t *` |
+| `VK_DROPDOWN(x)` | `vk_dropdown_t *` |
 | `VK_TEXTBOX(x)` | `vk_textbox_t *` |
 | `VK_DECK(x)` | `vk_deck_t *` |
 | `VK_BUTTON(x)` | `vk_button_t *` |
@@ -93,7 +96,7 @@ require_klass(KLASS_NAME);    // extern reference from other files
 These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINER_KLASS`,
 `VK_FRAME_KLASS`, `VK_SCROLLER_KLASS`, `VK_WINDOW_KLASS`, `VK_BOX_KLASS`,
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
-`VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
+`VK_SELECTBOX_KLASS`, `VK_DROPDOWN_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
 `VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
 `VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
@@ -121,6 +124,7 @@ vk_marquee_create(width)
 vk_listbox_create(width, height)
 vk_window_create(width, height)
 vk_selectbox_create(width, height, mode)
+vk_dropdown_create(width, max_visible)
 vk_textbox_create(width, height)
 vk_deck_create(void)
 vk_button_create(text)
@@ -147,6 +151,7 @@ _vk_marquee_ctor    -> VK_LABEL_KLASS->ctor(object, argp)
 _vk_window_ctor     -> VK_FRAME_KLASS->ctor(object, argp)
 _vk_listbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_selectbox_ctor  -> VK_LISTBOX_KLASS->ctor(object, argp)
+_vk_dropdown_ctor   -> VK_LISTBOX_KLASS->ctor(object, argp)
 _vk_textbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_deck_ctor       -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_button_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
@@ -236,6 +241,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_window_t` | `ctor`, `dtor`, `_draw_title` |
 | `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_update`, `_reset` |
 | `vk_selectbox_t` | `ctor`, `dtor`, `_update` (overrides listbox's `_update`) |
+| `vk_dropdown_t` | `ctor`, `dtor` (overrides listbox's `_update`) |
 | `vk_label_t` | `ctor`, `dtor`, `_update` |
 | `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
 | `vk_textbox_t` | `ctor`, `dtor`, `_update` |
@@ -586,7 +592,8 @@ border and a user decoration callback. Like `vk_scroller_t`, it overrides
 child management, update) are available under `vk_window_*` names via
 convenience macros.
 
-The title is rendered on border row 0 using the border colors with `A_BOLD`.
+The title is rendered on border row 0 using the border colors and
+`border_attrs` (set via `vk_window_set_border_attrs()`).
 Justification is controlled by:
 
 | Constant | Alignment |
@@ -672,6 +679,7 @@ Because the deck has no canvas, `_erase` and `_resize` are no-ops, and
 | `vk_deck_get_top(deck)` | Return the topmost widget (or NULL) |
 | `vk_deck_cycle(deck, vector)` | Rotate the stack (`VK_VECTOR_LEFT` / `VK_VECTOR_RIGHT`) |
 | `vk_deck_set_shadow(deck, enabled)` | Enable or disable drop shadows on all children |
+| `vk_deck_set_shadow_colors(deck, fg, bg)` | Set shadow color pair (default white-on-black) |
 | `vk_deck_update(deck)` | Manually composite children (delegates to `_draw`) |
 | `vk_deck_destroy(deck)` | Detach all children and destroy |
 
@@ -684,8 +692,9 @@ attached and detached from surfaces at runtime, acting as a floating overlay.
 
 When shadows are enabled via `vk_deck_set_shadow(deck, TRUE)`, each child
 widget casts a drop shadow — an L-shaped strip (right edge + bottom edge,
-offset by 1 cell) rendered in white-on-black. The shadow reads the existing
-characters from the surface and recolors them, preserving the glyph beneath.
+offset by 1 cell). The shadow reads the existing characters from the surface
+and recolors them, preserving the glyph beneath. Shadow colors default to
+white-on-black and can be changed via `vk_deck_set_shadow_colors(deck, fg, bg)`.
 Shadows are drawn before each widget during bottom-to-top compositing, so
 higher widgets correctly occlude the shadows of lower ones.
 
@@ -802,6 +811,15 @@ like `A_BOLD`, `A_UNDERLINE`). Set via `vk_widget_set_attrs()`. Widgets
 that render text (labels, marquees) combine colors and attrs into their
 `wattron`/`wbkgd` calls automatically.
 
+### 3D Relief Colors
+
+`vk_widget_t` also carries `relief_hi` and `relief_lo` fields that control
+the highlight and shadow colors used in 3D beveled rendering. The defaults
+are `COLOR_WHITE` (highlight) and `COLOR_BLACK` (shadow). Set via
+`vk_widget_set_relief_colors(widget, hi, lo)`. Widgets that render 3D
+relief (buttons, inputs, dropdowns) use these fields instead of hardcoded
+colors, so the bevel appearance can be configured per widget.
+
 ## Labels
 
 `vk_label_t` is a single-line text widget derived from `vk_widget_t`. It
@@ -830,11 +848,12 @@ Display width is measured via `wcswidth`, so UTF-8 text sizes correctly.
 The widget is 3 rows tall (border, centered text, border) and
 `1 + display_width + 1` columns wide. The bevel is a two-tone color
 split that simulates a raised look. Starting clockwise from the
-bottom-left corner (inclusive), the highlight color (white on face)
+bottom-left corner (inclusive), the highlight color (`relief_hi` on face)
 covers the left edge, top-left corner, and top edge. From the top-right
-corner (inclusive), the shadow color (black on face) covers the right
+corner (inclusive), the shadow color (`relief_lo` on face) covers the right
 edge, bottom edge, and corners. On press, the highlight and shadow swap
-to give a sunken appearance. `VK_FRAME_SINGLE` uses WACS_* box-drawing
+to give a sunken appearance. The relief colors default to white/black
+and can be changed via `vk_widget_set_relief_colors()`. `VK_FRAME_SINGLE` uses WACS_* box-drawing
 characters; `VK_FRAME_ASCII` uses `+`, `-`, `|` with the same split.
 
 ### Basic relief (`VK_BUTTON_BASIC`)
@@ -870,7 +889,9 @@ supports two relief style families matching the button widget:
 ### 3D Relief (`VK_FRAME_SINGLE`, `VK_FRAME_ASCII`)
 
 The widget is 3 rows tall with a sunken border (inverted bevel from
-buttons): black shadow on top/left, white highlight on bottom/right.
+buttons): `relief_lo` shadow on top/left, `relief_hi` highlight on
+bottom/right. The relief colors default to black/white and can be changed
+via `vk_widget_set_relief_colors()`.
 `VK_FRAME_SINGLE` uses WACS_* box-drawing characters; `VK_FRAME_ASCII`
 uses `+`, `-`, `|`. The text field occupies the middle row between the
 borders.
@@ -1017,6 +1038,55 @@ The selectbox registers its own `ON_RESIZE` and `ON_RECREATE` event
 handlers because the listbox's handlers call `_vk_listbox_update` directly
 (static function, not through the function pointer). The selectbox's
 handlers follow the same scroller-propagation pattern as the listbox's.
+
+## Dropdowns
+
+`vk_dropdown_t` derives from `vk_listbox_t`. It displays a single-row
+collapsed view showing the currently selected item, and expands into a
+popup `vk_window_t` containing a copy of the item list for selection.
+
+### Relief Styles
+
+The collapsed view supports two relief families:
+
+| Style | Height | Appearance |
+|-------|--------|------------|
+| `VK_BUTTON_BASIC` (default) | 1 row | `text ▼` — plain text with arrow |
+| `VK_FRAME_SINGLE` | 3 rows | 3D bordered box with text and arrow in a separator column |
+
+The 3D bordered style uses `relief_hi`/`relief_lo` for the bevel (set via
+`vk_widget_set_relief_colors()`).
+
+### Popup
+
+When expanded via `vk_dropdown_set_expanded(dropdown, true)`, a
+`vk_window_t` popup is created containing a `vk_listbox_t` copy of the
+items. The popup inherits the dropdown's widget colors and highlight
+colors. The application is responsible for positioning the popup on screen
+(via `vk_widget_move` on the popup widget returned by
+`vk_dropdown_get_popup()`), attaching it to the screen surface, and
+detaching it when collapsed.
+
+`vk_dropdown_popup_navigate(dropdown, direction)` moves the popup's
+selection. `vk_dropdown_popup_select(dropdown)` commits the popup's
+selection to the dropdown and closes the popup.
+
+### API
+
+All listbox item management and navigation APIs are available under
+`vk_dropdown_*` names via convenience macros.
+
+| API | Description |
+|-----|-------------|
+| `vk_dropdown_create(width, max_visible)` | Create a dropdown (max_visible limits popup height) |
+| `vk_dropdown_set_relief_style(dd, style)` | Set collapsed relief style |
+| `vk_dropdown_set_expanded(dd, expanded)` | Expand or collapse the popup |
+| `vk_dropdown_get_expanded(dd)` | Return expansion state |
+| `vk_dropdown_get_popup(dd)` | Return the popup widget (or NULL) |
+| `vk_dropdown_popup_navigate(dd, dir)` | Navigate popup selection (-1 = prev, 1 = next) |
+| `vk_dropdown_popup_select(dd)` | Commit popup selection and collapse |
+| `vk_dropdown_update(dd)` | Redraw the collapsed view |
+| `vk_dropdown_destroy(dd)` | Destroy dropdown and popup |
 
 ## Fillers
 
@@ -1189,6 +1259,9 @@ child widget individually (scroller, button bar, buttons, file list, input).
 | `vk_filedialog_set_wrap(dialog, bool)` | Enable/disable wrap-around navigation |
 | `vk_filedialog_set_colors(dialog, fg, bg)` | Set colors on all child widgets |
 | `vk_filedialog_set_highlight(dialog, fg, bg)` | Set highlight colors on file list |
+| `vk_filedialog_set_button_colors(dialog, fg, bg)` | Set button face colors |
+| `vk_filedialog_set_button_attrs(dialog, attrs)` | Set button text attributes |
+| `vk_filedialog_get_file_list(dialog)` | Return the internal file list widget |
 | `vk_filedialog_update(dialog)` | Update all children and composite |
 | `vk_filedialog_destroy(dialog)` | Destroy dialog and all children |
 

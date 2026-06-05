@@ -16,6 +16,8 @@ struct _vk_deck_s
 
     struct list_head    widget_list;
     bool                shadows;
+    short               shadow_fg;
+    short               shadow_bg;
 
     int                 (*ctor)         (vk_object_t *, va_list *, ...);
     int                 (*dtor)         (vk_object_t *);

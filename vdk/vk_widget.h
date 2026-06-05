@@ -32,6 +32,9 @@ struct _vk_widget_s
     short               bg;                 // background color for canvas
     attr_t              attrs;              // text attributes (A_BOLD, etc.)
 
+    short               relief_hi;          // 3D relief highlight fg
+    short               relief_lo;          // 3D relief shadow fg
+
     uint32_t            state;
 
     void                *userptr;

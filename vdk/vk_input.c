@@ -414,8 +414,8 @@ _vk_input_update(vk_input_t *input)
 
         case VK_FRAME_ASCII:
         {
-            short tl_pair = vdk_color_pair(COLOR_BLACK, bg);
-            short br_pair = vdk_color_pair(COLOR_WHITE, bg);
+            short tl_pair = vdk_color_pair(widget->relief_lo, bg);
+            short br_pair = vdk_color_pair(widget->relief_hi, bg);
             int tl_colors = COLOR_PAIR(tl_pair) | widget->attrs;
             int br_colors = COLOR_PAIR(br_pair) | widget->attrs;
 
@@ -444,8 +444,8 @@ _vk_input_update(vk_input_t *input)
         default:
         {
             cchar_t cc;
-            short tl_pair = vdk_color_pair(COLOR_BLACK, bg);
-            short br_pair = vdk_color_pair(COLOR_WHITE, bg);
+            short tl_pair = vdk_color_pair(widget->relief_lo, bg);
+            short br_pair = vdk_color_pair(widget->relief_hi, bg);
 
             field_start = 1;
             text_row = 1;

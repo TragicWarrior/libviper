@@ -6,8 +6,6 @@
 #include "vk_widget.h"
 #include "vk_deck.h"
 
-#define VK_SHADOW_PAIR      vdk_color_pair(COLOR_WHITE, COLOR_BLACK)
-
 static int
 _vk_deck_ctor(vk_object_t *object, va_list *argp, ...);
 
@@ -33,7 +31,7 @@ static int
 _vk_deck_kmio(vk_object_t *object, int32_t keystroke);
 
 static void
-_vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface);
+_vk_deck_draw_shadow(vk_deck_t *deck, vk_widget_t *child, WINDOW *surface);
 
 require_klass(VK_WIDGET_KLASS);
 
@@ -128,6 +126,17 @@ vk_deck_set_shadow(vk_deck_t *deck, bool enabled)
 }
 
 inline int
+vk_deck_set_shadow_colors(vk_deck_t *deck, short fg, short bg)
+{
+    if(deck == NULL) return -1;
+
+    deck->shadow_fg = fg;
+    deck->shadow_bg = bg;
+
+    return 0;
+}
+
+inline int
 vk_deck_update(vk_deck_t *deck)
 {
     if(deck == NULL) return -1;
@@ -195,6 +204,8 @@ _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)
 
     INIT_LIST_HEAD(&deck->widget_list);
     deck->shadows = false;
+    deck->shadow_fg = COLOR_WHITE;
+    deck->shadow_bg = COLOR_BLACK;
 
     deck->ctor = _vk_deck_ctor;
     deck->dtor = _vk_deck_dtor;
@@ -266,7 +277,7 @@ _vk_deck_draw(vk_widget_t *widget)
         child->surface = widget->surface;
 
         if(deck->shadows)
-            _vk_deck_draw_shadow(child, widget->surface);
+            _vk_deck_draw_shadow(deck, child, widget->surface);
 
         vk_widget_draw(child);
     }
@@ -309,7 +320,7 @@ _vk_deck_recreate(vk_widget_t *widget)
 }
 
 static void
-_vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
+_vk_deck_draw_shadow(vk_deck_t *deck, vk_widget_t *child, WINDOW *surface)
 {
     int         sx, sy;
     int         max_y, max_x;
@@ -317,10 +328,12 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
     wchar_t     wch[CCHARW_MAX];
     attr_t      attrs;
     short       color;
+    short       shadow_pair;
 
     getmaxyx(surface, max_y, max_x);
 
-    // right edge: 1 column at (x + width), rows [y+1 .. y+height]
+    shadow_pair = vdk_color_pair(deck->shadow_fg, deck->shadow_bg);
+
     sx = child->x + child->width;
     if(sx < max_x)
     {
@@ -330,12 +343,11 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 
             mvwin_wch(surface, sy, sx, &cc);
             getcchar(&cc, wch, &attrs, &color, NULL);
-            setcchar(&cc, wch, (attrs & A_ALTCHARSET), VK_SHADOW_PAIR, NULL);
+            setcchar(&cc, wch, (attrs & A_ALTCHARSET), shadow_pair, NULL);
             mvwadd_wch(surface, sy, sx, &cc);
         }
     }
 
-    // bottom edge: 1 row at (y + height), cols [x+1 .. x+width-1]
     sy = child->y + child->height;
     if(sy < max_y)
     {
@@ -345,7 +357,7 @@ _vk_deck_draw_shadow(vk_widget_t *child, WINDOW *surface)
 
             mvwin_wch(surface, sy, sx, &cc);
             getcchar(&cc, wch, &attrs, &color, NULL);
-            setcchar(&cc, wch, (attrs & A_ALTCHARSET), VK_SHADOW_PAIR, NULL);
+            setcchar(&cc, wch, (attrs & A_ALTCHARSET), shadow_pair, NULL);
             mvwadd_wch(surface, sy, sx, &cc);
         }
     }

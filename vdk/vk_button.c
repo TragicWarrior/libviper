@@ -276,12 +276,12 @@ _vk_button_update(vk_button_t *button)
     face_colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
 
     hi_pair = button->pressed
-        ? vdk_color_pair(COLOR_BLACK, bg)
-        : vdk_color_pair(COLOR_WHITE, bg);
+        ? vdk_color_pair(widget->relief_lo, bg)
+        : vdk_color_pair(widget->relief_hi, bg);
 
     sh_pair = button->pressed
-        ? vdk_color_pair(COLOR_WHITE, bg)
-        : vdk_color_pair(COLOR_BLACK, bg);
+        ? vdk_color_pair(widget->relief_hi, bg)
+        : vdk_color_pair(widget->relief_lo, bg);
 
     vk_widget_fill(widget, ' ' | face_colors);
 

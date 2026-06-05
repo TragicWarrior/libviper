@@ -131,6 +131,15 @@ vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
 }
 
 inline void
+vk_widget_set_relief_colors(vk_widget_t *widget, short hi, short lo)
+{
+    if(widget == NULL) return;
+
+    widget->relief_hi = hi;
+    widget->relief_lo = lo;
+}
+
+inline void
 vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
 {
     if(widget == NULL) return;
@@ -322,6 +331,8 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
 
     widget->fg = COLOR_BLACK;
     widget->bg = COLOR_WHITE;
+    widget->relief_hi = COLOR_WHITE;
+    widget->relief_lo = COLOR_BLACK;
     widget->state = VK_STATE_VISIBLE;
 
     widget->ctor = _vk_widget_ctor;
