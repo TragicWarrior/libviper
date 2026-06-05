@@ -37,6 +37,8 @@ vk_object_t
    │
    ├─ vk_activity_t
    │
+   ├─ vk_menubar_t
+   │
    └─ vk_listbox_t
       │
       └─ vk_selectbox_t
@@ -73,6 +75,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_BUTTON(x)` | `vk_button_t *` |
 | `VK_INPUT(x)` | `vk_input_t *` |
 | `VK_FILLER(x)` | `vk_filler_t *` |
+| `VK_MENUBAR(x)` | `vk_menubar_t *` |
 | `VK_FILEDIALOG(x)` | `vk_filedialog_t *` |
 
 ## Klass Templates
@@ -89,7 +92,7 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_LABEL_KLASS`, `VK_MARQUEE_KLASS`, `VK_LISTBOX_KLASS`,
 `VK_SELECTBOX_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
 `VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
-`VK_FILEDIALOG_KLASS`.
+`VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -120,6 +123,7 @@ vk_deck_create(void)
 vk_button_create(text)
 vk_input_create(width)
 vk_filler_create(void)
+vk_menubar_create(width)
 vk_filedialog_create(width, height, style, multiselect)
 ```
 
@@ -144,6 +148,7 @@ _vk_deck_ctor       -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_button_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_input_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filler_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_menubar_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filedialog_ctor -> VK_BOX_KLASS->ctor(object, argp)
 ```
 
@@ -233,6 +238,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_button_t` | `ctor`, `dtor`, `_update` |
 | `vk_input_t` | `ctor`, `dtor`, `_update` |
 | `vk_filler_t` | `ctor`, `dtor` |
+| `vk_menubar_t` | `ctor`, `dtor`, `_add_item`, `_get_item_count`, `_exec_item`, `_update`, `_reset` |
 | `vk_filedialog_t` | `ctor`, `dtor` |
 
 ## Public API Convention
@@ -468,9 +474,9 @@ Events are grouped by purpose with spaced numeric ranges:
 | `VK_EVENT_ON_RECREATE` | 2 | `vk_widget_recreate()` after `_recreate` succeeds |
 | `VK_EVENT_ON_TELEPORT` | 3 | `vk_screen_teleport()` after terminal migration completes |
 | `VK_EVENT_ON_CLICK` | 10 | `vk_button_press()` |
-| `VK_EVENT_ON_SELECT` | 11 | listbox/selectbox navigation and check/radio selection |
+| `VK_EVENT_ON_SELECT` | 11 | listbox/selectbox/menubar navigation and check/radio selection |
 | `VK_EVENT_ON_UNSELECT` | 12 | selectbox uncheck |
-| `VK_EVENT_ON_ACTIVATE` | 13 | listbox/selectbox `exec_curr` |
+| `VK_EVENT_ON_ACTIVATE` | 13 | listbox/selectbox/menubar `exec_curr` |
 | `VK_EVENT_ON_SUBMIT` | 14 | reserved for input submission |
 | `VK_EVENT_ON_FOCUS` | 20 | `vk_box_set_subfocus()` on the newly focused slot widget |
 | `VK_EVENT_ON_UNFOCUS` | 21 | `vk_box_set_subfocus()` on the previously focused slot widget |
@@ -993,10 +999,57 @@ created at 1x1 with `VK_STATE_EXPAND` set, so it absorbs all available
 space when placed in a container. Use it as a spacer in non-homogeneous
 boxes to push other widgets apart.
 
+The filler registers `ON_RESIZE` and `ON_RECREATE` event handlers that
+fill the canvas with the widget's color pair. This ensures the filler
+paints correctly after a container resizes or recreates its children.
+
 | API | Description |
 |-----|-------------|
 | `vk_filler_create()` | Create a 1x1 filler with expand enabled |
 | `vk_filler_destroy(filler)` | Destroy the filler |
+
+## Menubars
+
+`vk_menubar_t` is a single-row horizontal menu bar derived from `vk_widget_t`.
+It displays labeled items separated by `WACS_VLINE` separators and supports
+keyboard navigation with wrap-around.
+
+Each item is a `vk_item_t` (the same node type used by `vk_listbox_t`).
+Items render as ` label ` (1 space padding each side). Between items, a
+vertical line separator occupies 1 column. The natural width is the sum of
+all item widths plus separators.
+
+When `focused` is true, the current item is highlighted using `mvwchgat`
+with the highlight color pair. Navigation via `set_next`/`set_prev` always
+wraps and emits `VK_EVENT_ON_SELECT`. `exec_curr` emits
+`VK_EVENT_ON_ACTIVATE` and calls the item's `VkWidgetFunc` callback.
+
+`hit_test` maps a column offset (relative to the widget) to an item index,
+enabling mouse interaction. `get_item_position` returns the column offset
+of a given item index, useful for positioning dropdowns.
+
+The menubar registers `ON_RESIZE` and `ON_RECREATE` event handlers that
+repaint the canvas, so it works correctly inside containers that resize
+their children (e.g. `vk_box_t`).
+
+| API | Description |
+|-----|-------------|
+| `vk_menubar_create(width)` | Create a menubar (height always 1) |
+| `vk_menubar_add_item(m, name, func, data)` | Add a labeled item |
+| `vk_menubar_get_item_count(m)` | Return number of items |
+| `vk_menubar_get_curr(m)` | Return current item index |
+| `vk_menubar_set_curr(m, idx)` | Set current item (emits ON_SELECT) |
+| `vk_menubar_set_next(m)` | Advance with wrap (emits ON_SELECT) |
+| `vk_menubar_set_prev(m)` | Retreat with wrap (emits ON_SELECT) |
+| `vk_menubar_exec_curr(m)` | Execute current item callback (emits ON_ACTIVATE) |
+| `vk_menubar_set_highlight(m, fg, bg)` | Set highlight colors for focused item |
+| `vk_menubar_set_focused(m, focused)` | Set focus state (emits ON_FOCUS/ON_UNFOCUS) |
+| `vk_menubar_get_focused(m)` | Return focus state |
+| `vk_menubar_hit_test(m, x)` | Return item index at column x, or -1 |
+| `vk_menubar_get_item_position(m, idx, &x)` | Get column offset of item |
+| `vk_menubar_update(m)` | Repaint the menubar |
+| `vk_menubar_reset(m)` | Remove all items |
+| `vk_menubar_destroy(m)` | Destroy the menubar |
 
 ## Activity Indicators
 
@@ -1122,3 +1175,4 @@ throughout:
 - `vk_container_t.widget_list` -- children of a container
 - `vk_deck_t.widget_list` -- z-ordered widget stack (head->next = top)
 - `vk_listbox_t.item_list` -- items in a listbox/menu (`vk_item_t` nodes)
+- `vk_menubar_t.item_list` -- items in a menubar (`vk_item_t` nodes)
