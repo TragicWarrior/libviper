@@ -231,13 +231,16 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
         }
     }
 
-    if(g_event.buttons == GPM_B_UP || g_event.buttons == GPM_B_FOURTH)
+    /* wheel: exps2/imps2 mice report scroll in wdy; the GPM_B_UP/DOWN
+       buttons are the legacy ms3 mechanism (kept as a fallback) */
+    if(g_event.wdy > 0 || g_event.buttons == GPM_B_UP ||
+        g_event.buttons == GPM_B_FOURTH)
     {
-        mouse_event->bstate = BUTTON4_PRESSED;
+        mouse_event->bstate = BUTTON4_PRESSED;      /* wheel up   */
     }
-    else if(g_event.buttons == GPM_B_DOWN)
+    else if(g_event.wdy < 0 || g_event.buttons == GPM_B_DOWN)
     {
-        mouse_event->bstate = BUTTON5_PRESSED;
+        mouse_event->bstate = BUTTON5_PRESSED;      /* wheel down */
     }
     else if((g_event.type & GPM_DRAG) || (g_event.type & GPM_MOVE))
     {
