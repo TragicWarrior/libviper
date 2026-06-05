@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include <signal.h>
 
 #include "viper.h"
 #include "vk_object.h"
@@ -258,6 +259,7 @@ int main(void)
     int             max_y, max_x;
     int             box_h;
     int             slot_w, inner_w, inner_h;
+    pid_t           evicted_pid = -1;
     int32_t         key;
 
     setlocale(LC_ALL, "");
@@ -418,6 +420,8 @@ int main(void)
 
             if(pos > 0)
             {
+                if(evicted_pid > 0) kill(evicted_pid, SIGCONT);
+                evicted_pid = vk_screen_evict_pty(pty_path);
                 vk_screen_teleport(vk_screen, pty_path);
                 screen = vk_screen_get_window(vk_screen);
                 getmaxyx(screen, max_y, max_x);
@@ -482,6 +486,8 @@ int main(void)
         draw_chrome(screen, max_x, slot_w, box->focused_slot);
         vk_screen_refresh(vk_screen);
     }
+
+    if(evicted_pid > 0) kill(evicted_pid, SIGCONT);
 
     vk_marquee_destroy(marquee);
     vk_box_destroy(box);

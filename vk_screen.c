@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <signal.h>
+#include <utmpx.h>
 
 #include "viper.h"
 #include "viper_color.h"
@@ -338,6 +340,49 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     wtimeout(stdscr, -1);
 
     return 0;
+}
+
+static pid_t
+_vk_find_session_leader(const char *pty)
+{
+    struct utmpx    *entry;
+    const char      *line;
+
+    if(pty == NULL) return -1;
+
+    line = (strncmp(pty, "/dev/", 5) == 0) ? pty + 5 : pty;
+
+    setutxent();
+
+    while((entry = getutxent()) != NULL)
+    {
+        if(entry->ut_type != USER_PROCESS) continue;
+
+        if(strcmp(entry->ut_line, line) == 0)
+        {
+            pid_t pid = entry->ut_pid;
+            endutxent();
+            return pid;
+        }
+    }
+
+    endutxent();
+    return -1;
+}
+
+pid_t
+vk_screen_evict_pty(const char *pty)
+{
+    pid_t   sid;
+
+    if(pty == NULL) return -1;
+
+    sid = _vk_find_session_leader(pty);
+    if(sid <= 1) return -1;
+
+    if(kill(sid, SIGSTOP) < 0) return -1;
+
+    return sid;
 }
 
 void

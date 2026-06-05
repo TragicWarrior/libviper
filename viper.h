@@ -323,6 +323,7 @@ int             vk_screen_detach_widget(vk_screen_t *screen,
                     int desktop_id, vk_widget_t *widget);
 int             vk_screen_resize(vk_screen_t *screen);
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
+pid_t           vk_screen_evict_pty(const char *pty);
 int             vk_screen_refresh(vk_screen_t *screen);
 void            vk_screen_destroy(vk_screen_t *screen);
 
