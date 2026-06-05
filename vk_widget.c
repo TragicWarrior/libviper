@@ -81,10 +81,35 @@ vk_widget_draw(vk_widget_t *widget)
     int retval;
 
     if(widget == NULL) return -1;
+    if(widget->hidden) return 0;
 
     retval = widget->_draw(widget);
 
     return retval;
+}
+
+void
+vk_widget_show(vk_widget_t *widget)
+{
+    if(widget == NULL) return;
+
+    widget->hidden = false;
+}
+
+void
+vk_widget_hide(vk_widget_t *widget)
+{
+    if(widget == NULL) return;
+
+    widget->hidden = true;
+}
+
+bool
+vk_widget_is_visible(vk_widget_t *widget)
+{
+    if(widget == NULL) return false;
+
+    return !widget->hidden;
 }
 
 void

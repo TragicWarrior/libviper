@@ -461,6 +461,20 @@ after canvas recreation. Widget types install it in their ctors:
 Callers can also set `_on_recreate` directly on plain `vk_widget_t`
 instances for custom content (the same way `_on_resize` is set).
 
+## Widget Visibility
+
+Any widget can be hidden or shown at runtime via `vk_widget_hide()` and
+`vk_widget_show()`. A hidden widget's `_draw` is skipped entirely — it
+does not blit to its surface. Query the current state with
+`vk_widget_is_visible()`.
+
+Since `vk_screen_refresh()` erases the surface canvas before compositing,
+hidden widgets simply leave their region transparent to the wallpaper.
+No explicit cleanup is needed — the next refresh handles it.
+
+All widgets default to visible (the `hidden` field is zero-initialized
+by `calloc` during construction).
+
 ## Widget Attributes
 
 `vk_widget_t` carries `fg`, `bg` (color), and `attrs` (ncurses attributes

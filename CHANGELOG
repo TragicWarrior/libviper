@@ -27,6 +27,8 @@ Version 4.0.0 (in progress)
   blit, refresh.
 * [Bryan Christ] Fix vk_box_t initial layout not sizing last slot to absorb
   remainder pixels.
+* [Bryan Christ] Add widget visibility API: vk_widget_show, vk_widget_hide,
+  vk_widget_is_visible. Hidden widgets skip blit during draw/refresh.
 
 Version 3.1.1
 
