@@ -204,8 +204,10 @@ Assert is used **only in destructors** (`_dtor` / `_destroy`) as a safety
 guard before freeing resources. Public API functions do not assert — callers
 who cast via `VK_FRAME()`, `VK_LISTBOX()`, etc. accept responsibility for
 type correctness. This means derived types can be used through their parent's
-public API without wrapper functions (e.g. a `vk_window_t*` can be passed to
-`vk_frame_set_border_colors()` via `VK_FRAME(window)`).
+public API (e.g. a `vk_window_t*` can be passed to
+`vk_frame_set_border_colors()` via `VK_FRAME(window)`). Convenience macros
+in `vdk.h` make this transparent — `vk_window_set_border_colors()` expands
+to the frame call with the cast built in.
 
 ## Virtual Methods
 
@@ -233,11 +235,16 @@ dispatch. Public APIs call through these pointers.
 | `vk_filler_t` | `ctor`, `dtor` |
 | `vk_filedialog_t` | `ctor`, `dtor` |
 
-## Public API Inline Convention
+## Public API Convention
 
 All public API functions in the `.c` files are declared `inline` as a compiler
 hint to reduce call overhead. These are thin wrappers that validate arguments
 and dispatch through the virtual method pointers.
+
+Where a derived klass inherits API from its parent (e.g. `vk_window_t`
+inheriting border and child APIs from `vk_frame_t`), convenience macros in
+`vdk.h` provide the derived-type name. These sit inline in the header
+alongside real function declarations so the API reads as a flat list.
 
 ## Headers
 
@@ -537,16 +544,15 @@ sets both the callback and a scroll source widget via
 drive scrolling -- the source widget manages its own scroll position.
 
 Both `vk_window_t` and `vk_frame_t` override `_update` to include scroller
-drawing. Convenience macros in `vdk.h` provide `vk_window_set_border_style`,
-`vk_window_set_border_colors`, `vk_window_set_child`, `vk_window_update`,
-etc. — these expand to `vk_frame_*` calls with a `VK_FRAME()` cast, so
-callers can use either the window or frame name.
+drawing.
 
 ## Windows
 
 `vk_window_t` inherits from `vk_frame_t` and adds a title drawn on the top
 border and a user decoration callback. Like `vk_scroller_t`, it overrides
-`_update` and `_recreate`.
+`_update` and `_recreate`. All frame APIs (border style, border colors,
+child management, update) are available under `vk_window_*` names via
+convenience macros.
 
 The title is rendered on border row 0 using the border colors with `A_BOLD`.
 Justification is controlled by:
@@ -924,9 +930,8 @@ For `VK_SCROLL_LOOP`:
 - Uses wide character rendering (`mvwadd_wch`) for proper unicode support
 
 `vk_marquee_set_text()` is a marquee-specific function (not a pass-through)
-because it resets scroll state when text changes. A convenience macro
-`vk_marquee_get_text()` is provided in `vdk.h`, expanding to
-`vk_label_get_text(VK_LABEL(m))`.
+because it resets scroll state when text changes. `vk_marquee_get_text()`
+reads the text via the inherited label API.
 
 ## Selectboxes
 
@@ -962,9 +967,8 @@ cannot be checked.
 The selectbox is IO-agnostic. The application installs a `kmio` handler that
 calls `vk_selectbox_toggle_item()` on Enter/Space and delegates navigation
 to inherited listbox functions (e.g. `vk_selectbox_set_next()`,
-`vk_selectbox_update()`). Convenience macros in `vdk.h` provide all the
-inherited listbox operations under `vk_selectbox_*` names — these expand to
-`vk_listbox_*` calls with a `VK_LISTBOX()` cast.
+`vk_selectbox_update()`). All listbox item management and navigation APIs
+are available under `vk_selectbox_*` names via convenience macros.
 
 ### _update Override
 
