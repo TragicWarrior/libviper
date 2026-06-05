@@ -34,13 +34,13 @@ if (!GPM_FOUND)
 add_definitions("-D_NO_GPM")
 endif()
 
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk)
 
 add_library(viper-static STATIC
     strings.c
     viper_private.c
     viper_callbacks.c
     viper_color.c
-    vdk_color.c
     viper_deck.c
     viper_events.c
     viper_keyboard.c
@@ -63,20 +63,21 @@ add_library(viper-static STATIC
     w_metrics.c
     w_move.c
     w_shadow.c
-    vk_object.c
-    vk_screen.c
-    vk_widget.c
-    vk_container.c
-    vk_listbox.c
-    vk_selectbox.c
-    vk_frame.c
-    vk_scroller.c
-    vk_window.c
-    vk_box.c
-    vk_label.c
-    vk_textbox.c
-    vk_marquee.c
-    vk_deck.c
+    vdk/vdk_color.c
+    vdk/vk_object.c
+    vdk/vk_screen.c
+    vdk/vk_widget.c
+    vdk/vk_container.c
+    vdk/vk_listbox.c
+    vdk/vk_selectbox.c
+    vdk/vk_frame.c
+    vdk/vk_scroller.c
+    vdk/vk_window.c
+    vdk/vk_box.c
+    vdk/vk_label.c
+    vdk/vk_textbox.c
+    vdk/vk_marquee.c
+    vdk/vk_deck.c
     )
 
 add_library(viper.o OBJECT
@@ -84,7 +85,6 @@ add_library(viper.o OBJECT
     viper_private.c
     viper_callbacks.c
     viper_color.c
-    vdk_color.c
     viper_deck.c
     viper_events.c
     viper_keyboard.c
@@ -107,20 +107,21 @@ add_library(viper.o OBJECT
     w_metrics.c
     w_move.c
     w_shadow.c
-    vk_object.c
-    vk_screen.c
-    vk_widget.c
-    vk_container.c
-    vk_listbox.c
-    vk_selectbox.c
-    vk_frame.c
-    vk_scroller.c
-    vk_window.c
-    vk_box.c
-    vk_label.c
-    vk_textbox.c
-    vk_marquee.c
-    vk_deck.c
+    vdk/vdk_color.c
+    vdk/vk_object.c
+    vdk/vk_screen.c
+    vdk/vk_widget.c
+    vdk/vk_container.c
+    vdk/vk_listbox.c
+    vdk/vk_selectbox.c
+    vdk/vk_frame.c
+    vdk/vk_scroller.c
+    vdk/vk_window.c
+    vdk/vk_box.c
+    vdk/vk_label.c
+    vdk/vk_textbox.c
+    vdk/vk_marquee.c
+    vdk/vk_deck.c
     )
 
 add_library(viper-shared SHARED
