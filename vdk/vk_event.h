@@ -9,7 +9,7 @@ struct vk_event_handler
     struct list_head    list;
     int                 event;
     VkEventFunc         func;
-    void                *data;
+    void                *anything;
 };
 
 int     vk_object_emit(vk_object_t *object, int event);

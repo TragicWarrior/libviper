@@ -15,7 +15,7 @@ static int
 _vk_box_dtor(vk_object_t *object);
 
 static int
-_vk_box_on_resize(vk_object_t *object, int event, void *data);
+_vk_box_on_resize(vk_object_t *object, int event, void *anything);
 
 static int
 _vk_box_recreate(vk_widget_t *widget);
@@ -266,7 +266,7 @@ _vk_box_dtor(vk_object_t *object)
 }
 
 static int
-_vk_box_on_resize(vk_object_t *object, int event, void *data)
+_vk_box_on_resize(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t     *widget = VK_WIDGET(object);
     vk_box_t        *box;
@@ -275,7 +275,7 @@ _vk_box_on_resize(vk_object_t *object, int event, void *data)
     bool            horiz;
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     box = VK_BOX(widget);
     horiz = (box->orientation == VK_BOX_HORIZONTAL);

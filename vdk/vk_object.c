@@ -70,7 +70,7 @@ vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
 
 inline int
 vk_object_register_event(vk_object_t *object, int event,
-    VkEventFunc func, void *data)
+    VkEventFunc func, void *anything)
 {
     struct vk_event_handler *handler;
 
@@ -81,7 +81,7 @@ vk_object_register_event(vk_object_t *object, int event,
 
     handler->event = event;
     handler->func = func;
-    handler->data = data;
+    handler->anything = anything;
 
     list_add_tail(&handler->list, &object->event_handlers);
 
@@ -126,7 +126,7 @@ vk_object_emit(vk_object_t *object, int event)
         handler = list_entry(pos, struct vk_event_handler, list);
 
         if(handler->event == event)
-            handler->func(object, event, handler->data);
+            handler->func(object, event, handler->anything);
     }
 
     return 0;

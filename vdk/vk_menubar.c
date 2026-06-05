@@ -28,10 +28,10 @@ static int
 _vk_menubar_update(vk_menubar_t *menubar);
 
 static int
-_vk_menubar_on_recreate(vk_object_t *object, int event, void *data);
+_vk_menubar_on_recreate(vk_object_t *object, int event, void *anything);
 
 static int
-_vk_menubar_on_resize(vk_object_t *object, int event, void *data);
+_vk_menubar_on_resize(vk_object_t *object, int event, void *anything);
 
 static int
 _vk_menubar_reset(vk_menubar_t *menubar);
@@ -379,19 +379,19 @@ _vk_menubar_exec_item(vk_menubar_t *menubar)
 }
 
 static int
-_vk_menubar_on_recreate(vk_object_t *object, int event, void *data)
+_vk_menubar_on_recreate(vk_object_t *object, int event, void *anything)
 {
     (void)event;
-    (void)data;
+    (void)anything;
 
     return _vk_menubar_update(VK_MENUBAR(object));
 }
 
 static int
-_vk_menubar_on_resize(vk_object_t *object, int event, void *data)
+_vk_menubar_on_resize(vk_object_t *object, int event, void *anything)
 {
     (void)event;
-    (void)data;
+    (void)anything;
 
     return _vk_menubar_update(VK_MENUBAR(object));
 }

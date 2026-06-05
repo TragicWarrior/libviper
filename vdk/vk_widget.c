@@ -283,7 +283,7 @@ vk_widget_set_userptr(vk_widget_t *widget, void *ptr)
 {
     if(widget == NULL) return;
 
-    widget->userptr = ptr;
+    widget->anything = ptr;
 }
 
 inline void*
@@ -291,7 +291,7 @@ vk_widget_get_userptr(vk_widget_t *widget)
 {
     if(widget == NULL) return NULL;
 
-    return widget->userptr;
+    return widget->anything;
 }
 
 inline void

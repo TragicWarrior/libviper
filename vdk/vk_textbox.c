@@ -18,10 +18,10 @@ static int
 _vk_textbox_update(vk_textbox_t *textbox);
 
 static int
-_vk_textbox_on_resize(vk_object_t *object, int event, void *data);
+_vk_textbox_on_resize(vk_object_t *object, int event, void *anything);
 
 static int
-_vk_textbox_on_recreate(vk_object_t *object, int event, void *data);
+_vk_textbox_on_recreate(vk_object_t *object, int event, void *anything);
 
 static void
 _vk_textbox_reflow(vk_textbox_t *textbox);
@@ -360,12 +360,12 @@ _vk_textbox_update(vk_textbox_t *textbox)
 }
 
 static int
-_vk_textbox_on_resize(vk_object_t *object, int event, void *data)
+_vk_textbox_on_resize(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t *widget = VK_WIDGET(object);
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     if(widget->vscroller != NULL)
     {
@@ -385,12 +385,12 @@ _vk_textbox_on_resize(vk_object_t *object, int event, void *data)
 }
 
 static int
-_vk_textbox_on_recreate(vk_object_t *object, int event, void *data)
+_vk_textbox_on_recreate(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t *widget = VK_WIDGET(object);
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     if(widget->vscroller != NULL)
     {

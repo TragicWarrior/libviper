@@ -47,10 +47,10 @@ static int
 _vk_listbox_update(vk_listbox_t *listbox);
 
 static int
-_vk_listbox_on_recreate(vk_object_t *object, int event, void *data);
+_vk_listbox_on_recreate(vk_object_t *object, int event, void *anything);
 
 static int
-_vk_listbox_on_resize(vk_object_t *object, int event, void *data);
+_vk_listbox_on_resize(vk_object_t *object, int event, void *anything);
 
 static int
 _vk_listbox_reset(vk_listbox_t *listbox);
@@ -716,12 +716,12 @@ _vk_listbox_exec_item(vk_listbox_t *listbox)
 }
 
 static int
-_vk_listbox_on_recreate(vk_object_t *object, int event, void *data)
+_vk_listbox_on_recreate(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t *widget = VK_WIDGET(object);
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     if(widget->vscroller != NULL)
     {
@@ -739,12 +739,12 @@ _vk_listbox_on_recreate(vk_object_t *object, int event, void *data)
 }
 
 static int
-_vk_listbox_on_resize(vk_object_t *object, int event, void *data)
+_vk_listbox_on_resize(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t *widget = VK_WIDGET(object);
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     if(widget->vscroller != NULL)
     {

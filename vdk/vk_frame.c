@@ -24,7 +24,7 @@ static int
 _vk_frame_draw_border(vk_frame_t *frame);
 
 static int
-_vk_frame_on_resize(vk_object_t *object, int event, void *data);
+_vk_frame_on_resize(vk_object_t *object, int event, void *anything);
 
 static int
 _vk_frame_recreate(vk_widget_t *widget);
@@ -433,13 +433,13 @@ _vk_frame_draw_border(vk_frame_t *frame)
 }
 
 static int
-_vk_frame_on_resize(vk_object_t *object, int event, void *data)
+_vk_frame_on_resize(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t *widget = VK_WIDGET(object);
     vk_frame_t  *frame;
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     frame = VK_FRAME(widget);
 

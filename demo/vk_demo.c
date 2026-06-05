@@ -25,11 +25,11 @@ on_item_activate(vk_widget_t *widget, void *anything)
 }
 
 static int
-on_teleport(vk_object_t *object, int event, void *data)
+on_teleport(vk_object_t *object, int event, void *anything)
 {
     (void)object;
     (void)event;
-    (void)data;
+    (void)anything;
 
     vdk_color_init();
 
@@ -45,9 +45,9 @@ struct focus_ctx
 };
 
 static int
-on_window_focus(vk_object_t *object, int event, void *data)
+on_window_focus(vk_object_t *object, int event, void *anything)
 {
-    struct focus_ctx *ctx = data;
+    struct focus_ctx *ctx = anything;
 
     (void)object;
     (void)event;
@@ -65,9 +65,9 @@ on_window_focus(vk_object_t *object, int event, void *data)
 }
 
 static int
-on_window_unfocus(vk_object_t *object, int event, void *data)
+on_window_unfocus(vk_object_t *object, int event, void *anything)
 {
-    struct focus_ctx *ctx = data;
+    struct focus_ctx *ctx = anything;
 
     (void)object;
     (void)event;
@@ -85,10 +85,10 @@ on_window_unfocus(vk_object_t *object, int event, void *data)
 }
 
 static int
-on_listbox_select(vk_object_t *object, int event, void *data)
+on_listbox_select(vk_object_t *object, int event, void *anything)
 {
     vk_listbox_t    *listbox = VK_LISTBOX(object);
-    vk_window_t     *window = data;
+    vk_window_t     *window = anything;
     char            item[32];
     char            title[48];
 
@@ -105,10 +105,10 @@ on_listbox_select(vk_object_t *object, int event, void *data)
 }
 
 static int
-on_checkbox_change(vk_object_t *object, int event, void *data)
+on_checkbox_change(vk_object_t *object, int event, void *anything)
 {
     vk_selectbox_t  *sb = VK_SELECTBOX(object);
-    vk_window_t     *window = data;
+    vk_window_t     *window = anything;
     char            title[48];
     int             count;
     int             checked = 0;
@@ -129,10 +129,10 @@ on_checkbox_change(vk_object_t *object, int event, void *data)
 }
 
 static int
-on_radio_change(vk_object_t *object, int event, void *data)
+on_radio_change(vk_object_t *object, int event, void *anything)
 {
     vk_selectbox_t  *sb = VK_SELECTBOX(object);
-    vk_window_t     *window = data;
+    vk_window_t     *window = anything;
     char            item[32];
     char            title[48];
     int             count;
@@ -157,10 +157,10 @@ on_radio_change(vk_object_t *object, int event, void *data)
 }
 
 static int
-on_textbox_scroll(vk_object_t *object, int event, void *data)
+on_textbox_scroll(vk_object_t *object, int event, void *anything)
 {
     vk_textbox_t    *tb = VK_TEXTBOX(object);
-    vk_window_t     *window = data;
+    vk_window_t     *window = anything;
     char            title[48];
 
     (void)event;
@@ -417,9 +417,9 @@ deck_draw_chrome(vk_window_t *window, WINDOW *canvas)
 }
 
 static void
-deck_notes_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+deck_notes_decorate(vk_window_t *window, WINDOW *canvas, void *anything)
 {
-    (void)data;
+    (void)anything;
 
     deck_draw_chrome(window, canvas);
 
@@ -432,9 +432,9 @@ deck_notes_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 }
 
 static void
-deck_tasks_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+deck_tasks_decorate(vk_window_t *window, WINDOW *canvas, void *anything)
 {
-    (void)data;
+    (void)anything;
 
     deck_draw_chrome(window, canvas);
 
@@ -447,9 +447,9 @@ deck_tasks_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 }
 
 static void
-deck_help_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+deck_help_decorate(vk_window_t *window, WINDOW *canvas, void *anything)
 {
-    (void)data;
+    (void)anything;
 
     deck_draw_chrome(window, canvas);
 
@@ -461,9 +461,9 @@ deck_help_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 }
 
 static void
-deck_log_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+deck_log_decorate(vk_window_t *window, WINDOW *canvas, void *anything)
 {
-    (void)data;
+    (void)anything;
 
     deck_draw_chrome(window, canvas);
 
@@ -476,9 +476,9 @@ deck_log_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 }
 
 static void
-deck_transport_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+deck_transport_decorate(vk_window_t *window, WINDOW *canvas, void *anything)
 {
-    (void)data;
+    (void)anything;
 
     deck_draw_chrome(window, canvas);
 
@@ -488,9 +488,9 @@ deck_transport_decorate(vk_window_t *window, WINDOW *canvas, void *data)
 }
 
 static void
-deck_files_decorate(vk_window_t *window, WINDOW *canvas, void *data)
+deck_files_decorate(vk_window_t *window, WINDOW *canvas, void *anything)
 {
-    (void)data;
+    (void)anything;
 
     deck_draw_chrome(window, canvas);
 
@@ -822,13 +822,13 @@ build_lang_listbox(int width, int height)
 }
 
 static int
-about_on_recreate(vk_object_t *object, int event, void *data)
+about_on_recreate(vk_object_t *object, int event, void *anything)
 {
     vk_widget_t *widget = VK_WIDGET(object);
     WINDOW *canvas = vk_widget_get_canvas(widget);
 
     (void)event;
-    (void)data;
+    (void)anything;
 
     vk_widget_fill(widget, ' ' | VDK_COLORS(COLOR_WHITE, COLOR_BLUE));
 

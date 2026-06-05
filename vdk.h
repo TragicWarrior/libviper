@@ -152,10 +152,27 @@ typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 typedef struct  _vk_calendar_s      vk_calendar_t;
 typedef struct  _vk_popup_s         vk_popup_t;
+typedef struct  _vk_viewport_s      vk_viewport_t;
+
+/*
+    Source config for vk_viewport.  The consumer fills one of these
+    and hands it to vk_viewport_set_src; the viewport then calls
+    get_row on demand whenever it needs to repaint.  Pure POD, safe
+    to pass by value.
+*/
+typedef struct  _vk_viewport_src_s
+{
+    int     (*get_row)(void *anything, int row, int col,
+                       cchar_t *out, int max_cols);
+    int     rows;      /* logical canvas extents (-1 = unbounded) */
+    int     cols;
+    void   *anything;
+}
+vk_viewport_src_t;
 
 /* callback typedefs */
 typedef int         (*VkEventFunc)(vk_object_t *object, int event,
-                        void *data);
+                        void *anything);
 typedef int         (*VkWidgetFunc)(vk_widget_t *widget, void *anything);
 typedef int         (*VkKmioFunc)(vk_object_t *object, int32_t keystroke);
 typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
@@ -164,7 +181,7 @@ typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
 typedef void        (*VkSurfaceBkgdFunc)(vk_screen_t *screen,
                         int surface_id, WINDOW *canvas);
 typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
-                        WINDOW *canvas, void *data);
+                        WINDOW *canvas, void *anything);
 
 /* cast macros */
 #define VK_OBJECT(x)            ((vk_object_t *)x)
@@ -190,6 +207,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 #define VK_CALENDAR(x)          ((vk_calendar_t *)x)
 #define VK_POPUP(x)             ((vk_popup_t *)x)
+#define VK_VIEWPORT(x)          ((vk_viewport_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -197,7 +215,7 @@ int             vk_object_set_kmio(vk_object_t *object, VkKmioFunc func);
 int             vk_object_push_keystroke(vk_object_t *object,
                     int32_t keystroke);
 int             vk_object_register_event(vk_object_t *object,
-                    int event, VkEventFunc func, void *data);
+                    int event, VkEventFunc func, void *anything);
 int             vk_object_unregister_event(vk_object_t *object,
                     int event, VkEventFunc func);
 int             vk_object_emit(vk_object_t *object, int event);
@@ -436,7 +454,7 @@ int             vk_window_set_title_justify(vk_window_t *window, int justify);
 #define         vk_window_get_child(w) \
                     vk_frame_get_child(VK_FRAME(w))
 int             vk_window_set_decorate(vk_window_t *window,
-                    VkWindowDecorateFunc func, void *data);
+                    VkWindowDecorateFunc func, void *anything);
 #define         vk_window_update(w) \
                     vk_frame_update(VK_FRAME(w))
 void            vk_window_destroy(vk_window_t *window);
@@ -523,6 +541,24 @@ void            vk_button_destroy(vk_button_t *button);
 /* vk_filler */
 vk_filler_t*    vk_filler_create(void);
 void            vk_filler_destroy(vk_filler_t *filler);
+
+/* vk_viewport -- a window into a logical canvas served by a callback */
+vk_viewport_t*  vk_viewport_create(int width, int height);
+int             vk_viewport_set_src(vk_viewport_t *vp,
+                    const vk_viewport_src_t *src);
+int             vk_viewport_set_scroll(vk_viewport_t *vp,
+                    int row, int col);
+int             vk_viewport_get_scroll(vk_viewport_t *vp,
+                    int *row, int *col);
+int             vk_viewport_scroll_by(vk_viewport_t *vp,
+                    int drow, int dcol);
+int             vk_viewport_pgup(vk_viewport_t *vp);
+int             vk_viewport_pgdn(vk_viewport_t *vp);
+int             vk_viewport_update(vk_viewport_t *vp);
+void            vk_viewport_scroll_info(vk_widget_t *child,
+                    int *content_h, int *content_w,
+                    int *scroll_y, int *scroll_x);
+void            vk_viewport_destroy(vk_viewport_t *vp);
 
 /* vk_input */
 vk_input_t*     vk_input_create(int width);

@@ -64,6 +64,7 @@ set(VDK_SOURCES
     vdk/vk_menubar.c
     vdk/vk_calendar.c
     vdk/vk_popup.c
+    vdk/vk_viewport.c
     )
 
 set(VKMIO_SOURCES

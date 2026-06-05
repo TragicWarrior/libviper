@@ -37,7 +37,7 @@ struct _vk_widget_s
 
     uint32_t            state;
 
-    void                *userptr;
+    void                *anything;
 
     vk_scroller_t       *vscroller;
     vk_scroller_t       *hscroller;
