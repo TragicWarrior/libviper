@@ -1,56 +1,210 @@
-Version 4.0.0 (in progress)
+Version 5.0.0
 
+Project structure
+* [Bryan Christ] Retire the entire legacy viper_* / w_* cluster:
+  viper_msgbox, viper_wdecorate, viper_kmio, viper_wcreate, viper_wfind,
+  viper_wresize, plus userptr/wtraits/keyboard/wclose and the rest of
+  the W_* layer.  libvdk is now the only library this project ships.
 * [Bryan Christ] Extract VDK widget toolkit as standalone libvdk (static
-  and shared). VDK sources have no dependency on legacy libviper code.
-  vdk.h is the single public header. viper.h includes vdk.h for backwards
-  compatibility. See VDK_CHANGELOG for widget toolkit details.
-* [Bryan Christ] Remove vk_menu_t (replaced by vk_listbox_t in VDK).
-* [Bryan Christ] Build system now produces libvdk.a, libvdk.so, libviper.a,
-  and libviper.so. libviper continues to bundle VDK for backwards compat.
-* [Bryan Christ] Add vk_popup_t composite widget: bordered dialog with
-  configurable client area and auto-laid-out button bar.  Buttons can be
-  specified at create time (va_args, NULL-terminated) or added later.
-  Button press emits VK_EVENT_ON_CLOSE with the button index as result.
-  Supports VK_FRAME_SINGLE, VK_FRAME_ASCII, and VK_BUTTON_BASIC styles.
-  All window APIs available via convenience macros.
-* [Bryan Christ] Add vk_viewport_t widget: a scrollable window into a
-  logical canvas served by a consumer-supplied get_row callback.  Source
-  config is POD (vk_viewport_src_t) and the viewport asks for one row at
-  a time when it repaints.  Pairs with vk_scroller via
-  vk_viewport_scroll_info.
-* [Bryan Christ] Add vk_grid_t layout primitive: 2D sister to vk_box.
-  Per-column and per-row natural sizing + expand bits.  Hybrid mode --
-  any cell can hold a slot widget (composited like vk_box) OR be a paint
-  area (consumer paints into the grid's canvas using
-  vk_grid_get_cell_rect).  Configurable gap reserves space between cells
-  and around the outer edge for subclass decorations.
-* [Bryan Christ] Add vk_table_t (vk_grid subclass): renders dividers
-  between cells and around the outer edge in single/double/ASCII line
-  styles.  Reuses vk_grid's gap as the divider channel and exposes
-  internal helpers (_vk_table_update, _vk_table_pick_junction,
-  _vk_table_compute_lines) so subclasses can overlay per-cell decorations.
-* [Bryan Christ] Add vk_color_t (vk_table subclass): 16-cell ANSI color
-  picker.  Cells are paint-mode (no slot widget overhead); layout is any
-  cols*rows == 16 (1x16, 2x8, 4x4, 8x2, 16x1).  Built-in arrow / Tab /
-  Shift-Tab / Enter navigation; the focused cell's surrounding dividers
-  are re-drawn in a configurable highlight color via the same junction
-  glyphs vk_table uses.
-* [Bryan Christ] vk_label override of _recreate: rerender label->text
-  after the canvas is reallocated.  Previously labels rendered blank on
-  the new SCREEN after vk_screen_teleport.
+  and shared).  vdk.h is the single public header; vkmio.h ships
+  alongside for keyboard / mouse I/O.  Sources moved into the vdk/
+  subdirectory; vdk_color.h consolidated into vdk.h.
+* [Bryan Christ] Unify version: PROJECT_VERSION drives libvdk's
+  VERSION and pkg-config; SOVERSION advances to 5 to reflect the ABI
+  break from the klass-system overhaul.
+
+vk_object framework
+* [Bryan Christ] Add vk_object_t base klass with RTTI,
+  constructor/destructor chaining, and demote pattern for safe
+  polymorphic destruction.
+* [Bryan Christ] Add generic event system on vk_object_t; restrict
+  vk_object_assert to destructors and remove redundant wrappers.
+* [Bryan Christ] Add convenience macros for inherited APIs in vdk.h,
+  interleaved into their klass API sections.
+
+Screen / surfaces / teleport
+* [Bryan Christ] Add vk_screen_t for terminal migration and virtual
+  surfaces.  Supports wallpaper callback (refresh composites: erase,
+  wallpaper, widget blit, refresh), screen overlay, surface change
+  event, active-surface and surface-count getters, and per-surface
+  bkgd persistence with stdscr propagation.
+* [Bryan Christ] Add vk_screen_evict_pty to SIGSTOP the session leader
+  before teleport.
+* [Bryan Christ] Add _on_recreate hook so widgets auto-repaint after
+  teleport.  vk_label override of _recreate rerenders label->text after
+  the canvas is reallocated (previously blank after teleport).
 * [Bryan Christ] Add vk_screen_get_fd(vk_screen_t *) -> int.  Returns
   fileno(screen->fd_out), letting consumers write raw terminal-mode
   escapes directly to the active SCREEN's output instead of stdout
   (which is wrong after teleport).
-* [Bryan Christ] vk_screen_teleport now writes \033[?1003l to the OLD
+* [Bryan Christ] vk_screen_teleport writes \033[?1003l to the OLD
   output before endwin, disabling any-event mouse tracking on the
   terminal we are walking away from.  Without it the launching shell
   saw raw \033[M mouse-report bytes for every cursor movement.
+
+Widgets
+* [Bryan Christ] Add vk_widget_t base widget with canvas, surface,
+  draw/move/resize/recreate pipeline, state flags, and scroller
+  attachment slots.
+* [Bryan Christ] Add vk_container_t with add/remove/vacate/rotate for
+  child widget management.
+* [Bryan Christ] Add vk_frame_t bordered single-child container with
+  VK_BORDER_SINGLE, VK_BORDER_DOUBLE, VK_BORDER_ASCII, and
+  VK_BORDER_NONE styles.  Border style symbols were renamed from
+  VK_FRAME_* during this cycle; legacy names are removed.  Adds
+  VK_BORDER_REVERSE modifier and VK_RELIEF_RAISED / VK_RELIEF_SUNKEN
+  relief modifiers.
+* [Bryan Christ] Add vk_scroller_t as an attachment widget (derives
+  from vk_widget_t).  Draws scrollbar strip on host widget canvas.
+  Supports vertical and horizontal axes.
+* [Bryan Christ] Add vk_window_t derived from vk_frame_t with title
+  rendering and VkWindowDecorateFunc callback.
+* [Bryan Christ] Add vk_box_t layout container with horizontal /
+  vertical orientation, homogeneous and non-homogeneous modes.
+* [Bryan Christ] Add vk_label_t single-line text widget with left /
+  right / center justification.
+* [Bryan Christ] Add vk_marquee_t derived from vk_label_t with
+  scroll-left, scroll-right, and continuous loop modes.
+* [Bryan Christ] Add vk_listbox_t with items, separators, highlight,
+  scroll support, and scroller host pattern.  Configurable highlight
+  attribute API.
+* [Bryan Christ] Add vk_selectbox_t derived from vk_listbox_t with
+  checkbox (multi-select) and radio (single-select) modes, ASCII and
+  Unicode glyph styles, and scroller attachment support.
+* [Bryan Christ] Add vk_textbox_t multi-line read-only text display
+  with word wrap, keyboard scrolling, and scroller attachment support.
+* [Bryan Christ] Add vk_deck_t z-order manager.  Canvas-less widget
+  that composites children directly onto its surface during draw.
+  Supports add-to-top/bottom, set-top, cycle, optional drop shadows,
+  and vk_deck_count / vk_deck_get_widget accessors.
+* [Bryan Christ] Add vk_button_t push button with 3D beveled style
+  (VK_BORDER_SINGLE, VK_BORDER_ASCII) and Links-style basic relief
+  (VK_BUTTON_BASIC).  Press / release states, callback, UTF-8 text.
+* [Bryan Christ] Add vk_input_t single-line text input widget.
+  Supports sunken and basic relief.  Full editing API with dynamic
+  text buffer, optional max length, horizontal scrolling, and cursor
+  toggle.
+* [Bryan Christ] Add vk_filler_t: a minimal 1x1 blank widget born with
+  VK_STATE_EXPAND.  Useful as a spacer in non-homogeneous boxes.
+* [Bryan Christ] Add vk_filedialog_t composite widget derived from
+  vk_box_t.  File browser with path input, scrollable file/directory
+  list (listbox or checkbox selectbox for multiselect), vertical
+  scrollbar, OK/Cancel button bar, extension filter, built-in sunken
+  file_list frame, and built-in keyboard navigation.  Supports
+  VK_BORDER_SINGLE, VK_BORDER_ASCII, and VK_BUTTON_BASIC styles.
+  vk_filedialog_set_wrap() enables wrap-around navigation.
+* [Bryan Christ] Add vk_popup_t composite widget: bordered dialog with
+  configurable client area and auto-laid-out button bar.  Buttons can
+  be specified at create time (va_args, NULL-terminated) or added
+  later.  Button press emits VK_EVENT_ON_CLOSE with the button index
+  as result.  Supports VK_BORDER_SINGLE, VK_BORDER_ASCII, and
+  VK_BUTTON_BASIC styles.  All window APIs available via convenience
+  macros.
+* [Bryan Christ] Add vk_viewport_t widget: a scrollable window into a
+  logical canvas served by a consumer-supplied get_row callback.
+  Source config is POD (vk_viewport_src_t) and the viewport asks for
+  one row at a time when it repaints.  Pairs with vk_scroller via
+  vk_viewport_scroll_info.
+* [Bryan Christ] Add vk_grid_t layout primitive: 2D sister to vk_box.
+  Per-column and per-row natural sizing + expand bits.  Hybrid mode --
+  any cell can hold a slot widget (composited like vk_box) OR be a
+  paint area (consumer paints into the grid's canvas using
+  vk_grid_get_cell_rect).  Configurable gap reserves space between
+  cells and around the outer edge for subclass decorations.
+* [Bryan Christ] Add vk_table_t (vk_grid subclass): renders dividers
+  between cells and around the outer edge in single / double / ASCII
+  line styles.  Reuses vk_grid's gap as the divider channel and
+  exposes internal helpers (_vk_table_update, _vk_table_pick_junction,
+  _vk_table_compute_lines) so subclasses can overlay per-cell
+  decorations.
+* [Bryan Christ] Add vk_color_t (vk_table subclass): 16-cell ANSI
+  color picker.  Cells are paint-mode (no slot widget overhead);
+  layout is any cols*rows == 16 (1x16, 2x8, 4x4, 8x2, 16x1).  Built-in
+  arrow / Tab / Shift-Tab / Enter navigation; the focused cell's
+  surrounding dividers are re-drawn in a configurable highlight color
+  via the same junction glyphs vk_table uses.
+* [Bryan Christ] Add vk_menubar_t widget with dropdown management.
+* [Bryan Christ] Add vk_dropdown_t widget with frame border attrs.
+* [Bryan Christ] Add vk_calendar_t widget.
+* [Bryan Christ] Add vk_activity_t widget; listbox item padding;
+  scroller background fill.
+* [Bryan Christ] Remove vk_menu_t (replaced by vk_listbox_t in VDK).
+
+Widget state and styling
+* [Bryan Christ] Replace bool hidden with a uint32_t state bitfield on
+  vk_widget_t (STATE_VISIBLE, STATE_FROZEN, STATE_NORESIZE,
+  STATE_EXPAND).  Implement STATE_FROZEN via composer snapshot.
+* [Bryan Christ] Add widget visibility API (show / hide / is_visible).
+* [Bryan Christ] Use WACS_* wide chars for borders and separators
+  instead of ACS_* and hardcoded Unicode codepoints.
+* [Bryan Christ] Add inline keyword to all public API functions; add
+  convenience macros for widget state.
+
+I/O, keyboard, mouse
+* [Bryan Christ] Make VDK widgets I/O-agnostic.  Remove built-in kmio
+  handlers from all klasses (except vk_filedialog_t).  Add
+  vk_object_set_kmio() so applications install their own keystroke
+  handlers at runtime.
+* [Bryan Christ] Add default kmio forwarding handlers to vk_frame_t
+  (forwards to child), vk_box_t (forwards to focused slot widget),
+  and vk_deck_t (forwards to top widget).  vk_window_t inherits
+  frame's handler.  All overridable via vk_object_set_kmio().
 * [Bryan Christ] vk_kmio: vk_kmio_init / vk_kmio_shutdown now take an
   int fd and write mouse-mode escapes through it via write(2) instead
-  of printf/fflush(stdout).  This keeps the keyboard/mouse layer
-  independent of stdio + lets callers re-bind kmio to a new fd after
+  of printf/fflush(stdout).  Keeps the keyboard/mouse layer
+  independent of stdio and lets callers re-bind kmio to a new fd after
   teleport.  Pass vk_screen_get_fd(screen) at every call site.
+* [Bryan Christ] Route mouse-mode escapes through caller-supplied fd.
+* [Bryan Christ] Add vkmio zone, double-click, and drag utilities.
+* [Bryan Christ] Add vk_kmio_mouse_drain to coalesce queued mouse
+  events.
+* [Bryan Christ] Add vk_kmio_get_mouse_event and GPM wheel button
+  mapping.
+* [Bryan Christ] Bypass the ncurses mouse queue for GPM and take over
+  the GPM connection directly.
+* [Bryan Christ] Enable xterm mode 1003 (any-event mouse tracking).
+* [Bryan Christ] Restrict window move/resize to frame border clicks;
+  add Shift bypass.
+* [Bryan Christ] Fix GPM wheel detection for exps2/imps2 mice.
+
+Color
+* [Bryan Christ] Add vdk_color_init() and vdk_color_pair() color
+  system.  VDK source files have no dependency on viper.h.
+* [Bryan Christ] Add 16x16 ANSI color pair tier for accurate bright
+  color mapping.
+* [Bryan Christ] Add extended 256-color pair registration and lookup.
+* [Bryan Christ] Add configurable relief colors and shadow colors,
+  plus filedialog button APIs.
+
+Fixes
+* [Bryan Christ] Fix scroller blank canvas overwriting host border
+  when content fits viewport (skip-draw semantics).
+* [Bryan Christ] Fix vk_box_t initial layout not sizing last slot to
+  absorb remainder pixels.
+* [Bryan Christ] Fix vdk_color_init() pair 0 swap to match ncurses
+  default pair semantics.
+* [Bryan Christ] Fix vk_button_t width calculation to use display
+  width (wcswidth) instead of byte length so UTF-8 labels size
+  correctly.
+* [Bryan Christ] Fix vk_widget_resize corrupting canvas when size is
+  unchanged.
+* [Bryan Christ] Redraw screen on focus change to fix stale border
+  agents.
+* [Bryan Christ] Fix label UTF-8 rendering; skip hidden box children
+  when painting.
+* [Bryan Christ] Honor widget attrs when painting listbox item text.
+* [Bryan Christ] Initialize widget list node at construction so
+  list_del is safe.
+* [Bryan Christ] Add missing listbox public API wrappers: set_selected,
+  exec_selected, item_is_separator, get_item_count, get_selected,
+  get_item, set_item.
+* [Bryan Christ] Add selectbox wrappers for the full listbox-inherited
+  API: add_separator, remove_item, get_item_count, get_selected,
+  set_selected, exec_selected, get_item, set_item, item_is_separator.
+
+Demos
+* [Bryan Christ] Multi-desktop demo, dialog demo, filedialog demo;
+  new vk_viewport_demo.
 
 Version 3.1.1
 
