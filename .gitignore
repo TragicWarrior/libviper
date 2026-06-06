@@ -1,0 +1,19 @@
+# CMake-generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+Makefile
+*/Makefile
+*/CMakeFiles/
+*/cmake_install.cmake
+
+# build outputs
+*.o
+*.a
+*.so
+*.so.*
+demo/vk_demo
+
+# editor backups
+*.save

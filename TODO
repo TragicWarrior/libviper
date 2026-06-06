@@ -4,15 +4,15 @@ Here's a evergreen list of TODO items in no particular order:
 * More klasses!
   - Clock
   - Spinner / Throbber
-  - Label
-  - Text Box
+  - Label (done)
+  - Text Box (done)
   - Input Field
   - File Picker
   - Button
   - Slider
   - Progress Bar
   - Check Box
-  - Frames
+  - Frames (done)
 * Convert standard event signals from strings to integers for perforance.
 * Rewrite KMIO code using protothreads for better code maintenace.
 * Shuffle APIs into more logical files.  Decks, Screens, Windows, States
