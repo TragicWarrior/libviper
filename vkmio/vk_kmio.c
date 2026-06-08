@@ -105,6 +105,30 @@ vk_kmio_shutdown(int fd)
     vk_kmio_flags = 0;
 }
 
+/* When VK_KMIO_DEBUG is non-empty in the environment, every fetched
+   mouse event is appended to /tmp/vk_kmio.log so we can see the
+   bstate ncurses is actually surfacing (vs the SGR bytes the
+   terminal sent).  Cheap when off (one getenv per call). */
+static void
+_vk_kmio_debug_log(const char *src, MEVENT *m)
+{
+    static FILE *f = NULL;
+    static int  checked = 0;
+
+    if(!checked)
+    {
+        const char *e = getenv("VK_KMIO_DEBUG");
+        if(e != NULL && *e != '\0')
+            f = fopen("/tmp/vk_kmio.log", "a");
+        checked = 1;
+    }
+    if(f == NULL || m == NULL) return;
+
+    fprintf(f, "%s bstate=0x%08lx x=%d y=%d z=%d id=%d\n",
+        src, (unsigned long)m->bstate, m->x, m->y, m->z, m->id);
+    fflush(f);
+}
+
 int32_t
 vk_kmio_fetch(MEVENT *mouse_event)
 {
@@ -116,7 +140,10 @@ vk_kmio_fetch(MEVENT *mouse_event)
 
 #if !defined(_NO_GPM) && defined(__linux)
     if(vk_kmio_gpm(mouse_event, 0) == 0)
+    {
+        _vk_kmio_debug_log("gpm  ", mouse_event);
         return KEY_MOUSE;
+    }
 #endif
 
     key_code = getch();
@@ -125,7 +152,11 @@ vk_kmio_fetch(MEVENT *mouse_event)
     {
         if(key_code != 27)
         {
-            if(key_code == KEY_MOUSE) getmouse(mouse_event);
+            if(key_code == KEY_MOUSE)
+            {
+                getmouse(mouse_event);
+                _vk_kmio_debug_log("xterm", mouse_event);
+            }
             return key_code;
         }
 
