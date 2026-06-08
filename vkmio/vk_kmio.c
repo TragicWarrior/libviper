@@ -75,7 +75,17 @@ vk_kmio_init(int fd, uint32_t flags)
         if(flags & VK_KMIO_MOUSE_HOVER)
         {
             mouseinterval(0);
-            _vk_kmio_write(fd, "\033[?1003h");
+            /* 1003h: report every motion event (hover + drag).
+               1006h: SGR encoding -- without it the terminal falls
+               back to legacy X10 mouse encoding, where no-button
+               motion is reported with button code 3 (= release) plus
+               the motion bit, which ncurses then surfaces as a
+               BUTTON1_RELEASED instead of a clean
+               REPORT_MOUSE_POSITION.  Over SSH that misclassification
+               broke hover-highlight (and caused spurious clicks
+               before vwm's dropdown was hardened against unarmed
+               releases). */
+            _vk_kmio_write(fd, "\033[?1003h\033[?1006h");
         }
     }
 
@@ -90,7 +100,7 @@ vk_kmio_shutdown(int fd)
 #endif
 
     if(vk_kmio_flags & VK_KMIO_MOUSE_HOVER)
-        _vk_kmio_write(fd, "\033[?1003l");
+        _vk_kmio_write(fd, "\033[?1006l\033[?1003l");
 
     vk_kmio_flags = 0;
 }
