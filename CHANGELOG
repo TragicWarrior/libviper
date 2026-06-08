@@ -1,3 +1,22 @@
+Unreleased
+
+I/O, keyboard, mouse
+* [Bryan Christ] vk_kmio: enable SGR mouse encoding (\033[?1006h) alongside
+  the existing 1003h any-event tracking.  Without it the terminal falls
+  back to legacy X10 encoding, where no-button motion is reported with
+  button code 3 (= release) plus the motion bit -- ncurses then surfaces
+  those as BUTTON1_RELEASED instead of REPORT_MOUSE_POSITION.  Disable in
+  reverse order in shutdown.  ABI/SONAME unchanged; consumers only need
+  to drop in the new libvdk.so.
+* [Bryan Christ] vk_kmio: recover real bstate from ncurses' SGR motion
+  misclassification.  ncurses still masks the motion bit off the button
+  code and surfaces SGR motion as BUTTON1_RELEASED and SGR drag (button
+  bit 32) as BUTTON1_PRESSED.  vk_kmio_fetch now tracks button-1 state
+  across events and rewrites bare RELEASED-without-prior-PRESSED and
+  bare PRESSED-while-already-held to REPORT_MOUSE_POSITION, restoring
+  hover-highlight behaviour over SSH and stopping spurious clicks on
+  hover in vwm's drop-down menus, button bars, and Manage Apps subforms.
+
 Version 5.0.0
 
 Project structure
