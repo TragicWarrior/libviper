@@ -114,6 +114,55 @@ vk_kmio_shutdown(int fd)
     vk_kmio_flags = 0;
 }
 
+/* ncurses (every version we've tested) parses the SGR motion
+   sequence \E[<35;col;rowM and surfaces it as BUTTON1_RELEASED
+   rather than REPORT_MOUSE_POSITION -- it masks the motion bit
+   (32) off the button code and treats the leftover 3 as "release
+   button 1", same misbehaviour the legacy X10 mouse encoding has.
+   Drag events (encoded as button=32, i.e. motion bit + button 0)
+   similarly come up as bare BUTTON1_PRESSED.
+
+   Since we can't fix ncurses from out here, recover the real intent
+   from the event stream: track whether button 1 is currently held,
+   and reclassify the bstate when it doesn't match the state we
+   expect.  No press in flight + RELEASED = hover; press already in
+   flight + PRESSED = drag; everything else passes through. */
+static void
+_vk_kmio_correct_sgr_motion(MEVENT *m)
+{
+    static bool button1_held = false;
+
+    if(m == NULL) return;
+
+    if(m->bstate == BUTTON1_RELEASED)
+    {
+        if(button1_held)
+        {
+            /* matches the prior press -- real release */
+            button1_held = false;
+        }
+        else
+        {
+            /* no press is in flight -- motion misclassified as release */
+            m->bstate = REPORT_MOUSE_POSITION;
+        }
+    }
+    else if(m->bstate == BUTTON1_PRESSED)
+    {
+        if(button1_held)
+        {
+            /* button already down -- drag event misclassified as a
+               fresh press; surface it as motion so hover-style
+               handlers fire while a drag is in progress */
+            m->bstate = REPORT_MOUSE_POSITION;
+        }
+        else
+        {
+            button1_held = true;
+        }
+    }
+}
+
 /* vk_kmio_debug_fp is opened up front in vk_kmio_init() when
    VK_KMIO_DEBUG is in the environment, so this fast-path has no
    lazy-init race and never calls fopen() while other threads might
@@ -155,6 +204,7 @@ vk_kmio_fetch(MEVENT *mouse_event)
             if(key_code == KEY_MOUSE)
             {
                 getmouse(mouse_event);
+                _vk_kmio_correct_sgr_motion(mouse_event);
                 _vk_kmio_debug_log("xterm", mouse_event);
             }
             return key_code;
