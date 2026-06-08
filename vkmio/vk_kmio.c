@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 
 #include <ncursesw/curses.h>
@@ -47,6 +48,7 @@ static unsigned short x_gpm_event[] = {
 
 static uint32_t     vk_kmio_flags = 0;
 static MEVENT       *last_mouse_event = NULL;
+static FILE        *vk_kmio_debug_fp = NULL;
 
 static void
 _vk_kmio_write(int fd, const char *esc)
@@ -62,6 +64,13 @@ int
 vk_kmio_init(int fd, uint32_t flags)
 {
     vk_kmio_flags = flags;
+
+    if(vk_kmio_debug_fp == NULL)
+    {
+        const char *e = getenv("VK_KMIO_DEBUG");
+        if(e != NULL && *e != '\0')
+            vk_kmio_debug_fp = fopen("/tmp/vk_kmio.log", "a");
+    }
 
     if(flags & VK_KMIO_MOUSE)
     {
@@ -105,28 +114,19 @@ vk_kmio_shutdown(int fd)
     vk_kmio_flags = 0;
 }
 
-/* When VK_KMIO_DEBUG is non-empty in the environment, every fetched
-   mouse event is appended to /tmp/vk_kmio.log so we can see the
-   bstate ncurses is actually surfacing (vs the SGR bytes the
-   terminal sent).  Cheap when off (one getenv per call). */
+/* vk_kmio_debug_fp is opened up front in vk_kmio_init() when
+   VK_KMIO_DEBUG is in the environment, so this fast-path has no
+   lazy-init race and never calls fopen() while other threads might
+   be polling. */
 static void
 _vk_kmio_debug_log(const char *src, MEVENT *m)
 {
-    static FILE *f = NULL;
-    static int  checked = 0;
+    if(vk_kmio_debug_fp == NULL || m == NULL) return;
 
-    if(!checked)
-    {
-        const char *e = getenv("VK_KMIO_DEBUG");
-        if(e != NULL && *e != '\0')
-            f = fopen("/tmp/vk_kmio.log", "a");
-        checked = 1;
-    }
-    if(f == NULL || m == NULL) return;
-
-    fprintf(f, "%s bstate=0x%08lx x=%d y=%d z=%d id=%d\n",
-        src, (unsigned long)m->bstate, m->x, m->y, m->z, m->id);
-    fflush(f);
+    fprintf(vk_kmio_debug_fp,
+        "%s bstate=0x%lx x=%d y=%d\n",
+        src, (unsigned long)m->bstate, m->x, m->y);
+    fflush(vk_kmio_debug_fp);
 }
 
 int32_t
