@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <inttypes.h>
 
 #include <ncursesw/curses.h>
@@ -48,7 +47,6 @@ static unsigned short x_gpm_event[] = {
 
 static uint32_t     vk_kmio_flags = 0;
 static MEVENT       *last_mouse_event = NULL;
-static FILE        *vk_kmio_debug_fp = NULL;
 
 static void
 _vk_kmio_write(int fd, const char *esc)
@@ -64,13 +62,6 @@ int
 vk_kmio_init(int fd, uint32_t flags)
 {
     vk_kmio_flags = flags;
-
-    if(vk_kmio_debug_fp == NULL)
-    {
-        const char *e = getenv("VK_KMIO_DEBUG");
-        if(e != NULL && *e != '\0')
-            vk_kmio_debug_fp = fopen("/tmp/vk_kmio.log", "a");
-    }
 
     if(flags & VK_KMIO_MOUSE)
     {
@@ -163,21 +154,6 @@ _vk_kmio_correct_sgr_motion(MEVENT *m)
     }
 }
 
-/* vk_kmio_debug_fp is opened up front in vk_kmio_init() when
-   VK_KMIO_DEBUG is in the environment, so this fast-path has no
-   lazy-init race and never calls fopen() while other threads might
-   be polling. */
-static void
-_vk_kmio_debug_log(const char *src, MEVENT *m)
-{
-    if(vk_kmio_debug_fp == NULL || m == NULL) return;
-
-    fprintf(vk_kmio_debug_fp,
-        "%s bstate=0x%lx x=%d y=%d\n",
-        src, (unsigned long)m->bstate, m->x, m->y);
-    fflush(vk_kmio_debug_fp);
-}
-
 int32_t
 vk_kmio_fetch(MEVENT *mouse_event)
 {
@@ -189,10 +165,7 @@ vk_kmio_fetch(MEVENT *mouse_event)
 
 #if !defined(_NO_GPM) && defined(__linux)
     if(vk_kmio_gpm(mouse_event, 0) == 0)
-    {
-        _vk_kmio_debug_log("gpm  ", mouse_event);
         return KEY_MOUSE;
-    }
 #endif
 
     key_code = getch();
@@ -205,7 +178,6 @@ vk_kmio_fetch(MEVENT *mouse_event)
             {
                 getmouse(mouse_event);
                 _vk_kmio_correct_sgr_motion(mouse_event);
-                _vk_kmio_debug_log("xterm", mouse_event);
             }
             return key_code;
         }
