@@ -48,6 +48,16 @@ static unsigned short x_gpm_event[] = {
 static uint32_t     vk_kmio_flags = 0;
 static MEVENT       *last_mouse_event = NULL;
 
+/* SGR mouse parser state.  Under mousemask(0) ncurses still returns
+   KEY_MOUSE for the \033[< introducer but, with no mask armed, leaks
+   the Cb;Cx;Cy(M|m) body as raw getch() bytes instead of cooking a
+   (mis-decoded) event.  We accumulate that body here and decode it
+   ourselves.  Touched only by vk_kmio_fetch on the cooperative input
+   protothread, so it needs no locking. */
+static char         sgr_buf[16];
+static int          sgr_len = 0;
+static bool         sgr_in_body = false;
+
 static void
 _vk_kmio_write(int fd, const char *esc)
 {
@@ -63,30 +73,27 @@ vk_kmio_init(int fd, uint32_t flags)
 {
     vk_kmio_flags = flags;
 
+    /* drop any half-read SGR body if init runs mid-session (teleport
+       calls shutdown+init against the new fd) */
+    sgr_in_body = false;
+    sgr_len = 0;
+
     if(flags & VK_KMIO_MOUSE)
     {
-        mmask_t mouse_mask = ALL_MOUSE_EVENTS;
+        /* mask 0 on purpose: we decode SGR mouse reports ourselves off
+           the bytes ncurses leaks (see vk_kmio_fetch).  With a non-zero
+           mask ncurses instead cooks the report, and its decoder masks
+           the motion bit (0x20) off the button code -- surfacing SGR
+           motion as BUTTON1_RELEASED and SGR drag as BUTTON1_PRESSED,
+           the misclassification that broke hover-highlight and drags
+           over SSH.  1006h selects SGR encoding; 1003h (hover) reports
+           every motion event, 1000h reports button events only. */
+        mousemask(0, NULL);
 
         if(flags & VK_KMIO_MOUSE_HOVER)
-            mouse_mask |= REPORT_MOUSE_POSITION;
-
-        mousemask(mouse_mask, NULL);
-
-        if(flags & VK_KMIO_MOUSE_HOVER)
-        {
-            mouseinterval(0);
-            /* 1003h: report every motion event (hover + drag).
-               1006h: SGR encoding -- without it the terminal falls
-               back to legacy X10 mouse encoding, where no-button
-               motion is reported with button code 3 (= release) plus
-               the motion bit, which ncurses then surfaces as a
-               BUTTON1_RELEASED instead of a clean
-               REPORT_MOUSE_POSITION.  Over SSH that misclassification
-               broke hover-highlight (and caused spurious clicks
-               before vwm's dropdown was hardened against unarmed
-               releases). */
             _vk_kmio_write(fd, "\033[?1003h\033[?1006h");
-        }
+        else
+            _vk_kmio_write(fd, "\033[?1000h\033[?1006h");
     }
 
     return 0;
@@ -99,58 +106,106 @@ vk_kmio_shutdown(int fd)
     vk_kmio_gpm(NULL, VK_GPM_CMD_CLOSE);
 #endif
 
-    if(vk_kmio_flags & VK_KMIO_MOUSE_HOVER)
-        _vk_kmio_write(fd, "\033[?1006l\033[?1003l");
+    if(vk_kmio_flags & VK_KMIO_MOUSE)
+    {
+        if(vk_kmio_flags & VK_KMIO_MOUSE_HOVER)
+            _vk_kmio_write(fd, "\033[?1006l\033[?1003l");
+        else
+            _vk_kmio_write(fd, "\033[?1006l\033[?1000l");
+    }
 
     vk_kmio_flags = 0;
 }
 
-/* ncurses (every version we've tested) parses the SGR motion
-   sequence \E[<35;col;rowM and surfaces it as BUTTON1_RELEASED
-   rather than REPORT_MOUSE_POSITION -- it masks the motion bit
-   (32) off the button code and treats the leftover 3 as "release
-   button 1", same misbehaviour the legacy X10 mouse encoding has.
-   Drag events (encoded as button=32, i.e. motion bit + button 0)
-   similarly come up as bare BUTTON1_PRESSED.
+/* Decode an accumulated SGR mouse body into an MEVENT.  The body is
+   the "Cb;Cx;Cy" between the (already-stripped) \033[< introducer and
+   the terminator; the terminator ('M' = press/motion, 'm' = release)
+   is passed separately.
 
-   Since we can't fix ncurses from out here, recover the real intent
-   from the event stream: track whether button 1 is currently held,
-   and reclassify the bstate when it doesn't match the state we
-   expect.  No press in flight + RELEASED = hover; press already in
-   flight + PRESSED = drag; everything else passes through. */
-static void
-_vk_kmio_correct_sgr_motion(MEVENT *m)
+   In the Cb button byte: bit 6 (0x40) marks a wheel event, bit 5
+   (0x20) marks motion (hover or drag), the low two bits select the
+   button (0=1, 1=2, 2=3), and bits 2/3/4 are shift/meta/ctrl.  Because
+   the wire is self-describing -- motion is the 0x20 bit, release is the
+   'm' terminator -- there is nothing to infer: no held-state tracking,
+   no timestamps, no heuristics.  Cx/Cy are 1-based; MEVENT is 0-based.
+
+   Returns true on a well-formed report. */
+static bool
+_vk_kmio_parse_sgr(const char *body, char term, MEVENT *m)
 {
-    static bool button1_held = false;
+    int     cb, cx, cy;
+    mmask_t bstate;
 
-    if(m == NULL) return;
+    if(m == NULL) return false;
+    if(sscanf(body, "%d;%d;%d", &cb, &cx, &cy) != 3) return false;
 
-    if(m->bstate == BUTTON1_RELEASED)
+    if(cb & 0x40)                   /* wheel: 0x40|0 = up, 0x40|1 = down */
+        bstate = (cb & 0x01) ? BUTTON5_PRESSED : BUTTON4_PRESSED;
+    else if(cb & 0x20)              /* motion -- hover or drag alike */
+        bstate = REPORT_MOUSE_POSITION;
+    else switch(cb & 0x03)          /* discrete press / release */
     {
-        if(button1_held)
-        {
-            /* matches the prior press -- real release */
-            button1_held = false;
-        }
-        else
-        {
-            /* no press is in flight -- motion misclassified as release */
-            m->bstate = REPORT_MOUSE_POSITION;
-        }
+        case 0:  bstate = (term == 'm') ? BUTTON1_RELEASED : BUTTON1_PRESSED; break;
+        case 1:  bstate = (term == 'm') ? BUTTON2_RELEASED : BUTTON2_PRESSED; break;
+        case 2:  bstate = (term == 'm') ? BUTTON3_RELEASED : BUTTON3_PRESSED; break;
+        default: return false;      /* low2 == 3 without the motion bit */
     }
-    else if(m->bstate == BUTTON1_PRESSED)
+
+    if(cb & 0x04) bstate |= BUTTON_SHIFT;
+    if(cb & 0x08) bstate |= BUTTON_ALT;
+    if(cb & 0x10) bstate |= BUTTON_CTRL;
+
+    memset(m, 0, sizeof(*m));
+    m->bstate = bstate;
+    m->x = cx - 1;
+    m->y = cy - 1;
+    return true;
+}
+
+/* Drain the leaked SGR body bytes from the input queue into sgr_buf
+   until the M/m terminator.  Returns 1 when a complete report was
+   parsed into mouse_event, 0 when the body ran dry mid-sequence (a
+   split read -- vk_kmio_fetch resumes on the next call), and -1 on a
+   malformed or oversized body (the sequence is abandoned, never
+   wedging the input path).  sgr_in_body stays true only while 0. */
+static int
+_vk_kmio_drain_sgr(MEVENT *mouse_event)
+{
+    int     c;
+
+    for(;;)
     {
-        if(button1_held)
+        c = getch();
+
+        if(c == -1)
+            return 0;               /* incomplete; come back next fetch */
+
+        if(c == 'M' || c == 'm')
         {
-            /* button already down -- drag event misclassified as a
-               fresh press; surface it as motion so hover-style
-               handlers fire while a drag is in progress */
-            m->bstate = REPORT_MOUSE_POSITION;
+            int ok;
+
+            sgr_buf[sgr_len] = '\0';
+            ok = _vk_kmio_parse_sgr(sgr_buf, (char)c, mouse_event);
+            sgr_in_body = false;
+            sgr_len = 0;
+            return ok ? 1 : -1;
         }
-        else
+
+        if((c >= '0' && c <= '9') || c == ';')
         {
-            button1_held = true;
+            if(sgr_len >= (int)sizeof(sgr_buf) - 1)
+            {
+                sgr_in_body = false;        /* overflow -- abandon */
+                sgr_len = 0;
+                return -1;
+            }
+            sgr_buf[sgr_len++] = (char)c;
+            continue;
         }
+
+        sgr_in_body = false;                /* unexpected byte -- abandon */
+        sgr_len = 0;
+        return -1;
     }
 }
 
@@ -168,6 +223,11 @@ vk_kmio_fetch(MEVENT *mouse_event)
         return KEY_MOUSE;
 #endif
 
+    /* finish a split SGR body left over from a previous call before
+       reading any new input */
+    if(sgr_in_body)
+        return (_vk_kmio_drain_sgr(mouse_event) == 1) ? KEY_MOUSE : -1;
+
     key_code = getch();
 
     if(key_code != -1)
@@ -176,8 +236,12 @@ vk_kmio_fetch(MEVENT *mouse_event)
         {
             if(key_code == KEY_MOUSE)
             {
-                getmouse(mouse_event);
-                _vk_kmio_correct_sgr_motion(mouse_event);
+                /* ncurses stripped the \033[< introducer and left the
+                   Cb;Cx;Cy(M|m) body in the queue; decode it ourselves */
+                sgr_in_body = true;
+                sgr_len = 0;
+                return (_vk_kmio_drain_sgr(mouse_event) == 1)
+                    ? KEY_MOUSE : -1;
             }
             return key_code;
         }
