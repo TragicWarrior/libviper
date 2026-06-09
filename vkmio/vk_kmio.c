@@ -56,7 +56,15 @@ static MEVENT       *last_mouse_event = NULL;
    protothread, so it needs no locking. */
 static char         sgr_buf[16];
 static int          sgr_len = 0;
+static int          sgr_stall = 0;
 static bool         sgr_in_body = false;
+
+/* Upper bound on how many fetches a partially-read SGR body may wait for
+   its remainder before we give up on it.  A genuine split read completes
+   in a fetch or two; the cap only matters if a terminal sends half an
+   escape and then nothing, so a stuck sequence can never starve the
+   keyboard path. */
+#define VK_KMIO_SGR_MAX_STALL   32
 
 static void
 _vk_kmio_write(int fd, const char *esc)
@@ -77,6 +85,7 @@ vk_kmio_init(int fd, uint32_t flags)
        calls shutdown+init against the new fd) */
     sgr_in_body = false;
     sgr_len = 0;
+    sgr_stall = 0;
 
     if(flags & VK_KMIO_MOUSE)
     {
@@ -162,12 +171,12 @@ _vk_kmio_parse_sgr(const char *body, char term, MEVENT *m)
     return true;
 }
 
-/* Drain the leaked SGR body bytes from the input queue into sgr_buf
-   until the M/m terminator.  Returns 1 when a complete report was
-   parsed into mouse_event, 0 when the body ran dry mid-sequence (a
-   split read -- vk_kmio_fetch resumes on the next call), and -1 on a
-   malformed or oversized body (the sequence is abandoned, never
-   wedging the input path).  sgr_in_body stays true only while 0. */
+/* Accumulate the leaked SGR body bytes from the input queue into sgr_buf
+   until the M/m terminator.  Pure accumulator: it owns sgr_buf/sgr_len but
+   never touches sgr_in_body -- vk_kmio_fetch owns that lifecycle.  Returns
+   1 when a complete report was parsed into mouse_event, 0 when input ran
+   dry (the partial is retained in sgr_buf for a later resume), and -1 on a
+   malformed or oversized body (the partial is discarded). */
 static int
 _vk_kmio_drain_sgr(MEVENT *mouse_event)
 {
@@ -178,7 +187,7 @@ _vk_kmio_drain_sgr(MEVENT *mouse_event)
         c = getch();
 
         if(c == -1)
-            return 0;               /* incomplete; come back next fetch */
+            return 0;               /* ran dry; keep the partial */
 
         if(c == 'M' || c == 'm')
         {
@@ -186,7 +195,6 @@ _vk_kmio_drain_sgr(MEVENT *mouse_event)
 
             sgr_buf[sgr_len] = '\0';
             ok = _vk_kmio_parse_sgr(sgr_buf, (char)c, mouse_event);
-            sgr_in_body = false;
             sgr_len = 0;
             return ok ? 1 : -1;
         }
@@ -195,17 +203,44 @@ _vk_kmio_drain_sgr(MEVENT *mouse_event)
         {
             if(sgr_len >= (int)sizeof(sgr_buf) - 1)
             {
-                sgr_in_body = false;        /* overflow -- abandon */
-                sgr_len = 0;
+                sgr_len = 0;                /* overflow -- discard */
                 return -1;
             }
             sgr_buf[sgr_len++] = (char)c;
             continue;
         }
 
-        sgr_in_body = false;                /* unexpected byte -- abandon */
-        sgr_len = 0;
+        sgr_len = 0;                        /* unexpected byte -- discard */
         return -1;
+    }
+}
+
+/* Run the accumulator and resolve the body-read state.  Returns KEY_MOUSE
+   when a report is ready, otherwise -1.  sgr_in_body is kept set ONLY when
+   a real partial body is still arriving (sgr_len > 0) and we are under the
+   stall cap; a KEY_MOUSE that leaks no body at all (e.g. another layer
+   re-armed mousemask so ncurses cooked the event) is abandoned at once, so
+   it can never wedge the input path. */
+static int32_t
+_vk_kmio_pump_sgr(MEVENT *mouse_event)
+{
+    switch(_vk_kmio_drain_sgr(mouse_event))
+    {
+        case 1:
+            sgr_in_body = false;
+            sgr_stall = 0;
+            return KEY_MOUSE;
+
+        case 0:
+            if(sgr_len > 0 && ++sgr_stall < VK_KMIO_SGR_MAX_STALL)
+                return -1;                  /* genuine split; resume later */
+            /* fall through -- no body leaked, or stalled too long */
+
+        default:                            /* malformed, or give-up above */
+            sgr_in_body = false;
+            sgr_len = 0;
+            sgr_stall = 0;
+            return -1;
     }
 }
 
@@ -226,7 +261,7 @@ vk_kmio_fetch(MEVENT *mouse_event)
     /* finish a split SGR body left over from a previous call before
        reading any new input */
     if(sgr_in_body)
-        return (_vk_kmio_drain_sgr(mouse_event) == 1) ? KEY_MOUSE : -1;
+        return _vk_kmio_pump_sgr(mouse_event);
 
     key_code = getch();
 
@@ -240,8 +275,8 @@ vk_kmio_fetch(MEVENT *mouse_event)
                    Cb;Cx;Cy(M|m) body in the queue; decode it ourselves */
                 sgr_in_body = true;
                 sgr_len = 0;
-                return (_vk_kmio_drain_sgr(mouse_event) == 1)
-                    ? KEY_MOUSE : -1;
+                sgr_stall = 0;
+                return _vk_kmio_pump_sgr(mouse_event);
             }
             return key_code;
         }
