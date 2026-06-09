@@ -1,9 +1,11 @@
 #include <poll.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <time.h>
 
 #include <ncursesw/curses.h>
 
@@ -48,6 +50,35 @@ static unsigned short x_gpm_event[] = {
 static uint32_t     vk_kmio_flags = 0;
 static MEVENT       *last_mouse_event = NULL;
 
+/* Button-1 tracking used by _vk_kmio_correct_sgr_motion to undo
+   ncurses' SGR misclassification.  vk_kmio_btn1_last_{time,x,y}
+   capture the moment + position of the last event in which button
+   1 was known to be down (press or drag), so a RELEASED-while-held
+   can be judged against them. */
+static bool             vk_kmio_btn1_held = false;
+static struct timespec  vk_kmio_btn1_last_time = {0, 0};
+static int              vk_kmio_btn1_last_x = -1;
+static int              vk_kmio_btn1_last_y = -1;
+
+/* If held=true and a RELEASED arrives more than this long after the
+   last button-down event AND the cursor has moved at least this far
+   from where button 1 was last seen, treat the RELEASED as a phantom
+   hover after a lost release rather than a real release.  Both must
+   hold so a deliberate press-and-hold-still-then-release stays a
+   real click. */
+#define VK_KMIO_BTN1_STALE_MS       750
+#define VK_KMIO_BTN1_STALE_DIST     4
+
+static void
+_vk_kmio_btn1_reset(void)
+{
+    vk_kmio_btn1_held = false;
+    vk_kmio_btn1_last_time.tv_sec = 0;
+    vk_kmio_btn1_last_time.tv_nsec = 0;
+    vk_kmio_btn1_last_x = -1;
+    vk_kmio_btn1_last_y = -1;
+}
+
 static void
 _vk_kmio_write(int fd, const char *esc)
 {
@@ -62,6 +93,10 @@ int
 vk_kmio_init(int fd, uint32_t flags)
 {
     vk_kmio_flags = flags;
+
+    /* teleport / reattach can call shutdown+init mid-session; clear
+       any stale press carried over from the previous fd. */
+    _vk_kmio_btn1_reset();
 
     if(flags & VK_KMIO_MOUSE)
     {
@@ -117,40 +152,84 @@ vk_kmio_shutdown(int fd)
    from the event stream: track whether button 1 is currently held,
    and reclassify the bstate when it doesn't match the state we
    expect.  No press in flight + RELEASED = hover; press already in
-   flight + PRESSED = drag; everything else passes through. */
+   flight + PRESSED = drag; everything else passes through.
+
+   Matching uses bitwise AND so modifier bits (BUTTON_SHIFT/CTRL/ALT)
+   on a motion or drag don't slip past the rewriter and leave the
+   state machine out of sync.  When rewriting, we clear only the
+   PRESSED/RELEASED bit and OR in REPORT_MOUSE_POSITION so any
+   modifier flags are preserved.
+
+   The held=true branch on RELEASED additionally checks for a stale
+   press -- if the last known button-down event was both long ago
+   and at a far-away position, the release we never saw happened
+   off-screen (mouse left the terminal mid-drag, lifted out there,
+   came back).  In that case treat the incoming RELEASED as the
+   first hover after re-entry, not as a real release.  Without this
+   the first event after a lost-release session presents the widget
+   with a phantom RELEASED, leaving the half-state behaviour the
+   original recovery couldn't catch. */
 static void
 _vk_kmio_correct_sgr_motion(MEVENT *m)
 {
-    static bool button1_held = false;
-
     if(m == NULL) return;
 
-    if(m->bstate == BUTTON1_RELEASED)
+    if(m->bstate & BUTTON1_RELEASED)
     {
-        if(button1_held)
+        if(vk_kmio_btn1_held)
         {
-            /* matches the prior press -- real release */
-            button1_held = false;
+            struct timespec now;
+            long            elapsed_ms;
+            int             dx, dy;
+
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            elapsed_ms = (now.tv_sec - vk_kmio_btn1_last_time.tv_sec) * 1000
+                + (now.tv_nsec - vk_kmio_btn1_last_time.tv_nsec) / 1000000;
+            dx = (vk_kmio_btn1_last_x < 0)
+                ? 0 : (m->x - vk_kmio_btn1_last_x);
+            dy = (vk_kmio_btn1_last_y < 0)
+                ? 0 : (m->y - vk_kmio_btn1_last_y);
+
+            if(elapsed_ms > VK_KMIO_BTN1_STALE_MS
+                && (abs(dx) >= VK_KMIO_BTN1_STALE_DIST
+                    || abs(dy) >= VK_KMIO_BTN1_STALE_DIST))
+            {
+                /* press is stale -- lost release scenario */
+                vk_kmio_btn1_held = false;
+                m->bstate = (m->bstate & ~BUTTON1_RELEASED)
+                    | REPORT_MOUSE_POSITION;
+            }
+            else
+            {
+                /* matches the prior press -- real release */
+                vk_kmio_btn1_held = false;
+            }
         }
         else
         {
             /* no press is in flight -- motion misclassified as release */
-            m->bstate = REPORT_MOUSE_POSITION;
+            m->bstate = (m->bstate & ~BUTTON1_RELEASED)
+                | REPORT_MOUSE_POSITION;
         }
     }
-    else if(m->bstate == BUTTON1_PRESSED)
+    else if(m->bstate & BUTTON1_PRESSED)
     {
-        if(button1_held)
+        if(vk_kmio_btn1_held)
         {
             /* button already down -- drag event misclassified as a
                fresh press; surface it as motion so hover-style
                handlers fire while a drag is in progress */
-            m->bstate = REPORT_MOUSE_POSITION;
+            m->bstate = (m->bstate & ~BUTTON1_PRESSED)
+                | REPORT_MOUSE_POSITION;
         }
         else
         {
-            button1_held = true;
+            vk_kmio_btn1_held = true;
         }
+
+        clock_gettime(CLOCK_MONOTONIC, &vk_kmio_btn1_last_time);
+        vk_kmio_btn1_last_x = m->x;
+        vk_kmio_btn1_last_y = m->y;
     }
 }
 
