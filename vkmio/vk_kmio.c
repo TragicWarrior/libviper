@@ -51,32 +51,72 @@ static uint32_t     vk_kmio_flags = 0;
 static MEVENT       *last_mouse_event = NULL;
 
 /* Button-1 tracking used by _vk_kmio_correct_sgr_motion to undo
-   ncurses' SGR misclassification.  vk_kmio_btn1_last_{time,x,y}
-   capture the moment + position of the last event in which button
-   1 was known to be down (press or drag), so a RELEASED-while-held
-   can be judged against them. */
-static bool             vk_kmio_btn1_held = false;
-static struct timespec  vk_kmio_btn1_last_time = {0, 0};
-static int              vk_kmio_btn1_last_x = -1;
-static int              vk_kmio_btn1_last_y = -1;
+   ncurses' SGR misclassification.  Three states:
 
-/* If held=true and a RELEASED arrives more than this long after the
-   last button-down event AND the cursor has moved at least this far
-   from where button 1 was last seen, treat the RELEASED as a phantom
-   hover after a lost release rather than a real release.  Both must
-   hold so a deliberate press-and-hold-still-then-release stays a
-   real click. */
+     IDLE         - button known to be up
+     HELD         - press in flight (we've seen a PRESSED, no matching
+                    RELEASED yet)
+     PROVISIONAL  - we saw a RELEASED while HELD but the press looked
+                    stale (idle long + cursor jumped) -- defer the
+                    decision until the next event tells us whether
+                    the release was real (next event is also a
+                    RELEASED-shaped hover) or the cursor just came
+                    back mid-drag with the terminal having dropped
+                    the implicit grab (next event is a PRESSED-shaped
+                    drag).
+
+   vk_kmio_btn1_last_{time,x,y} capture the moment + position of the
+   last event in which button 1 was known to be down (press or drag),
+   used to judge RELEASED-while-HELD as stale or real. */
+enum vk_kmio_btn1_state_e
+{
+    VK_KMIO_BTN1_IDLE = 0,
+    VK_KMIO_BTN1_HELD,
+    VK_KMIO_BTN1_PROVISIONAL
+};
+
+static enum vk_kmio_btn1_state_e    vk_kmio_btn1_state = VK_KMIO_BTN1_IDLE;
+static struct timespec              vk_kmio_btn1_last_time = {0, 0};
+static int                          vk_kmio_btn1_last_x = -1;
+static int                          vk_kmio_btn1_last_y = -1;
+
+/* A RELEASED arriving while HELD is treated as a stale press (and
+   therefore deferred via PROVISIONAL) iff BOTH:
+     - more than this many milliseconds have passed since the last
+       button-down event, and
+     - the cursor has moved at least this many cells from where it
+       was last seen with button 1 down.
+   Both conditions are required so a deliberate press-and-hold-still-
+   then-release stays recognised as a real click. */
 #define VK_KMIO_BTN1_STALE_MS       750
 #define VK_KMIO_BTN1_STALE_DIST     4
 
 static void
 _vk_kmio_btn1_reset(void)
 {
-    vk_kmio_btn1_held = false;
+    vk_kmio_btn1_state = VK_KMIO_BTN1_IDLE;
     vk_kmio_btn1_last_time.tv_sec = 0;
     vk_kmio_btn1_last_time.tv_nsec = 0;
     vk_kmio_btn1_last_x = -1;
     vk_kmio_btn1_last_y = -1;
+}
+
+static bool
+_vk_kmio_btn1_press_is_stale(int x, int y)
+{
+    struct timespec     now;
+    long                elapsed_ms;
+    int                 dx, dy;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    elapsed_ms = (now.tv_sec - vk_kmio_btn1_last_time.tv_sec) * 1000
+        + (now.tv_nsec - vk_kmio_btn1_last_time.tv_nsec) / 1000000;
+    dx = (vk_kmio_btn1_last_x < 0) ? 0 : (x - vk_kmio_btn1_last_x);
+    dy = (vk_kmio_btn1_last_y < 0) ? 0 : (y - vk_kmio_btn1_last_y);
+
+    return elapsed_ms > VK_KMIO_BTN1_STALE_MS
+        && (abs(dx) >= VK_KMIO_BTN1_STALE_DIST
+            || abs(dy) >= VK_KMIO_BTN1_STALE_DIST);
 }
 
 static void
@@ -149,26 +189,33 @@ vk_kmio_shutdown(int fd)
    similarly come up as bare BUTTON1_PRESSED.
 
    Since we can't fix ncurses from out here, recover the real intent
-   from the event stream: track whether button 1 is currently held,
-   and reclassify the bstate when it doesn't match the state we
-   expect.  No press in flight + RELEASED = hover; press already in
-   flight + PRESSED = drag; everything else passes through.
+   from the event stream.  Match the bits with bitwise AND so modifier
+   flags (BUTTON_SHIFT/CTRL/ALT) on a motion/drag don't slip past the
+   rewriter; when rewriting to motion, clear only the PRESSED/RELEASED
+   bit and OR in REPORT_MOUSE_POSITION so modifier flags survive.
 
-   Matching uses bitwise AND so modifier bits (BUTTON_SHIFT/CTRL/ALT)
-   on a motion or drag don't slip past the rewriter and leave the
-   state machine out of sync.  When rewriting, we clear only the
-   PRESSED/RELEASED bit and OR in REPORT_MOUSE_POSITION so any
-   modifier flags are preserved.
+   The tricky case is the cursor leaving the terminal mid-drag.  Some
+   terminals don't preserve the implicit grab and start sending plain
+   motion (button=35, surfacing as BUTTON1_RELEASED) at re-entry even
+   though the user is still holding the button.  Looking at any single
+   event we can't tell that from a real lost-release-then-hover.  So
+   when a RELEASED arrives while HELD and the press looks stale (idle
+   long, cursor jumped), don't commit either way -- enter the
+   PROVISIONAL state, emit motion for now, and let the next event
+   resolve it:
 
-   The held=true branch on RELEASED additionally checks for a stale
-   press -- if the last known button-down event was both long ago
-   and at a far-away position, the release we never saw happened
-   off-screen (mouse left the terminal mid-drag, lifted out there,
-   came back).  In that case treat the incoming RELEASED as the
-   first hover after re-entry, not as a real release.  Without this
-   the first event after a lost-release session presents the widget
-   with a phantom RELEASED, leaving the half-state behaviour the
-   original recovery couldn't catch. */
+     - PROVISIONAL + RELEASED -> the next event is also a hover, so
+       the button really is up.  Pass the RELEASED through (close the
+       drag from the widget's POV) and return to IDLE.
+     - PROVISIONAL + PRESSED  -> the next event is a drag, so the
+       button was still held all along.  Rewrite to motion (the widget
+       already thinks it's mid-drag) and return to HELD.
+
+   Without the deferral, an aggressive "stale = lost release" rewrite
+   eats real releases at re-entry: the widget never sees a RELEASED,
+   the drag-target window sticks to the cursor, and the next click
+   intended to break out of the stuck state gets misread as a fresh
+   press on whatever it lands on. */
 static void
 _vk_kmio_correct_sgr_motion(MEVENT *m)
 {
@@ -176,55 +223,63 @@ _vk_kmio_correct_sgr_motion(MEVENT *m)
 
     if(m->bstate & BUTTON1_RELEASED)
     {
-        if(vk_kmio_btn1_held)
+        switch(vk_kmio_btn1_state)
         {
-            struct timespec now;
-            long            elapsed_ms;
-            int             dx, dy;
-
-            clock_gettime(CLOCK_MONOTONIC, &now);
-            elapsed_ms = (now.tv_sec - vk_kmio_btn1_last_time.tv_sec) * 1000
-                + (now.tv_nsec - vk_kmio_btn1_last_time.tv_nsec) / 1000000;
-            dx = (vk_kmio_btn1_last_x < 0)
-                ? 0 : (m->x - vk_kmio_btn1_last_x);
-            dy = (vk_kmio_btn1_last_y < 0)
-                ? 0 : (m->y - vk_kmio_btn1_last_y);
-
-            if(elapsed_ms > VK_KMIO_BTN1_STALE_MS
-                && (abs(dx) >= VK_KMIO_BTN1_STALE_DIST
-                    || abs(dy) >= VK_KMIO_BTN1_STALE_DIST))
-            {
-                /* press is stale -- lost release scenario */
-                vk_kmio_btn1_held = false;
+            case VK_KMIO_BTN1_IDLE:
+                /* hover misclassified as release */
                 m->bstate = (m->bstate & ~BUTTON1_RELEASED)
                     | REPORT_MOUSE_POSITION;
-            }
-            else
-            {
-                /* matches the prior press -- real release */
-                vk_kmio_btn1_held = false;
-            }
-        }
-        else
-        {
-            /* no press is in flight -- motion misclassified as release */
-            m->bstate = (m->bstate & ~BUTTON1_RELEASED)
-                | REPORT_MOUSE_POSITION;
+                break;
+
+            case VK_KMIO_BTN1_HELD:
+                if(_vk_kmio_btn1_press_is_stale(m->x, m->y))
+                {
+                    /* could be a lost release or a cursor-returned-
+                       mid-drag with the terminal having dropped the
+                       grab.  Defer; resolve on the next event. */
+                    vk_kmio_btn1_state = VK_KMIO_BTN1_PROVISIONAL;
+                    m->bstate = (m->bstate & ~BUTTON1_RELEASED)
+                        | REPORT_MOUSE_POSITION;
+                }
+                else
+                {
+                    /* matches the prior press -- real release */
+                    vk_kmio_btn1_state = VK_KMIO_BTN1_IDLE;
+                }
+                break;
+
+            case VK_KMIO_BTN1_PROVISIONAL:
+                /* second consecutive non-press event confirms the
+                   release was actually lost.  Let this RELEASED reach
+                   the widget so its drag handler can close out. */
+                vk_kmio_btn1_state = VK_KMIO_BTN1_IDLE;
+                break;
         }
     }
     else if(m->bstate & BUTTON1_PRESSED)
     {
-        if(vk_kmio_btn1_held)
+        switch(vk_kmio_btn1_state)
         {
-            /* button already down -- drag event misclassified as a
-               fresh press; surface it as motion so hover-style
-               handlers fire while a drag is in progress */
-            m->bstate = (m->bstate & ~BUTTON1_PRESSED)
-                | REPORT_MOUSE_POSITION;
-        }
-        else
-        {
-            vk_kmio_btn1_held = true;
+            case VK_KMIO_BTN1_IDLE:
+                /* fresh press; let it through */
+                vk_kmio_btn1_state = VK_KMIO_BTN1_HELD;
+                break;
+
+            case VK_KMIO_BTN1_HELD:
+                /* drag event misclassified as a fresh press */
+                m->bstate = (m->bstate & ~BUTTON1_PRESSED)
+                    | REPORT_MOUSE_POSITION;
+                break;
+
+            case VK_KMIO_BTN1_PROVISIONAL:
+                /* the deferred RELEASED was really the terminal
+                   forgetting the button was held; this PRESSED is the
+                   drag resuming.  The widget already thinks it's
+                   mid-drag, so surface motion, not a fresh press. */
+                vk_kmio_btn1_state = VK_KMIO_BTN1_HELD;
+                m->bstate = (m->bstate & ~BUTTON1_PRESSED)
+                    | REPORT_MOUSE_POSITION;
+                break;
         }
 
         clock_gettime(CLOCK_MONOTONIC, &vk_kmio_btn1_last_time);
