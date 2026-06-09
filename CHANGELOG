@@ -29,6 +29,20 @@ I/O, keyboard, mouse
   phantom click.  Fixes the half-state hover-highlight glitch that
   showed up under SSH latency when the cursor exited the terminal
   mid-drag.
+* [Bryan Christ] vk_kmio: defer the stale-release decision via a
+  PROVISIONAL intermediate state instead of committing it immediately.
+  A RELEASED that looks stale at the ncurses layer is genuinely
+  ambiguous -- it can be a real lost-release-then-hover or a
+  cursor-returned-mid-drag with the terminal having dropped its
+  implicit grab.  Eagerly clearing held on the suspect event broke
+  active drags: the widget never saw a RELEASED, the drag-target
+  window stuck to the cursor, and the next click intended to break
+  out got misread as a fresh press on whatever it landed on.  The new
+  IDLE / HELD / PROVISIONAL machine lets the next event resolve the
+  ambiguity -- a subsequent RELEASED confirms the lost release (pass
+  it through so the widget closes the drag), a subsequent PRESSED
+  confirms drag continuation (emit motion, the widget is already
+  mid-drag).  No ABI change.
 
 Version 5.0.0
 
