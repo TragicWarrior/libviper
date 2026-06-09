@@ -12,6 +12,11 @@
  *
  * Then move / click / drag / wheel the mouse.  Press 'q' to quit.
  *
+ * The live display draws on the ncurses screen (wiped on exit), so every
+ * line is ALSO appended to /tmp/sgr_probe.log -- after you quit, run
+ *     cat /tmp/sgr_probe.log
+ * and paste that back.
+ *
  * Reading the output:
  *   - If moving the mouse prints a burst like
  *         27   <[>   <<>   <3> <5> <;> ... <M>
@@ -32,12 +37,20 @@
 
 #include <ncursesw/curses.h>
 
+#define SGR_PROBE_LOG   "/tmp/sgr_probe.log"
+
 int
 main(void)
 {
-    int c;
+    int     c;
+    FILE    *log;
 
     setlocale(LC_CTYPE, "");
+
+    /* capture file -- the on-screen ncurses output is wiped on endwin() */
+    log = fopen(SGR_PROBE_LOG, "w");
+    if(log != NULL)
+        fprintf(log, "# sgr_probe: raw getch() codes under mousemask(0)\n");
 
     initscr();
     keypad(stdscr, TRUE);
@@ -60,7 +73,9 @@ main(void)
     printw("Expect a burst starting  27 <[> <<>  per mouse event if the "
            "bytes flow.\r\n");
     printw("A 'KEY_MOUSE' line means ncurses claimed the sequence "
-           "(assumption fails).\r\n\r\n");
+           "(assumption fails).\r\n");
+    printw("Captured to %s -- 'cat' it after quitting.\r\n\r\n",
+           SGR_PROBE_LOG);
     refresh();
 
     for(;;)
@@ -71,13 +86,23 @@ main(void)
         if(c == 'q') break;
 
         if(c == KEY_MOUSE)
+        {
             printw("KEY_MOUSE  <-- ncurses CLAIMED it (assumption fails)\r\n");
+            if(log != NULL) fprintf(log, "KEY_MOUSE\n");
+        }
         else if(c >= 32 && c < 127)
+        {
             printw("%4d  <%c>\r\n", c, c);
+            if(log != NULL) fprintf(log, "%4d  <%c>\n", c, c);
+        }
         else
+        {
             printw("%4d\r\n", c);
+            if(log != NULL) fprintf(log, "%4d\n", c);
+        }
 
         refresh();
+        if(log != NULL) fflush(log);    /* survive a Ctrl-C mid-session */
     }
 
     /* disable in reverse order, like vk_kmio_shutdown */
@@ -85,5 +110,6 @@ main(void)
     fflush(stdout);
 
     endwin();
+    if(log != NULL) fclose(log);
     return 0;
 }
