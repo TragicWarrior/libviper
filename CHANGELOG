@@ -16,6 +16,19 @@ I/O, keyboard, mouse
   bare PRESSED-while-already-held to REPORT_MOUSE_POSITION, restoring
   hover-highlight behaviour over SSH and stopping spurious clicks on
   hover in vwm's drop-down menus, button bars, and Manage Apps subforms.
+* [Bryan Christ] vk_kmio: harden the button-1 SGR recovery against the
+  three ways the bool desynced.  Reset the held flag in vk_kmio_init so
+  teleport / reattach doesn't carry stale state across the new fd.
+  Match the PRESSED/RELEASED bits with bitwise AND (and preserve any
+  modifier bits when rewriting to motion) so shift/ctrl/alt-augmented
+  drags no longer slip past the rewriter.  Most importantly, gate
+  "real release" on the last button-down event being recent and the
+  cursor not having jumped -- if both go stale, the release we never
+  saw happened off-screen, so reclassify the incoming RELEASED as the
+  first hover after re-entry instead of presenting widgets with a
+  phantom click.  Fixes the half-state hover-highlight glitch that
+  showed up under SSH latency when the cursor exited the terminal
+  mid-drag.
 
 Version 5.0.0
 
