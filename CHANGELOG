@@ -1,4 +1,4 @@
-Unreleased
+Version 5.1.0
 
 I/O, keyboard, mouse
 * [Bryan Christ] vk_kmio: parse SGR mouse reports (1006h) in-library
