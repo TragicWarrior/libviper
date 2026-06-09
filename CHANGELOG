@@ -1,21 +1,22 @@
-Unreleased
+Version 5.1.0
 
 I/O, keyboard, mouse
-* [Bryan Christ] vk_kmio: enable SGR mouse encoding (\033[?1006h) alongside
-  the existing 1003h any-event tracking.  Without it the terminal falls
-  back to legacy X10 encoding, where no-button motion is reported with
-  button code 3 (= release) plus the motion bit -- ncurses then surfaces
-  those as BUTTON1_RELEASED instead of REPORT_MOUSE_POSITION.  Disable in
-  reverse order in shutdown.  ABI/SONAME unchanged; consumers only need
-  to drop in the new libvdk.so.
-* [Bryan Christ] vk_kmio: recover real bstate from ncurses' SGR motion
-  misclassification.  ncurses still masks the motion bit off the button
-  code and surfaces SGR motion as BUTTON1_RELEASED and SGR drag (button
-  bit 32) as BUTTON1_PRESSED.  vk_kmio_fetch now tracks button-1 state
-  across events and rewrites bare RELEASED-without-prior-PRESSED and
-  bare PRESSED-while-already-held to REPORT_MOUSE_POSITION, restoring
-  hover-highlight behaviour over SSH and stopping spurious clicks on
-  hover in vwm's drop-down menus, button bars, and Manage Apps subforms.
+* [Bryan Christ] vk_kmio: parse SGR mouse reports (1006h) in-library
+  instead of letting ncurses decode them.  ncurses masks the motion bit
+  (0x20) off the SGR button code, so it surfaces motion as
+  BUTTON1_RELEASED and drag as BUTTON1_PRESSED -- which broke
+  hover-highlight and made drags misfire over SSH (windows raised on
+  hover, dragged windows stuck to the cursor).  vk_kmio now arms
+  mousemask(0): ncurses still returns KEY_MOUSE for the \033[<
+  introducer but leaks the Cb;Cx;Cy(M|m) body as raw bytes, which
+  vk_kmio_fetch accumulates and decodes itself (resuming across a split
+  read).  The wire is self-describing -- motion is the 0x20 bit, release
+  is the lowercase 'm' terminator -- so the decode needs no held-state
+  tracking, timestamps, or heuristics: press -> BUTTONn_PRESSED, release
+  -> BUTTONn_RELEASED, any motion -> REPORT_MOUSE_POSITION, wheel ->
+  BUTTON4/5_PRESSED.  1003h (hover) or 1000h (button-only) selects the
+  tracking level; both disabled in reverse order at shutdown.
+  ABI/SONAME unchanged; consumers only need to drop in the new libvdk.so.
 
 Version 5.0.0
 
