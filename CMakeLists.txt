@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(libviper)
+project(libviper C)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC -DNCURSES_OPAQUE=0")
 set(PROJECT_DESCRIPTION "A library for developing windowed apps on ncurses")
