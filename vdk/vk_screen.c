@@ -332,6 +332,29 @@ vk_screen_resize(vk_screen_t *screen)
         werase(surface->canvas);
     }
 
+    /* KEY_RESIZE is also how a dtach / abduco reattach reaches us: the
+       client sends SIGWINCH on attach and ncurses turns it into
+       KEY_RESIZE.  After a reattach -- or after the user ran `reset` on
+       the detached tty -- ncurses' model of the physical terminal is
+       stale, and two parts of it have to be forced back into sync. */
+
+    /* (1) screen contents: the optimized wrefresh in vk_screen_refresh
+       emits a diff against a screen state that no longer holds, leaving
+       the terminal showing garbage until something forces a full
+       repaint.  Mark stdscr for a clear+repaint on the next wrefresh,
+       exactly as the teleport path does (see vk_screen_teleport). */
+    clearok(stdscr, TRUE);
+
+    /* (2) cursor visibility: the hardware cursor was hidden once with
+       curs_set(0) at startup, but the freshly attached terminal comes
+       up showing it.  ncurses suppresses a redundant curs_set(0) (it
+       believes the cursor is already hidden on this unchanged SCREEN),
+       so toggle through visible to force the civis escape to be
+       re-emitted to the new terminal.  The pair is emitted back to back
+       before any refresh, so no cursor blink is visible. */
+    curs_set(1);
+    curs_set(0);
+
     return 0;
 }
 
