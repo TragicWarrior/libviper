@@ -1,3 +1,18 @@
+Version 5.1.1
+
+Terminal restore (dtach / abduco reattach)
+* [Bryan Christ] vk_screen_resize: force a full repaint and re-assert
+  the hidden cursor when the resize cascade runs.  A detach/reattach --
+  and a `reset` on the detached tty -- leaves ncurses' model of the
+  physical terminal stale: the optimized wrefresh emits a diff against a
+  screen state that no longer holds, so the reattached terminal shows
+  garbage until something forces a repaint; and curs_set(0) is
+  suppressed on the unchanged SCREEN, so the freshly attached terminal
+  comes up with the cursor visible.  clearok(stdscr, TRUE) plus a
+  curs_set(1)/curs_set(0) toggle re-sync both on the next refresh -- the
+  same path a SIGWINCH-driven reattach (dtach -r winch) travels.  No
+  API/ABI change; SOVERSION stays 5.
+
 Version 5.1.0
 
 I/O, keyboard, mouse
