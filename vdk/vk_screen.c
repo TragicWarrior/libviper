@@ -361,13 +361,26 @@ vk_screen_resize(vk_screen_t *screen)
        getch translates to KEY_UP/KEY_DOWN/...  The freshly attached
        terminal is in normal cursor mode and sends \E[A/\E[B/... which
        no key_* terminfo entry binds, so getch surfaces the raw bytes
-       and arrow keys appear to "type escape sequences" at the focused
-       widget.  ncurses suppresses a redundant keypad(TRUE) on the
-       unchanged SCREEN, so toggle through FALSE to force rmkx then
-       smkx to be re-emitted.  No input can arrive between the calls --
-       vk_screen_resize is called synchronously from the input loop. */
-    keypad(stdscr, FALSE);
-    keypad(stdscr, TRUE);
+       and arrow keys reach the focused widget as escape-sequence
+       garbage.
+
+       The natural recipe -- toggling keypad(stdscr, FALSE/TRUE) to
+       coax ncurses into re-emitting rmkx/smkx -- is not reliable
+       across ncurses versions: the emission is gated by ncurses'
+       internal _keypad_on flag, which can defer or coalesce the
+       transition on a SCREEN whose state ncurses believes is already
+       correct.  Write smkx straight to the screen fd instead --
+       same approach kmio uses for the mouse-enable escapes (which
+       survive reattach for exactly this reason) and the teleport
+       path uses for the mouse-disable on the outgoing fd. */
+    {
+        const char *smkx = tigetstr("smkx");
+        if(smkx != NULL && smkx != (char *)-1 && screen->fd_out != NULL)
+        {
+            fputs(smkx, screen->fd_out);
+            fflush(screen->fd_out);
+        }
+    }
 
     return 0;
 }
