@@ -355,6 +355,20 @@ vk_screen_resize(vk_screen_t *screen)
     curs_set(1);
     curs_set(0);
 
+    /* (3) keypad / application cursor key mode: keypad(stdscr, TRUE) at
+       startup sent smkx, putting the terminal in application keypad
+       mode so arrow keys arrive as \EOA/\EOB/... -- the form ncurses'
+       getch translates to KEY_UP/KEY_DOWN/...  The freshly attached
+       terminal is in normal cursor mode and sends \E[A/\E[B/... which
+       no key_* terminfo entry binds, so getch surfaces the raw bytes
+       and arrow keys appear to "type escape sequences" at the focused
+       widget.  ncurses suppresses a redundant keypad(TRUE) on the
+       unchanged SCREEN, so toggle through FALSE to force rmkx then
+       smkx to be re-emitted.  No input can arrive between the calls --
+       vk_screen_resize is called synchronously from the input loop. */
+    keypad(stdscr, FALSE);
+    keypad(stdscr, TRUE);
+
     return 0;
 }
 
