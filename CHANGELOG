@@ -1,3 +1,20 @@
+Version 5.1.2
+
+Terminal restore (dtach / abduco reattach)
+* [Bryan Christ] vk_screen_resize: re-arm application keypad mode on
+  reattach by writing smkx directly to the screen fd.  keypad(stdscr,
+  TRUE) at startup put the terminal in application cursor key mode, so
+  arrow keys arrived as \EOA/\EOB/... -- the form getch translates to
+  KEY_UP/KEY_DOWN/...  A dtach reattach binds a fresh terminal that is
+  in normal cursor mode (\E[A/\E[B/...), which no key_* terminfo entry
+  binds, so the focused widget received raw escape-sequence bytes
+  instead of cursor-key events.  ncurses gates smkx emission on its
+  internal _keypad_on flag, and a keypad(FALSE)/keypad(TRUE) toggle on
+  an unchanged SCREEN does not reliably re-emit the capability across
+  ncurses versions.  Write smkx straight to fd_out instead -- same
+  pattern kmio uses for the mouse-enable escapes that already survive
+  reattach.  No API/ABI change; SOVERSION stays 5.
+
 Version 5.1.1
 
 Terminal restore (dtach / abduco reattach)
