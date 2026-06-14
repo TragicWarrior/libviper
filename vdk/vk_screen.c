@@ -332,6 +332,17 @@ vk_screen_resize(vk_screen_t *screen)
         werase(surface->canvas);
     }
 
+    /* KEY_RESIZE is also how a dtach / abduco reattach reaches us: the
+       client sends SIGWINCH on attach and ncurses turns it into
+       KEY_RESIZE.  After a reattach -- or after the user ran `reset` on
+       the detached tty -- ncurses' model of the physical screen is
+       stale, so the optimized wrefresh in vk_screen_refresh would leave
+       the terminal showing garbage until something forced a full
+       repaint.  Mark stdscr for a clear+full repaint on the next
+       wrefresh, exactly as the teleport path does (see
+       vk_screen_teleport). */
+    clearok(stdscr, TRUE);
+
     return 0;
 }
 
