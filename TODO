@@ -18,3 +18,8 @@ Here's a evergreen list of TODO items in no particular order:
 * Shuffle APIs into more logical files.  Decks, Screens, Windows, States
   aren't really arranged in a clear cut manner.
 * Support freezing screen.
+* valgrind: "Invalid read of size 4" in ncurses' color tree
+  (tsearch/tfind/tdelete) reached via vdk_color_init /
+  _vdk_color_init_extended at startup, and via delscreen at screen
+  teardown.  Investigate whether the extended-color init can avoid the
+  freed-block reads, else add a suppression.  (Seen 2026-06-17 from vwm.)
