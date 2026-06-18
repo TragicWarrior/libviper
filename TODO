@@ -23,3 +23,22 @@ Here's a evergreen list of TODO items in no particular order:
   _vdk_color_init_extended at startup, and via delscreen at screen
   teardown.  Investigate whether the extended-color init can avoid the
   freed-block reads, else add a suppression.  (Seen 2026-06-17 from vwm.)
+* vkmio: unify the two mouse decoders.  vk_kmio_gpm (GPM) and
+  _vk_kmio_parse_sgr (xterm/SGR) each build the ncurses bstate
+  independently, so the same mouse semantics live in two places and can
+  drift apart (the btn1 drag-desync class of bug).  Collapse onto the
+  SGR decoder: have the GPM handler compute the SGR Cb (button = low 2
+  bits; motion = 0x20; wheel = 0x40|bit from wdy; shift/ctrl/alt =
+  0x04/0x10/0x08; M/m from GPM_DOWN/UP) and call _vk_kmio_parse_sgr
+  directly.  It is already a pure body->MEVENT decoder, so do NOT
+  re-inject synthesized escape bytes through getch -- pass it the
+  encoding, or split it so GPM hands over the integer Cb and skips the
+  sscanf.  Wins: one canonical bstate builder (kills the divergence
+  bugs); delete vk_gpm.def with its X_GPM tables and the ~50-line
+  mapping tail; and drop the GPM cooked-click code (GPM_CLICK_STRICT /
+  X_GPM_COOKED) since vk_dblclick already does double-click by timing
+  downstream -- nothing uses GPM's native click count.  The mapping is
+  clean because both event streams are self-describing (no held-state).
+  Caveats: recently stabilized, historically bug-prone code -- do it as
+  a spike; only testable on a real console with GPM; perf-neutral or
+  better (removes the static tables).  (Noted 2026-06-17.)
