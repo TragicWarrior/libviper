@@ -24,7 +24,7 @@ Widgets
   Layout              vk_frame, vk_window, vk_box, vk_grid, vk_table,
                       vk_deck (z-order with drop shadows), vk_container
   Primitives          vk_label, vk_marquee, vk_button, vk_input,
-                      vk_filler
+                      vk_spinbutton, vk_filler
   Content             vk_listbox, vk_selectbox (checkbox / radio),
                       vk_textbox, vk_dropdown, vk_menubar, vk_calendar,
                       vk_activity, vk_color

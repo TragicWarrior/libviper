@@ -41,6 +41,8 @@ vk_object_t
    │
    ├─ vk_input_t
    │
+   ├─ vk_spinbutton_t
+   │
    ├─ vk_filler_t
    │
    ├─ vk_activity_t
@@ -93,6 +95,7 @@ Cast macros are defined in `vdk.h`:
 | `VK_DECK(x)` | `vk_deck_t *` |
 | `VK_BUTTON(x)` | `vk_button_t *` |
 | `VK_INPUT(x)` | `vk_input_t *` |
+| `VK_SPINBUTTON(x)` | `vk_spinbutton_t *` |
 | `VK_FILLER(x)` | `vk_filler_t *` |
 | `VK_MENUBAR(x)` | `vk_menubar_t *` |
 | `VK_FILEDIALOG(x)` | `vk_filedialog_t *` |
@@ -150,6 +153,7 @@ vk_textbox_create(width, height)
 vk_deck_create(void)
 vk_button_create(text)
 vk_input_create(width)
+vk_spinbutton_create(width)
 vk_filler_create(void)
 vk_menubar_create(width)
 vk_calendar_create(void)
@@ -182,6 +186,7 @@ _vk_textbox_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_deck_ctor       -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_button_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_input_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_spinbutton_ctor -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filler_ctor     -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_menubar_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_calendar_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
@@ -275,6 +280,7 @@ dispatch. Public APIs call through these pointers.
 | `vk_deck_t` | `ctor`, `dtor`, `_update` (overrides widget's `_draw`, `_erase`, `_resize`, `_recreate`) |
 | `vk_button_t` | `ctor`, `dtor`, `_update` |
 | `vk_input_t` | `ctor`, `dtor`, `_update` |
+| `vk_spinbutton_t` | `ctor`, `dtor`, `_update` |
 | `vk_filler_t` | `ctor`, `dtor` |
 | `vk_menubar_t` | `ctor`, `dtor`, `_add_item`, `_get_item_count`, `_exec_item`, `_update`, `_reset` |
 | `vk_calendar_t` | `ctor`, `dtor`, `_update` |
@@ -576,6 +582,7 @@ Events are grouped by purpose with spaced numeric ranges:
 | `VK_EVENT_ON_UNSELECT` | 12 | selectbox uncheck |
 | `VK_EVENT_ON_ACTIVATE` | 13 | listbox/selectbox/menubar `exec_curr` |
 | `VK_EVENT_ON_SUBMIT` | 14 | reserved for input submission |
+| `VK_EVENT_ON_CHANGE` | 16 | `vk_spinbutton` value change (arrow step or committed edit) |
 | `VK_EVENT_ON_FOCUS` | 20 | `vk_box_set_subfocus()` on the newly focused slot widget |
 | `VK_EVENT_ON_UNFOCUS` | 21 | `vk_box_set_subfocus()` on the previously focused slot widget |
 | `VK_EVENT_ON_SCROLL` | 22 | textbox scroll functions |
@@ -1006,6 +1013,67 @@ inserts beyond the limit are rejected and existing text is truncated.
 
 The input is IO-agnostic; the application installs a `kmio` handler that
 maps keystrokes to the editing API functions.
+
+## Spin Buttons
+
+`vk_spinbutton_t` is a numeric value field with increment / decrement
+arrows, derived from `vk_widget_t`. The value is a `double` (so the step
+can be any magnitude) clamped to `[min, max]`, with a configurable step
+and display precision. Manual text editing is opt-in.
+
+### Layout
+
+The 3-row relief field is split by a vertical separator into a value
+field on the left and the arrow controls on the right; a second separator
+divides the inc (`▲`) and dec (`▼`) arrows. Under the ASCII relief style
+the arrows render as `+` / `-`; under `VK_BUTTON_BASIC` the field collapses
+to one row.
+
+### Relief
+
+The value field and the arrow controls carry independent 3D relief
+directions, set with `vk_spinbutton_set_field_relief()` and
+`vk_spinbutton_set_button_relief()` (each takes `VK_RELIEF_SUNKEN`,
+`VK_RELIEF_RAISED`, or `0` for flat; defaults are sunken field / raised
+buttons). The colours follow the same convention as `vk_button` and
+`vk_frame`: the highlight edge carries the widget's bold attrs so
+`relief_hi` reads bright, the shadow edge is plain so `relief_lo` reads
+dark. The shared separator is the value field's right edge and the
+buttons' left edge at once, so the two regions meet cleanly.
+
+### Interaction
+
+Keyboard is self-contained through the widget's own `kmio`: Up / Down step
+the value, and (when editable) digits / `.` / `-` / Backspace / Left /
+Right / Home / End edit an inline buffer that is parsed and clamped on
+Enter (Esc abandons it). Mouse is parent-assisted -- a leaf widget does
+not know its absolute screen position, so the container translates a click
+into widget-local coordinates and calls `vk_spinbutton_click()`, which
+hit-tests the arrows (and, when editable, the value field).
+
+A value change (an arrow step or a committed edit) emits
+`VK_EVENT_ON_CHANGE` and invokes an optional `on_change` `VkWidgetFunc`,
+mirroring `vk_button`'s dual notify.
+
+### API
+
+| API | Description |
+|-----|-------------|
+| `vk_spinbutton_create(width)` | Create a spin button (minimum width 8) |
+| `vk_spinbutton_set_range(spin, min, max)` | Set the clamp bounds |
+| `vk_spinbutton_set_step(spin, step)` | Set the increment per arrow step |
+| `vk_spinbutton_set_value(spin, value)` | Set the value (clamped, no notify) |
+| `vk_spinbutton_get_value(spin)` | Return the value (commits a pending edit) |
+| `vk_spinbutton_set_precision(spin, n)` | Fractional digits shown |
+| `vk_spinbutton_set_editable(spin, bool)` | Allow manual text entry (default off) |
+| `vk_spinbutton_set_relief_style` | `VK_BORDER_SINGLE`, `VK_BORDER_ASCII`, or `VK_BUTTON_BASIC` |
+| `vk_spinbutton_set_field_relief(spin, relief)` | 3D direction of the value field |
+| `vk_spinbutton_set_button_relief(spin, relief)` | 3D direction of the arrow controls |
+| `vk_spinbutton_set_on_change(spin, func, data)` | Register a value-change callback |
+| `vk_spinbutton_step(spin, n)` | Apply n steps (n may be negative); clamps + notifies |
+| `vk_spinbutton_click(spin, lx, ly)` | Route a widget-local click; returns whether consumed |
+| `vk_spinbutton_update(spin)` | Redraw the spin button |
+| `vk_spinbutton_destroy(spin)` | Destroy the spin button |
 
 ## Textboxes
 
