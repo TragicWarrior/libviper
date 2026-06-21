@@ -110,6 +110,7 @@ enum
     VK_EVENT_ON_ACTIVATE    = 13,
     VK_EVENT_ON_SUBMIT      = 14,
     VK_EVENT_ON_CLOSE       = 15,
+    VK_EVENT_ON_CHANGE      = 16,
 
     /* state */
     VK_EVENT_ON_FOCUS       = 20,
@@ -157,6 +158,7 @@ typedef struct  _vk_filedialog_s    vk_filedialog_t;
 typedef struct  _vk_calendar_s      vk_calendar_t;
 typedef struct  _vk_popup_s         vk_popup_t;
 typedef struct  _vk_viewport_s      vk_viewport_t;
+typedef struct  _vk_spinbutton_s    vk_spinbutton_t;
 
 /*
     Source config for vk_viewport.  The consumer fills one of these
@@ -215,6 +217,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_CALENDAR(x)          ((vk_calendar_t *)x)
 #define VK_POPUP(x)             ((vk_popup_t *)x)
 #define VK_VIEWPORT(x)          ((vk_viewport_t *)x)
+#define VK_SPINBUTTON(x)        ((vk_spinbutton_t *)x)
 
 /* vk_object */
 const char*     vk_object_get_klass_name(vk_object_t *object);
@@ -616,6 +619,31 @@ void            vk_viewport_scroll_info(vk_widget_t *child,
                     int *content_h, int *content_w,
                     int *scroll_y, int *scroll_x);
 void            vk_viewport_destroy(vk_viewport_t *vp);
+
+/* vk_spinbutton -- numeric value field with increment / decrement arrows */
+vk_spinbutton_t* vk_spinbutton_create(int width);
+int             vk_spinbutton_set_range(vk_spinbutton_t *spin,
+                    double min, double max);
+int             vk_spinbutton_set_step(vk_spinbutton_t *spin, double step);
+int             vk_spinbutton_set_value(vk_spinbutton_t *spin, double value);
+double          vk_spinbutton_get_value(vk_spinbutton_t *spin);
+int             vk_spinbutton_set_precision(vk_spinbutton_t *spin,
+                    int precision);
+int             vk_spinbutton_set_editable(vk_spinbutton_t *spin,
+                    bool editable);
+int             vk_spinbutton_set_relief_style(vk_spinbutton_t *spin,
+                    int style);
+int             vk_spinbutton_set_field_relief(vk_spinbutton_t *spin,
+                    int relief);
+int             vk_spinbutton_set_button_relief(vk_spinbutton_t *spin,
+                    int relief);
+int             vk_spinbutton_set_on_change(vk_spinbutton_t *spin,
+                    VkWidgetFunc func, void *anything);
+int             vk_spinbutton_step(vk_spinbutton_t *spin, int n);
+bool            vk_spinbutton_click(vk_spinbutton_t *spin,
+                    int local_x, int local_y);
+int             vk_spinbutton_update(vk_spinbutton_t *spin);
+void            vk_spinbutton_destroy(vk_spinbutton_t *spin);
 
 /* vk_input */
 vk_input_t*     vk_input_create(int width);

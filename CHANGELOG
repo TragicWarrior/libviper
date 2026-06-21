@@ -1,3 +1,18 @@
+Version 5.2.0
+
+vk_spinbutton widget
+* [Bryan Christ] Add vk_spinbutton, a numeric value field with increment /
+  decrement arrows.  The value is a double clamped to [min, max] with a
+  configurable step and display precision; manual text entry is opt-in.
+  The value field and the arrow controls carry independent 3D relief
+  (sunken field / raised buttons by default), split by a vertical
+  separator, with a second separator between the inc / dec arrows.
+  Keyboard is self-contained (Up/Down step plus an inline editor); mouse
+  is parent-assisted via vk_spinbutton_click(), since a leaf widget does
+  not know its absolute position.  A value change emits the new
+  VK_EVENT_ON_CHANGE (16) and invokes an optional on_change callback.
+  Additive API only; SOVERSION stays 5.
+
 Version 5.1.2
 
 Terminal restore (dtach / abduco reattach)
