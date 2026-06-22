@@ -519,14 +519,16 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
         }
     }
 
-    /* turn off any-event mouse tracking on the OLD terminal before we
-       walk away from it -- the escape was sent via raw stdio at
-       startup so ncurses' endwin() doesn't know to disable it, and
-       the shell that takes over would otherwise show every mouse
-       move as garbage chars (\033[M...). */
+    /* turn off mouse tracking on the OLD terminal before we walk away
+       from it -- the escape was sent via raw stdio at startup so
+       ncurses' endwin() doesn't know to disable it, and the shell that
+       takes over would otherwise show mouse activity as garbage chars
+       (\033[M... / \033[<...).  Clear the whole tracking family
+       (1000/1002/1003 + 1006 SGR): ?1003l alone leaves button/wheel
+       reporting armed on many terminals.  Mirrors vk_kmio_shutdown. */
     if(old_out != NULL)
     {
-        fputs("\033[?1003l", old_out);
+        fputs("\033[?1000l\033[?1002l\033[?1003l\033[?1006l", old_out);
         fflush(old_out);
     }
 

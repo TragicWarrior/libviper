@@ -1,3 +1,16 @@
+Version 5.2.1
+
+Mouse-tracking teardown
+* [Bryan Christ] vk_kmio_shutdown now resets the full mouse-tracking
+  family (?1000l ?1002l ?1003l ?1006l) instead of only the single mode
+  it set.  ?1003l stops motion reports but leaves button / wheel
+  tracking armed on many terminals, so after the host (vwm) exits the
+  shell showed clicks and wheel ticks as garbage glyphs -- simple
+  movement stayed clean, the tell that button tracking, not motion,
+  was left on.  The teleport walk-away in vk_screen.c carried the same
+  ?1003l-only gap on the outgoing terminal and got the same full reset.
+  SOVERSION stays 5.
+
 Version 5.2.0
 
 vk_spinbutton widget

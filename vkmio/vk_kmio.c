@@ -117,10 +117,15 @@ vk_kmio_shutdown(int fd)
 
     if(vk_kmio_flags & VK_KMIO_MOUSE)
     {
-        if(vk_kmio_flags & VK_KMIO_MOUSE_HOVER)
-            _vk_kmio_write(fd, "\033[?1006l\033[?1003l");
-        else
-            _vk_kmio_write(fd, "\033[?1006l\033[?1000l");
+        /* Reset the WHOLE tracking family, not just the mode we set.
+           init enables any-event tracking (?1003h), but on many
+           terminals ?1003l only stops motion reports -- button and
+           wheel reporting survive, so clicks/wheel still leak into the
+           shell as glyphs after the host exits.  Clear 1000/1002/1003
+           plus the 1006 SGR encoding so nothing is left armed however
+           the terminal models the modes; resetting a mode that was
+           never set is a harmless no-op. */
+        _vk_kmio_write(fd, "\033[?1000l\033[?1002l\033[?1003l\033[?1006l");
     }
 
     vk_kmio_flags = 0;
