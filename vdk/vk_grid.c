@@ -608,9 +608,8 @@ _vk_grid_update(vk_grid_t *grid)
 
     if(widget->fg >= 0 && widget->bg >= 0)
     {
-        int colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
-            | widget->attrs;
-        vk_widget_fill(widget, ' ' | colors);
+        short pair = vdk_color_pair(widget->fg, widget->bg);
+        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
     }
 
     col_sizes   = calloc(grid->cols, sizeof(int));

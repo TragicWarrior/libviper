@@ -326,8 +326,8 @@ vk_filedialog_set_colors(vk_filedialog_t *dialog, short fg, short bg)
     vk_widget_set_colors(VK_WIDGET(dialog->btn_cancel), fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->button_bar), fg, bg);
 
-    vk_widget_fill(VK_WIDGET(dialog->button_bar),
-        ' ' | COLOR_PAIR(vdk_color_pair(fg, bg)));
+    vk_widget_fill_pair(VK_WIDGET(dialog->button_bar), L' ', 0,
+        vdk_color_pair(fg, bg));
 
     return 0;
 }
@@ -361,8 +361,8 @@ vk_filedialog_set_button_colors(vk_filedialog_t *dialog, short fg, short bg)
     vk_widget_set_colors(VK_WIDGET(dialog->btn_cancel), fg, bg);
     vk_widget_set_colors(VK_WIDGET(dialog->button_bar), fg, bg);
 
-    vk_widget_fill(VK_WIDGET(dialog->button_bar),
-        ' ' | COLOR_PAIR(vdk_color_pair(fg, bg)));
+    vk_widget_fill_pair(VK_WIDGET(dialog->button_bar), L' ', 0,
+        vdk_color_pair(fg, bg));
 
     return 0;
 }

@@ -236,8 +236,8 @@ _vk_selectbox_update(vk_listbox_t *listbox)
     struct list_head    *pos;
     int                 paint_width;
     int                 paint_height;
-    int                 paint_colors;
-    int                 highlight;
+    short               pair;
+    short               hl_pair;
     attr_t              highlight_attr;
     int                 ind_width;
     const char          *ind;
@@ -261,11 +261,14 @@ _vk_selectbox_update(vk_listbox_t *listbox)
     if(listbox->highlight_fg == -1) listbox->highlight_fg = widget->bg;
     if(listbox->highlight_bg == -1) listbox->highlight_bg = widget->fg;
 
-    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
-    highlight = COLOR_PAIR(vdk_color_pair(listbox->highlight_fg, listbox->highlight_bg));
+    /* apply the pair as a separate short so bright (8-15) colors, whose
+       pair numbers exceed 255, are not truncated by COLOR_PAIR's 8-bit
+       pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
+    hl_pair = vdk_color_pair(listbox->highlight_fg, listbox->highlight_bg);
 
-    vk_widget_fill(widget, ' ' | paint_colors);
-    wattron(widget->canvas, paint_colors);
+    vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
+    wattr_set(widget->canvas, widget->attrs, pair, NULL);
 
     if(listbox->item_count <= paint_height)
         listbox->scroll_top = 0;
@@ -332,7 +335,7 @@ _vk_selectbox_update(vk_listbox_t *listbox)
         if(idx == listbox->curr_item)
         {
             mvwchgat(widget->canvas, y, 0, paint_width,
-                highlight_attr, PAIR_NUMBER(highlight), NULL);
+                highlight_attr, hl_pair, NULL);
         }
 
         y++;
@@ -345,7 +348,7 @@ _vk_selectbox_update(vk_listbox_t *listbox)
         y++;
     }
 
-    wattroff(widget->canvas, paint_colors);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     if(widget->vscroller != NULL)
     {

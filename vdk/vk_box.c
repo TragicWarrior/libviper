@@ -425,9 +425,8 @@ _vk_box_update(vk_box_t *box)
 
     if(widget->fg >= 0 && widget->bg >= 0)
     {
-        int colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
-            | widget->attrs;
-        vk_widget_fill(widget, ' ' | colors);
+        vk_widget_fill_pair(widget, L' ', widget->attrs,
+            vdk_color_pair(widget->fg, widget->bg));
     }
 
     horiz = (box->orientation == VK_BOX_HORIZONTAL);

@@ -130,7 +130,7 @@ inline int
 vk_activity_run(vk_activity_t *activity)
 {
     vk_widget_t     *widget;
-    int             colors;
+    short           pair;
     int             frame_count;
 
     if(activity == NULL) return -1;
@@ -139,11 +139,14 @@ vk_activity_run(vk_activity_t *activity)
 
     widget->_erase(widget);
 
-    colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
+    /* apply the pair via the pair-safe path so bright (8-15) colors,
+       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
+       8-bit pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
 
     if(!activity->running)
     {
-        vk_widget_fill(widget, ' ' | colors);
+        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
         return 0;
     }
 
@@ -165,7 +168,7 @@ vk_activity_run(vk_activity_t *activity)
         activity->frame = (activity->frame + 1) % frame_count;
     }
 
-    wattron(widget->canvas, colors);
+    wattr_set(widget->canvas, widget->attrs, pair, NULL);
 
     if(activity->style == VK_ACTIVITY_SPINNER)
     {
@@ -189,11 +192,11 @@ vk_activity_run(vk_activity_t *activity)
         wstr[0] = frames[activity->frame];
         wstr[1] = 0;
 
-        setcchar(&wch, wstr, colors, 0, NULL);
+        setcchar(&wch, wstr, widget->attrs, pair, NULL);
         mvwadd_wch(widget->canvas, 0, 0, &wch);
     }
 
-    wattroff(widget->canvas, colors);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }

@@ -240,21 +240,24 @@ _vk_spinbutton_draw_vsep(vk_spinbutton_t *spin, int col, short pair,
 {
     vk_widget_t *widget = VK_WIDGET(spin);
     int         bottom_row = widget->height - 1;
-    int         c = COLOR_PAIR(pair) | attr;
     int         r;
 
     if(spin->relief_style == VK_BUTTON_BASIC)
     {
-        mvwaddch(widget->canvas, 0, col, '|' | c);
+        wattr_set(widget->canvas, attr, pair, NULL);
+        mvwaddch(widget->canvas, 0, col, '|');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         return;
     }
 
     if(spin->relief_style == VK_BORDER_ASCII)
     {
-        mvwaddch(widget->canvas, 0, col, '+' | c);
+        wattr_set(widget->canvas, attr, pair, NULL);
+        mvwaddch(widget->canvas, 0, col, '+');
         for(r = 1; r < bottom_row; r++)
-            mvwaddch(widget->canvas, r, col, '|' | c);
-        mvwaddch(widget->canvas, bottom_row, col, '+' | c);
+            mvwaddch(widget->canvas, r, col, '|');
+        mvwaddch(widget->canvas, bottom_row, col, '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         return;
     }
 
@@ -306,47 +309,69 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
 
     if(spin->relief_style == VK_BUTTON_BASIC)
     {
-        int fc = COLOR_PAIR(face) | widget->attrs;
-        wattron(widget->canvas, fc);
+        wattr_set(widget->canvas, widget->attrs, face, NULL);
         mvwaddch(widget->canvas, 0, 0, '[');
         mvwaddch(widget->canvas, 0, right_col, ']');
-        wattroff(widget->canvas, fc);
-        mvwaddch(widget->canvas, 0, sep_col,
-            '|' | (COLOR_PAIR(sep) | sepa));
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        wattr_set(widget->canvas, sepa, sep, NULL);
+        mvwaddch(widget->canvas, 0, sep_col, '|');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna);
         return;
     }
 
     if(spin->relief_style == VK_BORDER_ASCII)
     {
-        int vnc = COLOR_PAIR(vn) | vna;
-        int vfc = COLOR_PAIR(vf) | vfa;
-        int bnc = COLOR_PAIR(bn) | bna;
-        int bfc = COLOR_PAIR(bf) | bfa;
-        int spc = COLOR_PAIR(sep) | sepa;
-
-        mvwaddch(widget->canvas, 0, 0, '+' | vnc);
+        /* top row: value-near NW corner + top edge */
+        wattr_set(widget->canvas, vna, vn, NULL);
+        mvwaddch(widget->canvas, 0, 0, '+');
         for(i = 1; i < sep_col; i++)
-            mvwaddch(widget->canvas, 0, i, '-' | vnc);
-        mvwaddch(widget->canvas, 0, sep_col, '+' | spc);
+            mvwaddch(widget->canvas, 0, i, '-');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        /* separator tee */
+        wattr_set(widget->canvas, sepa, sep, NULL);
+        mvwaddch(widget->canvas, 0, sep_col, '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        /* button-near top edge */
+        wattr_set(widget->canvas, bna, bn, NULL);
         for(i = sep_col + 1; i < right_col; i++)
-            mvwaddch(widget->canvas, 0, i, '-' | bnc);
-        mvwaddch(widget->canvas, 0, right_col, '+' | bfc);
+            mvwaddch(widget->canvas, 0, i, '-');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        /* button-far NE corner */
+        wattr_set(widget->canvas, bfa, bf, NULL);
+        mvwaddch(widget->canvas, 0, right_col, '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
         for(i = 1; i < bottom_row; i++)
         {
-            mvwaddch(widget->canvas, i, 0, '|' | vnc);
-            mvwaddch(widget->canvas, i, sep_col, '|' | spc);
-            mvwaddch(widget->canvas, i, right_col, '|' | bfc);
+            wattr_set(widget->canvas, vna, vn, NULL);
+            mvwaddch(widget->canvas, i, 0, '|');
+            wattr_set(widget->canvas, sepa, sep, NULL);
+            mvwaddch(widget->canvas, i, sep_col, '|');
+            wattr_set(widget->canvas, bfa, bf, NULL);
+            mvwaddch(widget->canvas, i, right_col, '|');
+            wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         }
 
-        mvwaddch(widget->canvas, bottom_row, 0, '+' | vnc);
+        /* bottom row: value-near SW corner */
+        wattr_set(widget->canvas, vna, vn, NULL);
+        mvwaddch(widget->canvas, bottom_row, 0, '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        /* value-far bottom edge */
+        wattr_set(widget->canvas, vfa, vf, NULL);
         for(i = 1; i < sep_col; i++)
-            mvwaddch(widget->canvas, bottom_row, i, '-' | vfc);
-        mvwaddch(widget->canvas, bottom_row, sep_col, '+' | spc);
+            mvwaddch(widget->canvas, bottom_row, i, '-');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        /* separator tee */
+        wattr_set(widget->canvas, sepa, sep, NULL);
+        mvwaddch(widget->canvas, bottom_row, sep_col, '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
+        /* button-far bottom edge + SE corner */
+        wattr_set(widget->canvas, bfa, bf, NULL);
         for(i = sep_col + 1; i < right_col; i++)
-            mvwaddch(widget->canvas, bottom_row, i, '-' | bfc);
-        mvwaddch(widget->canvas, bottom_row, right_col, '+' | bfc);
+            mvwaddch(widget->canvas, bottom_row, i, '-');
+        mvwaddch(widget->canvas, bottom_row, right_col, '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna);
         return;
     }
@@ -685,7 +710,7 @@ _vk_spinbutton_update(vk_spinbutton_t *spin)
 {
     vk_widget_t *widget;
     short       fg, bg;
-    int         face_colors;
+    short       face_pair;
     int         field_start;
     int         field_width;
     int         value_width;
@@ -707,9 +732,9 @@ _vk_spinbutton_update(vk_spinbutton_t *spin)
     fg = widget->fg;
     bg = widget->bg;
 
-    face_colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
+    face_pair = vdk_color_pair(fg, bg);
 
-    vk_widget_fill(widget, ' ' | face_colors);
+    vk_widget_fill_pair(widget, L' ', widget->attrs, face_pair);
 
     /* relief frame: sunken/raised value field and arrow controls, split
        by the separator (see _vk_spinbutton_draw_frame) */
@@ -753,14 +778,14 @@ _vk_spinbutton_update(vk_spinbutton_t *spin)
     {
         int     idx = spin->edit_scroll + i;
         char    ch = (idx < shown_len) ? shown[idx] : ' ';
-        int     attrs = face_colors;
+        attr_t  attrs = widget->attrs;
 
         if(show_cursor && idx == cursor)
             attrs |= A_REVERSE;
 
-        wattron(widget->canvas, attrs);
+        wattr_set(widget->canvas, attrs, face_pair, NULL);
         mvwaddch(widget->canvas, text_row, field_start + i, ch);
-        wattroff(widget->canvas, attrs);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
     }
 
     /* the increment / decrement arrows */
@@ -770,11 +795,10 @@ _vk_spinbutton_update(vk_spinbutton_t *spin)
 
         if(spin->relief_style == VK_BORDER_ASCII)
         {
-            int c = COLOR_PAIR(pair) | a;
-            wattron(widget->canvas, c);
+            wattr_set(widget->canvas, a, pair, NULL);
             mvwaddch(widget->canvas, text_row, up_col, '+');
             mvwaddch(widget->canvas, text_row, down_col, '-');
-            wattroff(widget->canvas, c);
+            wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         }
         else
         {

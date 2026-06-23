@@ -228,7 +228,10 @@ _vk_color_overdraw_focus(vk_color_t *color, vk_grid_t *grid,
     if(bg < 0) bg = COLOR_BLACK;
 
     pair  = vdk_color_pair(fg, bg);
-    attrs = COLOR_PAIR(pair) | color->focus_attrs;
+    /* attr bits only -- the pair is applied separately via wattr_set /
+       setcchar so pair numbers > 255 (bright focus colors) survive the
+       8-bit COLOR_PAIR packing. */
+    attrs = color->focus_attrs;
 
     col_sizes = calloc(cols, sizeof(int));
     row_sizes = calloc(rows, sizeof(int));
@@ -246,23 +249,25 @@ _vk_color_overdraw_focus(vk_color_t *color, vk_grid_t *grid,
 
     if(style == VK_BORDER_ASCII)
     {
+        wattr_set(widget->canvas, attrs, pair, NULL);
         /* top + bottom edges */
         for(x = vlines[f_col] + 1; x < vlines[f_col + 1]; x++)
         {
-            mvwaddch(widget->canvas, hlines[f_row],     x, '-' | attrs);
-            mvwaddch(widget->canvas, hlines[f_row + 1], x, '-' | attrs);
+            mvwaddch(widget->canvas, hlines[f_row],     x, '-');
+            mvwaddch(widget->canvas, hlines[f_row + 1], x, '-');
         }
         /* left + right edges */
         for(y = hlines[f_row] + 1; y < hlines[f_row + 1]; y++)
         {
-            mvwaddch(widget->canvas, y, vlines[f_col],     '|' | attrs);
-            mvwaddch(widget->canvas, y, vlines[f_col + 1], '|' | attrs);
+            mvwaddch(widget->canvas, y, vlines[f_col],     '|');
+            mvwaddch(widget->canvas, y, vlines[f_col + 1], '|');
         }
         /* 4 corners */
-        mvwaddch(widget->canvas, hlines[f_row],     vlines[f_col],     '+' | attrs);
-        mvwaddch(widget->canvas, hlines[f_row],     vlines[f_col + 1], '+' | attrs);
-        mvwaddch(widget->canvas, hlines[f_row + 1], vlines[f_col],     '+' | attrs);
-        mvwaddch(widget->canvas, hlines[f_row + 1], vlines[f_col + 1], '+' | attrs);
+        mvwaddch(widget->canvas, hlines[f_row],     vlines[f_col],     '+');
+        mvwaddch(widget->canvas, hlines[f_row],     vlines[f_col + 1], '+');
+        mvwaddch(widget->canvas, hlines[f_row + 1], vlines[f_col],     '+');
+        mvwaddch(widget->canvas, hlines[f_row + 1], vlines[f_col + 1], '+');
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
     }
     else
     {
@@ -275,7 +280,7 @@ _vk_color_overdraw_focus(vk_color_t *color, vk_grid_t *grid,
         attr_t  src_attr;
         short   dummy;
 
-        wattr_on(widget->canvas, attrs, NULL);
+        wattr_set(widget->canvas, attrs, pair, NULL);
 
         /* top + bottom edges (line chars), repainted with current attrs */
         getcchar(hl, wch, &src_attr, &dummy, NULL);
@@ -323,7 +328,7 @@ _vk_color_overdraw_focus(vk_color_t *color, vk_grid_t *grid,
             mvwadd_wch(widget->canvas, hlines[f_row + 1], vlines[f_col + 1], &cc);
         }
 
-        wattr_off(widget->canvas, attrs, NULL);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
     }
 
     (void)i;

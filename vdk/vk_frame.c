@@ -290,7 +290,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
     vk_widget_t *widget;
     short       fg;
     short       bg;
-    int         border_colors;
+    short       pair;
     int         base_style;
     attr_t      rev;
 
@@ -306,9 +306,9 @@ _vk_frame_draw_border(vk_frame_t *frame)
 
     fg = (frame->border_fg == -1) ? widget->fg : frame->border_fg;
     bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
-    border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
+    pair = vdk_color_pair(fg, bg);
 
-    wattron(widget->canvas, border_colors | rev | frame->border_attrs);
+    wattr_set(widget->canvas, rev | frame->border_attrs, pair, NULL);
 
     switch(base_style)
     {
@@ -388,7 +388,6 @@ _vk_frame_draw_border(vk_frame_t *frame)
             else
             {
                 cchar_t ls, rs, ts, bs, tl, tr, bl, br;
-                short   pair = vdk_color_pair(fg, bg);
 
                 _vk_frame_build_cchar(&ls, WACS_VLINE,    pair, extra);
                 _vk_frame_build_cchar(&rs, WACS_VLINE,    pair, extra);
@@ -409,7 +408,6 @@ _vk_frame_draw_border(vk_frame_t *frame)
         case VK_BORDER_DOUBLE:
         {
             cchar_t ls, rs, ts, bs, tl, tr, bl, br;
-            short   pair = vdk_color_pair(fg, bg);
             attr_t  extra = rev | frame->border_attrs;
 
             _vk_frame_build_cchar(&ls, WACS_D_VLINE, pair, extra);
@@ -427,7 +425,7 @@ _vk_frame_draw_border(vk_frame_t *frame)
         }
     }
 
-    wattroff(widget->canvas, border_colors | rev | frame->border_attrs);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }

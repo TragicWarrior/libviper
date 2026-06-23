@@ -402,8 +402,8 @@ _vk_menubar_update(vk_menubar_t *menubar)
     vk_widget_t         *widget;
     vk_item_t           *item;
     struct list_head    *pos;
-    int                 paint_colors;
-    int                 highlight;
+    short               pair;
+    short               hl_pair;
     int                 col = 0;
     int                 idx = 0;
 
@@ -414,11 +414,14 @@ _vk_menubar_update(vk_menubar_t *menubar)
     if(menubar->highlight_fg == -1) menubar->highlight_fg = widget->bg;
     if(menubar->highlight_bg == -1) menubar->highlight_bg = widget->fg;
 
-    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg));
-    highlight = COLOR_PAIR(vdk_color_pair(
-        menubar->highlight_fg, menubar->highlight_bg));
+    /* apply the pair as a separate short so bright (8-15) colors, whose
+       pair numbers exceed 255, are not truncated by COLOR_PAIR's 8-bit
+       pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
+    hl_pair = vdk_color_pair(
+        menubar->highlight_fg, menubar->highlight_bg);
 
-    wattron(widget->canvas, paint_colors);
+    wattr_set(widget->canvas, A_NORMAL, pair, NULL);
     vk_widget_fill(widget, ' ');
 
     list_for_each(pos, &menubar->item_list)
@@ -438,12 +441,14 @@ _vk_menubar_update(vk_menubar_t *menubar)
         if(menubar->focused && idx == menubar->curr_item)
         {
             mvwchgat(widget->canvas, 0, col, item_width,
-                A_NORMAL, PAIR_NUMBER(highlight), NULL);
+                A_NORMAL, hl_pair, NULL);
         }
 
         col += item_width;
         idx++;
     }
+
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }

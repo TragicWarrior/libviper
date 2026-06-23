@@ -102,9 +102,8 @@ _vk_filler_on_repaint(vk_object_t *object, int event, void *data)
 
     if(widget->fg >= 0 && widget->bg >= 0)
     {
-        int colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
-            | widget->attrs;
-        vk_widget_fill(widget, ' ' | colors);
+        vk_widget_fill_pair(widget, L' ', widget->attrs,
+            vdk_color_pair(widget->fg, widget->bg));
     }
 
     return 0;

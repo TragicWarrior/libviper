@@ -277,8 +277,8 @@ vk_popup_set_colors(vk_popup_t *popup, short fg, short bg)
     if(popup->layout != NULL)
     {
         vk_widget_set_colors(VK_WIDGET(popup->layout), fg, bg);
-        vk_widget_fill(VK_WIDGET(popup->layout),
-            ' ' | COLOR_PAIR(vdk_color_pair(fg, bg)));
+        vk_widget_fill_pair(VK_WIDGET(popup->layout), L' ', 0,
+            vdk_color_pair(fg, bg));
     }
 
     if(popup->default_client != NULL)
@@ -300,8 +300,8 @@ vk_popup_set_button_colors(vk_popup_t *popup, short fg, short bg)
     if(popup->button_bar != NULL)
     {
         vk_widget_set_colors(VK_WIDGET(popup->button_bar), fg, bg);
-        vk_widget_fill(VK_WIDGET(popup->button_bar),
-            ' ' | COLOR_PAIR(vdk_color_pair(fg, bg)));
+        vk_widget_fill_pair(VK_WIDGET(popup->button_bar), L' ', 0,
+            vdk_color_pair(fg, bg));
     }
 
     return 0;
