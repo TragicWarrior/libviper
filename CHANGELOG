@@ -1,3 +1,21 @@
+Version 5.3.0
+
+High-color pair rendering
+* [Bryan Christ] Widgets applied their ncurses color pair through the
+  COLOR_PAIR() macro, which packs the pair into the 8-bit A_COLOR field
+  (max pair 255).  vdk_color_pair() returns pairs 256-319 for the
+  16-color range whenever a component is bright (8-15), so bright
+  foreground or background colors truncated to a different pair and
+  rendered the wrong color.  Apply the pair as a separate short via
+  wattr_set() / setcchar() / the new vk_widget_fill_pair() across every
+  widget (label, color, box, filler, popup, filedialog, window, scroller,
+  frame, grid, table, activity, marquee, textbox, listbox, selectbox,
+  menubar, dropdown, button, input, spinbutton, calendar) and the
+  vk_color focus overlay.  The list / select / menubar highlight carried
+  a second truncation -- mvwchgat(PAIR_NUMBER(COLOR_PAIR(p))) -- now the
+  short pair is passed to mvwchgat directly.  Adds vk_widget_fill_pair();
+  additive API only, SOVERSION stays 5.
+
 Version 5.2.1
 
 Mouse-tracking teardown
