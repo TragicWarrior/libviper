@@ -207,7 +207,7 @@ _vk_marquee_update(vk_label_t *label)
     vk_marquee_t    *marquee;
     vk_widget_t     *widget;
     int             text_len;
-    int             colors;
+    short           pair;
     int             x;
 
     if(label == NULL) return -1;
@@ -217,8 +217,11 @@ _vk_marquee_update(vk_label_t *label)
 
     widget->_erase(widget);
 
-    colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
-    vk_widget_fill(widget, ' ' | colors);
+    /* apply the pair via the pair-safe path so bright (8-15) colors,
+       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
+       8-bit pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
+    vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
 
     if(label->text == NULL) return 0;
 
@@ -241,9 +244,9 @@ _vk_marquee_update(vk_label_t *label)
                 break;
         }
 
-        wattron(widget->canvas, colors);
+        wattr_set(widget->canvas, widget->attrs, pair, NULL);
         mvwprintw(widget->canvas, 0, x, "%s", label->text);
-        wattroff(widget->canvas, colors);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
         return 0;
     }
@@ -275,7 +278,7 @@ _vk_marquee_update(vk_label_t *label)
                 marquee->scroll_offset = 0;
         }
 
-        wattron(widget->canvas, colors);
+        wattr_set(widget->canvas, widget->attrs, pair, NULL);
 
         for(i = 0; i < widget->width; i++)
         {
@@ -283,7 +286,7 @@ _vk_marquee_update(vk_label_t *label)
 
             if(vpos < wlen)
             {
-                setcchar(&wch, &wtext[vpos], colors, 0, NULL);
+                setcchar(&wch, &wtext[vpos], widget->attrs, pair, NULL);
                 mvwadd_wch(widget->canvas, 0, i, &wch);
             }
             else
@@ -292,7 +295,7 @@ _vk_marquee_update(vk_label_t *label)
             }
         }
 
-        wattroff(widget->canvas, colors);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         free(wtext);
 
         return 0;
@@ -360,10 +363,10 @@ _vk_marquee_update(vk_label_t *label)
         }
     }
 
-    wattron(widget->canvas, colors);
+    wattr_set(widget->canvas, widget->attrs, pair, NULL);
     mvwprintw(widget->canvas, 0, 0, "%.*s",
         widget->width, label->text + marquee->scroll_offset);
-    wattroff(widget->canvas, colors);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }

@@ -271,10 +271,13 @@ _vk_calendar_update(vk_calendar_t *calendar)
 {
     vk_widget_t     *widget;
     WINDOW          *canvas;
-    int             normal_colors;
-    int             header_colors;
-    int             highlight_colors;
-    int             dimmed_colors;
+    short           normal_pair;
+    short           header_pair;
+    short           highlight_pair;
+    short           dimmed_pair;
+    attr_t          header_attrs;
+    attr_t          highlight_attrs;
+    attr_t          dimmed_attrs;
     int             first_dow;
     int             dim;
     int             prev_dim;
@@ -292,32 +295,51 @@ _vk_calendar_update(vk_calendar_t *calendar)
     widget = VK_WIDGET(calendar);
     canvas = widget->canvas;
 
-    normal_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg));
+    normal_pair = vdk_color_pair(widget->fg, widget->bg);
 
+    /* each region: when its colors are unset (-1) it reuses the normal
+       pair and layers its default attr (A_REVERSE / A_DIM) on top of the
+       caller's attrs; otherwise it gets its own pair with just those attrs.
+       the pair is applied separately via wattr_set so bright (8-15) pair
+       numbers (>255) survive. */
     if(calendar->header_fg == -1 || calendar->header_bg == -1)
-        header_colors = normal_colors | calendar->header_attrs;
+    {
+        header_pair = normal_pair;
+        header_attrs = calendar->header_attrs;
+    }
     else
-        header_colors = COLOR_PAIR(vdk_color_pair(
-            calendar->header_fg, calendar->header_bg))
-            | calendar->header_attrs;
+    {
+        header_pair = vdk_color_pair(
+            calendar->header_fg, calendar->header_bg);
+        header_attrs = calendar->header_attrs;
+    }
 
     if(calendar->highlight_fg == -1 || calendar->highlight_bg == -1)
-        highlight_colors = normal_colors | A_REVERSE
-            | calendar->highlight_attrs;
+    {
+        highlight_pair = normal_pair;
+        highlight_attrs = A_REVERSE | calendar->highlight_attrs;
+    }
     else
-        highlight_colors = COLOR_PAIR(vdk_color_pair(
-            calendar->highlight_fg, calendar->highlight_bg))
-            | calendar->highlight_attrs;
+    {
+        highlight_pair = vdk_color_pair(
+            calendar->highlight_fg, calendar->highlight_bg);
+        highlight_attrs = calendar->highlight_attrs;
+    }
 
     if(calendar->dimmed_fg == -1 || calendar->dimmed_bg == -1)
-        dimmed_colors = normal_colors | A_DIM | calendar->dimmed_attrs;
+    {
+        dimmed_pair = normal_pair;
+        dimmed_attrs = A_DIM | calendar->dimmed_attrs;
+    }
     else
-        dimmed_colors = COLOR_PAIR(vdk_color_pair(
-            calendar->dimmed_fg, calendar->dimmed_bg))
-            | calendar->dimmed_attrs;
+    {
+        dimmed_pair = vdk_color_pair(
+            calendar->dimmed_fg, calendar->dimmed_bg);
+        dimmed_attrs = calendar->dimmed_attrs;
+    }
 
     widget->_erase(widget);
-    vk_widget_fill(widget, ' ' | normal_colors);
+    vk_widget_fill_pair(widget, L' ', A_NORMAL, normal_pair);
 
     /* row 0: < Month Year > */
     snprintf(buf, sizeof(buf), "%s %d", month_names[calendar->month],
@@ -328,11 +350,11 @@ _vk_calendar_update(vk_calendar_t *calendar)
         int center = (VK_CALENDAR_WIDTH - label_len) / 2;
         if(center < 2) center = 2;
 
-        wattron(canvas, header_colors);
+        wattr_set(canvas, header_attrs, header_pair, NULL);
         mvwprintw(canvas, 0, 0, "<");
         mvwprintw(canvas, 0, center, "%s", buf);
         mvwprintw(canvas, 0, VK_CALENDAR_WIDTH - 1, ">");
-        wattroff(canvas, header_colors);
+        wattr_set(canvas, A_NORMAL, 0, NULL);
     }
 
     /* row 1: day-of-week headers */
@@ -341,12 +363,12 @@ _vk_calendar_update(vk_calendar_t *calendar)
             "Su","Mo","Tu","We","Th","Fr","Sa"
         };
 
-        wattron(canvas, header_colors);
+        wattr_set(canvas, header_attrs, header_pair, NULL);
         for(col = 0; col < 7; col++)
         {
             mvwprintw(canvas, 1, col * 3 + 1, "%s", dow_labels[col]);
         }
-        wattroff(canvas, header_colors);
+        wattr_set(canvas, A_NORMAL, 0, NULL);
     }
 
     /* rows 2-7: day grid */
@@ -366,20 +388,23 @@ _vk_calendar_update(vk_calendar_t *calendar)
     {
         for(col = 0; col < 7; col++)
         {
-            int print_day;
-            int colors;
+            int     print_day;
+            short   cell_pair;
+            attr_t  cell_attrs;
             int x = col * 3 + 1;
             int y = row + 2;
 
             if(day < 1)
             {
                 print_day = prev_dim + day;
-                colors = dimmed_colors;
+                cell_pair = dimmed_pair;
+                cell_attrs = dimmed_attrs;
             }
             else if(day > dim)
             {
                 print_day = day - dim;
-                colors = dimmed_colors;
+                cell_pair = dimmed_pair;
+                cell_attrs = dimmed_attrs;
             }
             else
             {
@@ -389,17 +414,19 @@ _vk_calendar_update(vk_calendar_t *calendar)
                    calendar->month == calendar->today_month &&
                    calendar->year == calendar->today_year)
                 {
-                    colors = highlight_colors;
+                    cell_pair = highlight_pair;
+                    cell_attrs = highlight_attrs;
                 }
                 else
                 {
-                    colors = normal_colors;
+                    cell_pair = normal_pair;
+                    cell_attrs = A_NORMAL;
                 }
             }
 
-            wattron(canvas, colors);
+            wattr_set(canvas, cell_attrs, cell_pair, NULL);
             mvwprintw(canvas, y, x, "%2d", print_day);
-            wattroff(canvas, colors);
+            wattr_set(canvas, A_NORMAL, 0, NULL);
 
             day++;
         }

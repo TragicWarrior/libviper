@@ -373,7 +373,7 @@ _vk_input_update(vk_input_t *input)
 {
     vk_widget_t *widget;
     short       fg, bg;
-    int         face_colors;
+    short       face_pair;
     int         field_start;
     int         field_width;
     int         text_row;
@@ -390,9 +390,9 @@ _vk_input_update(vk_input_t *input)
     fg = widget->fg;
     bg = widget->bg;
 
-    face_colors = COLOR_PAIR(vdk_color_pair(fg, bg)) | widget->attrs;
+    face_pair = vdk_color_pair(fg, bg);
 
-    vk_widget_fill(widget, ' ' | face_colors);
+    vk_widget_fill_pair(widget, L' ', widget->attrs, face_pair);
 
     right_col = widget->width - 1;
     bottom_row = widget->height - 1;
@@ -404,10 +404,10 @@ _vk_input_update(vk_input_t *input)
             field_start = 2;
             text_row = 0;
 
-            wattron(widget->canvas, face_colors);
+            wattr_set(widget->canvas, widget->attrs, face_pair, NULL);
             mvwaddch(widget->canvas, 0, 0, '[');
             mvwaddch(widget->canvas, 0, right_col, ']');
-            wattroff(widget->canvas, face_colors);
+            wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
             break;
         }
@@ -416,27 +416,29 @@ _vk_input_update(vk_input_t *input)
         {
             short tl_pair = vdk_color_pair(widget->relief_lo, bg);
             short br_pair = vdk_color_pair(widget->relief_hi, bg);
-            int tl_colors = COLOR_PAIR(tl_pair) | widget->attrs;
-            int br_colors = COLOR_PAIR(br_pair) | widget->attrs;
 
             field_start = 1;
             text_row = 1;
 
-            mvwaddch(widget->canvas, 0, 0, '+' | tl_colors);
+            /* top-left region: entire top row plus the left column */
+            wattr_set(widget->canvas, widget->attrs, tl_pair, NULL);
+            mvwaddch(widget->canvas, 0, 0, '+');
             for(i = 1; i < right_col; i++)
-                mvwaddch(widget->canvas, 0, i, '-' | tl_colors);
-            mvwaddch(widget->canvas, 0, right_col, '+' | tl_colors);
-
+                mvwaddch(widget->canvas, 0, i, '-');
+            mvwaddch(widget->canvas, 0, right_col, '+');
             for(i = 1; i < bottom_row; i++)
-            {
-                mvwaddch(widget->canvas, i, 0, '|' | tl_colors);
-                mvwaddch(widget->canvas, i, right_col, '|' | br_colors);
-            }
+                mvwaddch(widget->canvas, i, 0, '|');
+            wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
-            mvwaddch(widget->canvas, bottom_row, 0, '+' | br_colors);
+            /* bottom-right region: right column plus the entire bottom row */
+            wattr_set(widget->canvas, widget->attrs, br_pair, NULL);
+            for(i = 1; i < bottom_row; i++)
+                mvwaddch(widget->canvas, i, right_col, '|');
+            mvwaddch(widget->canvas, bottom_row, 0, '+');
             for(i = 1; i < right_col; i++)
-                mvwaddch(widget->canvas, bottom_row, i, '-' | br_colors);
-            mvwaddch(widget->canvas, bottom_row, right_col, '+' | br_colors);
+                mvwaddch(widget->canvas, bottom_row, i, '-');
+            mvwaddch(widget->canvas, bottom_row, right_col, '+');
+            wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
             break;
         }
@@ -501,17 +503,17 @@ _vk_input_update(vk_input_t *input)
     {
         int     text_idx = input->scroll + i;
         char    ch;
-        int     attrs;
+        attr_t  attrs;
 
         ch = (text_idx < input->text_len) ? input->text[text_idx] : ' ';
-        attrs = face_colors;
+        attrs = widget->attrs;
 
         if(i == cursor_col && input->show_cursor)
             attrs |= A_REVERSE;
 
-        wattron(widget->canvas, attrs);
+        wattr_set(widget->canvas, attrs, face_pair, NULL);
         mvwaddch(widget->canvas, text_row, field_start + i, ch);
-        wattroff(widget->canvas, attrs);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
     }
 
     return 0;

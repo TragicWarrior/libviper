@@ -248,7 +248,6 @@ _vk_table_draw_dividers(vk_table_t *table)
     short       fg;
     short       bg;
     short       pair;
-    attr_t      attrs;
     int         cols    = grid->cols;
     int         rows    = grid->rows;
     int         *vlines;
@@ -265,8 +264,10 @@ _vk_table_draw_dividers(vk_table_t *table)
     if(fg < 0) fg = COLOR_WHITE;
     if(bg < 0) bg = COLOR_BLACK;
 
+    /* apply the pair via the pair-safe path so bright (8-15) colors,
+       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
+       8-bit pair field. */
     pair = vdk_color_pair(fg, bg);
-    attrs = COLOR_PAIR(pair) | table->border_attrs;
 
     col_sizes = calloc(cols, sizeof(int));
     row_sizes = calloc(rows, sizeof(int));
@@ -282,7 +283,7 @@ _vk_table_draw_dividers(vk_table_t *table)
 
     _vk_table_compute_lines(table, col_sizes, row_sizes, vlines, hlines);
 
-    wattr_on(widget->canvas, attrs, NULL);
+    wattr_set(widget->canvas, table->border_attrs, pair, NULL);
 
     if(table->divider_style == VK_BORDER_ASCII)
     {
@@ -291,19 +292,19 @@ _vk_table_draw_dividers(vk_table_t *table)
         {
             int y = hlines[r];
             for(i = 0; i < widget->width; i++)
-                mvwaddch(widget->canvas, y, i, '-' | attrs);
+                mvwaddch(widget->canvas, y, i, '-');
         }
         /* vertical runs */
         for(c = 0; c <= cols; c++)
         {
             int x = vlines[c];
             for(i = 0; i < widget->height; i++)
-                mvwaddch(widget->canvas, i, x, '|' | attrs);
+                mvwaddch(widget->canvas, i, x, '|');
         }
         /* junctions */
         for(r = 0; r <= rows; r++)
             for(c = 0; c <= cols; c++)
-                mvwaddch(widget->canvas, hlines[r], vlines[c], '+' | attrs);
+                mvwaddch(widget->canvas, hlines[r], vlines[c], '+');
     }
     else
     {
@@ -336,7 +337,7 @@ _vk_table_draw_dividers(vk_table_t *table)
             }
     }
 
-    wattr_off(widget->canvas, attrs, NULL);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     free(col_sizes);
     free(row_sizes);

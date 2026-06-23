@@ -299,7 +299,7 @@ _vk_textbox_update(vk_textbox_t *textbox)
     vk_widget_t     *widget;
     int             paint_width;
     int             paint_height;
-    int             paint_colors;
+    short           pair;
     int             max_top;
     int             y;
     int             i;
@@ -316,9 +316,12 @@ _vk_textbox_update(vk_textbox_t *textbox)
     if(widget->vscroller != NULL) paint_width--;
     if(widget->hscroller != NULL) paint_height--;
 
-    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
-    vk_widget_fill(widget, ' ' | paint_colors);
-    wattron(widget->canvas, paint_colors);
+    /* apply the pair via the pair-safe path so bright (8-15) colors,
+       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
+       8-bit pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
+    vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
+    wattr_set(widget->canvas, widget->attrs, pair, NULL);
 
     if(textbox->line_count <= paint_height)
         textbox->scroll_top = 0;
@@ -342,7 +345,7 @@ _vk_textbox_update(vk_textbox_t *textbox)
         y++;
     }
 
-    wattroff(widget->canvas, paint_colors);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     if(widget->vscroller != NULL)
     {

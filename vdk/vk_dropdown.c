@@ -274,7 +274,7 @@ _vk_dropdown_update(vk_listbox_t *listbox)
     vk_widget_t         *widget;
     vk_item_t           *item;
     struct list_head    *pos;
-    int                 paint_colors;
+    short               pair;
     int                 name_width;
     int                 idx = 0;
     const char          *text = "";
@@ -287,8 +287,10 @@ _vk_dropdown_update(vk_listbox_t *listbox)
 
     widget->_erase(widget);
 
-    paint_colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg))
-        | widget->attrs;
+    /* apply the pair as a separate short so bright (8-15) colors, whose
+       pair numbers exceed 255, are not truncated by COLOR_PAIR's 8-bit
+       pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
 
     list_for_each(pos, &listbox->item_list)
     {
@@ -307,7 +309,7 @@ _vk_dropdown_update(vk_listbox_t *listbox)
         short sh_pair = vdk_color_pair(widget->relief_lo, widget->bg);
         int row;
 
-        vk_widget_fill(widget, ' ' | paint_colors);
+        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
 
         row = 0;
         {
@@ -351,10 +353,10 @@ _vk_dropdown_update(vk_listbox_t *listbox)
             mvwadd_wch(widget->canvas, row, 0, &cc);
         }
 
-        wattron(widget->canvas, paint_colors);
+        wattr_set(widget->canvas, widget->attrs, pair, NULL);
         mvwprintw(widget->canvas, row, 1, " %-*.*s",
             name_width, name_width, text);
-        wattroff(widget->canvas, paint_colors);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
         {
             wchar_t wch[2] = { 0 };
@@ -366,9 +368,9 @@ _vk_dropdown_update(vk_listbox_t *listbox)
             mvwadd_wch(widget->canvas, row, widget->width - 3, &cc);
         }
 
-        wattron(widget->canvas, paint_colors);
+        wattr_set(widget->canvas, widget->attrs, pair, NULL);
         mvwaddstr(widget->canvas, row, widget->width - 2, "\xe2\x96\xbc");
-        wattroff(widget->canvas, paint_colors);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
         {
             wchar_t wch[2] = { 0 };
@@ -413,12 +415,12 @@ _vk_dropdown_update(vk_listbox_t *listbox)
         name_width = widget->width - 2;
         if(name_width < 1) name_width = 1;
 
-        vk_widget_fill(widget, ' ' | paint_colors);
-        wattron(widget->canvas, paint_colors);
+        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
+        wattr_set(widget->canvas, widget->attrs, pair, NULL);
         mvwprintw(widget->canvas, 0, 0, "%-*.*s",
             name_width, name_width, text);
         mvwaddstr(widget->canvas, 0, name_width, " \xe2\x96\xbc");
-        wattroff(widget->canvas, paint_colors);
+        wattr_set(widget->canvas, A_NORMAL, 0, NULL);
     }
 
     return 0;

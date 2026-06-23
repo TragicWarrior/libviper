@@ -221,7 +221,7 @@ _vk_window_draw_title(vk_window_t *window)
     vk_frame_t  *frame;
     vk_widget_t *widget;
     short       fg, bg;
-    int         border_colors;
+    short       pair;
     int         title_len;
     int         avail;
     int         col;
@@ -258,11 +258,11 @@ _vk_window_draw_title(vk_window_t *window)
 
     fg = (frame->border_fg == -1) ? widget->fg : frame->border_fg;
     bg = (frame->border_bg == -1) ? widget->bg : frame->border_bg;
-    border_colors = COLOR_PAIR(vdk_color_pair(fg, bg));
+    pair = vdk_color_pair(fg, bg);
 
-    wattron(widget->canvas, border_colors | frame->border_attrs);
+    wattr_set(widget->canvas, frame->border_attrs, pair, NULL);
     mvwprintw(widget->canvas, 0, col, "%.*s", title_len, window->title);
-    wattroff(widget->canvas, border_colors | frame->border_attrs);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }

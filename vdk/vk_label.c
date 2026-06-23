@@ -179,15 +179,18 @@ _vk_label_update(vk_label_t *label)
     vk_widget_t *widget;
     int         text_len;
     int         x;
-    int         colors;
+    short       pair;
 
     if(label == NULL) return -1;
 
     widget = VK_WIDGET(label);
     widget->_erase(widget);
 
-    colors = COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)) | widget->attrs;
-    vk_widget_fill(VK_WIDGET(label), ' ' | colors);
+    /* apply the pair via the pair-safe path so bright (8-15) colors,
+       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
+       8-bit pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
+    vk_widget_fill_pair(VK_WIDGET(label), L' ', widget->attrs, pair);
 
     if(label->text == NULL) return 0;
 
@@ -210,9 +213,9 @@ _vk_label_update(vk_label_t *label)
             break;
     }
 
-    wattron(widget->canvas, colors);
+    wattr_set(widget->canvas, widget->attrs, pair, NULL);
     mvwprintw(widget->canvas, 0, x, "%s", label->text);
-    wattroff(widget->canvas, colors);
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }
