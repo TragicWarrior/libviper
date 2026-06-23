@@ -176,16 +176,20 @@ _vk_color_paint_cell(vk_widget_t *widget, vk_grid_t *grid,
     int     x, y, w, h;
     int     yy, xx;
     short   pair;
-    int     attr;
+    cchar_t cc;
+    wchar_t sp[2] = { L' ', L'\0' };
 
     if(vk_grid_get_cell_rect(grid, col, row, &x, &y, &w, &h) != 0) return;
 
+    /* apply via setcchar so bright (8-15) backgrounds, whose pair
+       numbers exceed 255, are not truncated by COLOR_PAIR's 8-bit
+       pair field. */
     pair = vdk_color_pair(COLOR_BLACK, color_idx);
-    attr = COLOR_PAIR(pair);
+    setcchar(&cc, sp, A_NORMAL, pair, NULL);
 
     for(yy = 0; yy < h; yy++)
         for(xx = 0; xx < w; xx++)
-            mvwaddch(widget->canvas, y + yy, x + xx, ' ' | attr);
+            mvwadd_wch(widget->canvas, y + yy, x + xx, &cc);
 }
 
 /*

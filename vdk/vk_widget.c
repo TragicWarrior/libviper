@@ -251,6 +251,35 @@ vk_widget_fill(vk_widget_t *widget, chtype ch)
     return;
 }
 
+inline void
+vk_widget_fill_pair(vk_widget_t *widget, wchar_t wch, attr_t attrs, short pair)
+{
+    cchar_t     cc;
+    wchar_t     buf[2];
+    long        i;
+
+    if(widget == NULL) return;
+    if(widget->canvas == NULL) return;
+
+    /* a cchar_t carries the pair as a full short, unlike COLOR_PAIR()
+       which truncates it into the 8-bit A_COLOR field. */
+    buf[0] = wch;
+    buf[1] = L'\0';
+    setcchar(&cc, buf, attrs, pair, NULL);
+
+    wmove(widget->canvas, 0, 0);
+
+    i = widget->width * widget->height;
+
+    while(i)
+    {
+        wadd_wch(widget->canvas, &cc);
+        i--;
+    }
+
+    return;
+}
+
 inline int
 vk_widget_move(vk_widget_t *widget, int x, int y)
 {

@@ -276,6 +276,11 @@ int             vk_widget_erase(vk_widget_t *widget);
 int             vk_widget_resize(vk_widget_t *widget, int width, int height);
 int             vk_widget_recreate(vk_widget_t *widget);
 void            vk_widget_fill(vk_widget_t *widget, chtype ch);
+/* like vk_widget_fill but carries the color pair as a separate argument
+   so pair numbers > 255 survive (the chtype/COLOR_PAIR form only encodes
+   an 8-bit pair in the attribute word). */
+void            vk_widget_fill_pair(vk_widget_t *widget, wchar_t wch,
+                    attr_t attrs, short pair);
 int             vk_widget_draw(vk_widget_t *widget);
 uint32_t        vk_widget_get_state(vk_widget_t *widget);
 void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
