@@ -1,3 +1,15 @@
+Version 5.4.1
+
+Compositor scroll flicker
+* [Bryan Christ] Stop ncurses' doupdate from scroll-optimizing the composited
+  screen.  A scroll inside one surface (an embedded terminal reaching a bound)
+  was realized with a physical scroll region + reverse index, which act on the
+  full row width and dragged every other surface's cells in those rows along
+  with it -- a screen-wide flicker on the static desktop.  vk_screen now hands
+  newterm() a variant of $TERM with the scroll / insert-delete-line caps
+  cancelled, so doupdate composes each frame with direct cell writes instead.
+  No API change; SOVERSION stays 5.
+
 Version 5.4.0
 
 Proportional scroller thumb
