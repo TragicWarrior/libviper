@@ -28,6 +28,8 @@ struct _vk_scroller_s
     short               border_fg;
     short               border_bg;
 
+    int                 always_visible;
+
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 

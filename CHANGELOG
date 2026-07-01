@@ -1,3 +1,13 @@
+Version 5.4.0
+
+Proportional scroller thumb
+* [Bryan Christ] vk_scroller draws a proportional-length thumb whose size
+  encodes the visible fraction of the content, instead of a single cell --
+  a full-height thumb means everything fits, and it shrinks as content
+  grows.  Adds vk_scroller_set_always_visible() to keep the trough on screen
+  (with a full thumb) instead of hiding when content fits.  Default behavior
+  is unchanged; additive API only, SOVERSION stays 5.
+
 Version 5.3.0
 
 High-color pair rendering
