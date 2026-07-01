@@ -439,6 +439,8 @@ int             vk_scroller_set_border_style(vk_scroller_t *scroller,
                     int style);
 int             vk_scroller_set_border_colors(vk_scroller_t *scroller,
                     short fg, short bg);
+int             vk_scroller_set_always_visible(vk_scroller_t *scroller,
+                    int always);
 int             vk_scroller_set_scroll_info(vk_scroller_t *scroller,
                     VkScrollInfoFunc func);
 int             vk_scroller_set_scroll_source(vk_scroller_t *scroller,
