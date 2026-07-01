@@ -15,6 +15,84 @@
 #include "vk_screen.h"
 #include "vk_event.h"
 
+#include <stdio.h>      /* generate the no-scroll TERM's terminfo source */
+
+/*
+    Keep ncurses' doupdate from scroll-optimizing the composited screen.  It
+    realizes a vertical shift with a scroll region (ESC[t;b r) + reverse index
+    (ESC M), which act on the FULL physical row width -- so a scroll inside one
+    surface (e.g. an embedded terminal hitting a bound) drags the cells of
+    every other surface in those rows along with it: a screen-wide flicker on
+    an otherwise static desktop.
+
+    Nulling the terminfo cap globals after newterm() does not work -- ncurses
+    fixes its scroll decision (SP->_scrolling) at newterm, and with
+    NCURSES_OPAQUE=0 the macro write can miss the struct slot the compiled
+    library actually reads.  So instead we hand newterm() a TERM that genuinely
+    lacks the caps: $TERM with csr/ind/ri/indn/rin/il/dl cancelled, compiled
+    once via tic into a private terminfo dir.  With them absent SP->_scrolling
+    is false from birth and doupdate never emits the region-scroll.  Child
+    terminals keep their own TERM, so they are unaffected.
+
+    Returns the stripped term name for newterm(), or NULL to fall back to the
+    normal TERM.  Built once; the private dir is removed at exit.
+*/
+static char vk_noscroll_dir[] = "/tmp/vk-ti-XXXXXX";
+
+static void
+vk_screen_noscroll_cleanup(void)
+{
+    char    cmd[256];
+
+    if(strchr(vk_noscroll_dir, 'X') != NULL) return;    /* never created */
+
+    snprintf(cmd, sizeof(cmd), "rm -rf '%s'", vk_noscroll_dir);
+    if(system(cmd) != 0) return;                        /* best effort */
+}
+
+static const char *
+vk_screen_noscroll_term(void)
+{
+    static char     name[128];
+    static int      state = 0;              /* 0 untried, 1 ready, -1 failed */
+    const char      *base;
+    char            src[192];
+    char            cmd[512];
+    FILE            *f;
+
+    if(state != 0) return (state == 1) ? name : NULL;
+    state = -1;                             /* pessimistic until it works */
+
+    base = getenv("TERM");
+    if(base == NULL || base[0] == '\0') return NULL;
+
+    if(mkdtemp(vk_noscroll_dir) == NULL) return NULL;
+    atexit(vk_screen_noscroll_cleanup);
+
+    snprintf(name, sizeof(name), "%s-vknoscroll", base);
+    snprintf(src, sizeof(src), "%s/entry.src", vk_noscroll_dir);
+
+    f = fopen(src, "w");
+    if(f == NULL) return NULL;
+    fprintf(f,
+        "%s|vk no-scroll variant,\n"
+        "\tcsr@, ind@, ri@, indn@, rin@, il@, il1@, dl@, dl1@,\n"
+        "\tuse=%s,\n",
+        name, base);
+    fclose(f);
+
+    /* tic resolves use=$TERM from the system db (TERMINFO not set yet), then
+       we point ncurses at the private dir for the self-contained result */
+    snprintf(cmd, sizeof(cmd),
+        "tic -x -o '%s' '%s' >/dev/null 2>&1", vk_noscroll_dir, src);
+    if(system(cmd) != 0) return NULL;
+
+    setenv("TERMINFO", vk_noscroll_dir, 1);
+    state = 1;
+
+    return name;
+}
+
 static int
 _vk_screen_ctor(vk_object_t *object, va_list *argp, ...);
 
@@ -480,7 +558,12 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     else
         screen->has_saved_termios = false;
 
-    new_term = newterm(NULL, new_out, new_in);
+    {
+        const char *nst = vk_screen_noscroll_term();
+        new_term = newterm((char *)nst, new_out, new_in);
+        if(new_term == NULL && nst != NULL)     /* stripped entry didn't load */
+            new_term = newterm(NULL, new_out, new_in);
+    }
     if(new_term == NULL)
     {
         fclose(new_in);
@@ -696,7 +779,12 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
 
     setlocale(LC_CTYPE, "");
 
-    screen->term = newterm(NULL, screen->fd_out, screen->fd_in);
+    {
+        const char *nst = vk_screen_noscroll_term();
+        screen->term = newterm((char *)nst, screen->fd_out, screen->fd_in);
+        if(screen->term == NULL && nst != NULL) /* stripped entry didn't load */
+            screen->term = newterm(NULL, screen->fd_out, screen->fd_in);
+    }
     if(screen->term == NULL) return -1;
 
     set_term(screen->term);
