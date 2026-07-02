@@ -56,7 +56,7 @@ vk_object_set_kmio(vk_object_t *object, VkKmioFunc func)
 inline int
 vk_object_push_keystroke(vk_object_t *object, int32_t keystroke)
 {
-    int retval;
+    int retval = -1;        /* default when the target widget has no kmio */
 
     if(object == NULL) return -1;
 
@@ -118,10 +118,20 @@ vk_object_emit(vk_object_t *object, int event)
 {
     struct vk_event_handler *handler;
     struct list_head        *pos;
+    struct list_head        *n;
 
     if(object == NULL) return -1;
 
-    list_for_each(pos, &object->event_handlers)
+    /*
+        walk with the _safe iterator (as unregister_event and destroy already
+        do): a handler may unregister itself -- or another handler -- during
+        dispatch, freeing its list node; the non-safe walk would then
+        dereference the freed node via pos->next.  (Destroying the emitting
+        object inside its own handler remains unsupported -- that frees the
+        whole list out from under the walk, so callers must defer it, as vwm
+        does by emitting ON_CLOSE and destroying only after emit returns.)
+    */
+    list_for_each_safe(pos, n, &object->event_handlers)
     {
         handler = list_entry(pos, struct vk_event_handler, list);
 

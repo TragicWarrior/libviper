@@ -1,3 +1,17 @@
+Version 5.5.1
+
+vk_object event/input safety fixes
+* [Bryan Christ] vk_object_emit() now walks the handler list with the _safe
+  iterator (as unregister_event and destroy already do).  A handler that
+  unregisters itself -- or another handler -- during dispatch frees its list
+  node; the non-safe walk then dereferenced the freed node via pos->next
+  (confirmed use-after-free under ASan).  Destroying the emitting object inside
+  its own handler remains unsupported -- callers must defer it (as vwm does).
+* [Bryan Christ] vk_object_push_keystroke() no longer returns an uninitialized
+  int when the target widget has no kmio -- e.g. a label or filler in a focused
+  box/grid slot, which routes the keystroke through push_keystroke.  Now returns
+  -1 in that case.
+
 Version 5.5.0
 
 Deck member visibility, finalize event + menubar label updates
