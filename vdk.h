@@ -119,6 +119,9 @@ enum
 
     /* surface */
     VK_EVENT_ON_SURFACE_CHANGE = 30,
+
+    /* deck */
+    VK_EVENT_ON_FINALIZE    = 31,
 };
 
 /* keystroke definitions */
@@ -584,6 +587,7 @@ vk_widget_t*    vk_deck_get_top(vk_deck_t *deck);
 int             vk_deck_cycle(vk_deck_t *deck, int vector);
 int             vk_deck_count(vk_deck_t *deck);
 vk_widget_t*    vk_deck_get_widget(vk_deck_t *deck, int index);
+int             vk_deck_finalize(vk_deck_t *deck);
 int             vk_deck_set_shadow(vk_deck_t *deck, bool enabled);
 int             vk_deck_set_shadow_colors(vk_deck_t *deck,
                     short fg, short bg);
@@ -685,6 +689,8 @@ vk_menubar_t*   vk_menubar_create(int width);
 int             vk_menubar_add_item(vk_menubar_t *menubar,
                     char *name, VkWidgetFunc func, void *anything);
 int             vk_menubar_get_item_count(vk_menubar_t *menubar);
+int             vk_menubar_set_item_label(vk_menubar_t *menubar, int idx,
+                    char *name);
 int             vk_menubar_get_curr(vk_menubar_t *menubar);
 int             vk_menubar_set_curr(vk_menubar_t *menubar, int idx);
 int             vk_menubar_set_next(vk_menubar_t *menubar);

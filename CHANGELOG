@@ -1,3 +1,26 @@
+Version 5.5.0
+
+Deck member visibility, finalize event + menubar label updates
+* [Bryan Christ] vk_deck_get_top() now returns the topmost VISIBLE member --
+  hidden (minimized) members are skipped, so focus and keyboard input hand off
+  to the next real window (callers that must walk every member regardless of
+  visibility use vk_deck_get_widget()).  The deck draw also skips a hidden
+  member's drop-shadow (previously painted before the per-widget visibility
+  gate).  With the existing vk_widget_hide() / vk_widget_show(), this is enough
+  to minimize a window in place.
+* [Bryan Christ] Add the VK_EVENT_ON_FINALIZE deck event.  vk_deck_add_widget(),
+  vk_deck_remove_widget(), vk_deck_set_top() and vk_deck_cycle() emit it once
+  the deck's membership or stacking has changed; the public vk_deck_finalize()
+  lets a consumer fire it after a change the deck can't observe itself (a
+  member's visibility).  A consumer can then re-evaluate every member in
+  z-order (vk_deck_count() / vk_deck_get_widget()) from a single handler --
+  e.g. to repaint focus decorations -- instead of hand-rolling the "who was top
+  / who is top now" dance at each call site.  A per-deck re-entrancy guard
+  prevents a handler from triggering a nested emit.  Additive; SOVERSION stays 5.
+* [Bryan Christ] Add vk_menubar_set_item_label() -- replace a menu-bar item's
+  label in place and re-render, for a live-updating label such as a count.
+  Additive; SOVERSION stays 5.
+
 Version 5.4.1
 
 Compositor scroll flicker

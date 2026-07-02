@@ -53,6 +53,30 @@ vk_deck_create(void)
     return deck;
 }
 
+/*
+    Emit VK_EVENT_ON_FINALIZE so a consumer can re-evaluate every member (in
+    z-order, via vk_deck_count()/vk_deck_get_widget()) after the deck's
+    membership or stacking changes -- e.g. to repaint focus decorations
+    without each call site hand-rolling the "who was top / who is top now"
+    dance.  The mutators below fire it automatically; a consumer calls it
+    directly after changing something the deck can't observe, such as a
+    member's visibility (vk_widget_hide()/vk_widget_show()).
+*/
+int
+vk_deck_finalize(vk_deck_t *deck)
+{
+    if(deck == NULL) return -1;
+
+    /* a handler must not trigger a second, nested emit */
+    if(deck->finalizing) return 0;
+
+    deck->finalizing = true;
+    vk_object_emit(VK_OBJECT(deck), VK_EVENT_ON_FINALIZE);
+    deck->finalizing = false;
+
+    return 0;
+}
+
 inline int
 vk_deck_add_widget(vk_deck_t *deck, vk_widget_t *widget, int position)
 {
@@ -63,6 +87,8 @@ vk_deck_add_widget(vk_deck_t *deck, vk_widget_t *widget, int position)
         list_add_tail(&widget->list, &deck->widget_list);
     else
         list_add(&widget->list, &deck->widget_list);
+
+    vk_deck_finalize(deck);
 
     return 0;
 }
@@ -76,6 +102,8 @@ vk_deck_remove_widget(vk_deck_t *deck, vk_widget_t *widget)
     list_del(&widget->list);
     widget->surface = NULL;
 
+    vk_deck_finalize(deck);
+
     return 0;
 }
 
@@ -87,17 +115,29 @@ vk_deck_set_top(vk_deck_t *deck, vk_widget_t *widget)
 
     list_move(&widget->list, &deck->widget_list);
 
+    vk_deck_finalize(deck);
+
     return 0;
 }
 
 inline vk_widget_t*
 vk_deck_get_top(vk_deck_t *deck)
 {
+    struct list_head    *pos;
+    vk_widget_t         *child;
+
     if(deck == NULL) return NULL;
 
-    if(list_empty(&deck->widget_list)) return NULL;
+    /* the topmost VISIBLE member -- hidden (minimized) members are skipped so
+       focus and input hand off to the next real window.  Callers that must
+       walk every member regardless of visibility use vk_deck_get_widget(). */
+    list_for_each(pos, &deck->widget_list)
+    {
+        child = list_entry(pos, vk_widget_t, list);
+        if(child->state & VK_STATE_VISIBLE) return child;
+    }
 
-    return list_first_entry(&deck->widget_list, vk_widget_t, list);
+    return NULL;
 }
 
 inline int
@@ -111,6 +151,8 @@ vk_deck_cycle(vk_deck_t *deck, int vector)
         list_rotate_left(&deck->widget_list);
     else
         list_rotate_right(&deck->widget_list);
+
+    vk_deck_finalize(deck);
 
     return 0;
 }
@@ -238,6 +280,7 @@ _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)
     deck->shadows = false;
     deck->shadow_fg = COLOR_WHITE;
     deck->shadow_bg = COLOR_BLACK;
+    deck->finalizing = false;
 
     deck->ctor = _vk_deck_ctor;
     deck->dtor = _vk_deck_dtor;
@@ -307,6 +350,11 @@ _vk_deck_draw(vk_widget_t *widget)
     {
         child = list_entry(pos, vk_widget_t, list);
         child->surface = widget->surface;
+
+        /* hidden (minimized) members: skip the shadow and the draw.  the
+           shadow is painted before vk_widget_draw's own visibility gate, so
+           without this a hidden member's drop-shadow would still leak. */
+        if(!(child->state & VK_STATE_VISIBLE)) continue;
 
         if(deck->shadows)
             _vk_deck_draw_shadow(deck, child, widget->surface);
