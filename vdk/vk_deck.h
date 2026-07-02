@@ -18,6 +18,7 @@ struct _vk_deck_s
     bool                shadows;
     short               shadow_fg;
     short               shadow_bg;
+    bool                finalizing;     /* re-entrancy guard for ON_FINALIZE */
 
     int                 (*ctor)         (vk_object_t *, va_list *, ...);
     int                 (*dtor)         (vk_object_t *);

@@ -70,6 +70,45 @@ vk_menubar_add_item(vk_menubar_t *menubar, char *name,
     return menubar->_add_item(menubar, name, func, anything);
 }
 
+/*
+    Replace item `idx`'s label in place (e.g. a live count) and re-render the
+    bar.  If the new label changes the item's width, the caller should resize
+    the menubar widget to fit.  Returns 0, or -1 on a bad index / OOM.
+*/
+inline int
+vk_menubar_set_item_label(vk_menubar_t *menubar, int idx, char *name)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    char                *dup;
+    int                 i = 0;
+
+    if(menubar == NULL) return -1;
+    if(name == NULL || name[0] == '\0') return -1;
+    if(idx < 0 || idx >= menubar->item_count) return -1;
+
+    list_for_each(pos, &menubar->item_list)
+    {
+        if(i == idx)
+        {
+            item = list_entry(pos, vk_item_t, list);
+
+            dup = strdup(name);
+            if(dup == NULL) return -1;
+
+            if(item->name != NULL) free(item->name);
+            item->name = dup;
+
+            menubar->_update(menubar);
+
+            return 0;
+        }
+        i++;
+    }
+
+    return -1;
+}
+
 inline int
 vk_menubar_get_item_count(vk_menubar_t *menubar)
 {
