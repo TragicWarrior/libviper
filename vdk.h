@@ -242,7 +242,7 @@ int             vk_screen_set_surface(vk_screen_t *screen, int id);
 int             vk_screen_get_active_surface(vk_screen_t *screen);
 int             vk_screen_get_surface_count(vk_screen_t *screen);
 int             vk_screen_set_surface_bkgd(vk_screen_t *screen,
-                    int surface_id, chtype bkgd);
+                    int surface_id, wchar_t wch, attr_t attrs, short pair);
 int             vk_screen_apply_stdscr_bkgd(vk_screen_t *screen);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_get_fd(vk_screen_t *screen);

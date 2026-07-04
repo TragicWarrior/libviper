@@ -249,9 +249,11 @@ vk_screen_get_surface_count(vk_screen_t *screen)
     canvas avoids that without losing the flicker fix.
 */
 int
-vk_screen_set_surface_bkgd(vk_screen_t *screen, int surface_id, chtype bkgd)
+vk_screen_set_surface_bkgd(vk_screen_t *screen, int surface_id,
+    wchar_t wch, attr_t attrs, short pair)
 {
     vk_surface_t    *surface;
+    wchar_t         buf[2];
 
     if(screen == NULL) return -1;
     if(surface_id < 0 || surface_id >= screen->surface_count) return -1;
@@ -259,7 +261,13 @@ vk_screen_set_surface_bkgd(vk_screen_t *screen, int surface_id, chtype bkgd)
     surface = screen->surfaces[surface_id];
     if(surface == NULL) return -1;
 
-    surface->bkgd = bkgd;
+    /* build the bkgd as a cchar_t so it carries the pair as a full short.
+       The old chtype form went through COLOR_PAIR(), which truncates the
+       pair into the 8-bit A_COLOR field -- a bright (bg 12-15) or 256-colour
+       background then rendered in the wrong colour. */
+    buf[0] = wch;
+    buf[1] = L'\0';
+    setcchar(&surface->bkgd, buf, attrs, pair, NULL);
 
     if(surface_id == screen->active_surface)
         vk_screen_apply_stdscr_bkgd(screen);
@@ -289,7 +297,7 @@ vk_screen_apply_stdscr_bkgd(vk_screen_t *screen)
     surface = screen->surfaces[screen->active_surface];
     if(surface == NULL) return -1;
 
-    wbkgdset(stdscr, surface->bkgd);
+    wbkgrndset(stdscr, &surface->bkgd);
 
     return 0;
 }
@@ -886,6 +894,10 @@ _vk_surface_create(SCREEN *term, int width, int height)
     surface->widgets = NULL;
     surface->widget_count = 0;
     surface->widget_alloc = 0;
+
+    /* default background: a blank cell in the default pair.  A zeroed cchar_t
+       (from calloc) would carry a NUL background character. */
+    setcchar(&surface->bkgd, L" ", A_NORMAL, 0, NULL);
 
     return surface;
 }

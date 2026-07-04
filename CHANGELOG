@@ -1,3 +1,14 @@
+Version 5.6.0
+
+Extended-colour surface backgrounds (API change)
+* [Bryan Christ] vk_screen_set_surface_bkgd() now takes (wchar_t wch, attr_t
+  attrs, short pair) and stores the background as a cchar_t applied via
+  wbkgrndset(), instead of a chtype via wbkgdset().  The chtype/COLOR_PAIR form
+  truncated the pair into ncurses' 8-bit A_COLOR field, so a bright (bg 12-15)
+  or 256-colour desktop background rendered in the wrong colour in the cells the
+  terminal's hardware-scroll optimisation exposes.  API break: callers pass the
+  decomposed background instead of a chtype (see vwm 4.9.2).  SOVERSION unchanged.
+
 Version 5.5.1
 
 vk_object event/input safety fixes
