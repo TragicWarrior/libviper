@@ -14,6 +14,29 @@ New widgets: vk_progress and vk_meter
   and high both bad) and monotone ramps are both expressible.  It overrides
   only the fill-colour virtual; all geometry is inherited.  SOVERSION stays 5.
 
+Relief drawing centralised (and fixed) in vdk_private
+* [Bryan Christ] vk_progress/vk_meter render into their own canvas via the
+  _update path and inherit the base compositing _draw, per the toolkit
+  convention -- the first cut rendered from _draw and never composited, so
+  the widgets drew nothing when attached to a screen.
+* [Bryan Christ] All 3D relief drawing now lives in one internal helper unit,
+  vdk/vdk_private.c: vdk_relief_wch() is the single relief-cell primitive
+  (recolours a WACS_ glyph; neutralises window attrs, which wadd_wch would
+  otherwise merge into the cell) and vdk_draw_relief() draws a full relief
+  box over a caller-supplied background.  vk_frame, vk_input, vk_button,
+  vk_progress, vk_dropdown and vk_spinbutton drop their private copies.
+  Shading is uniform via VDK_RELIEF_HI/SH_ATTRS: the highlight edge is
+  always bold (bright white), the shadow edge never is (black, not washed-out
+  grey).  Fixes two long-standing filedialog artifacts: the path input's
+  highlight rendered dull, and the list frame's bold border attrs leaked
+  onto its shadow edge, turning it grey.
+* [Bryan Christ] Dropdown and spinbutton arrow boxes are now flat (face
+  colour): a tee cell is shared by two regions and cannot satisfy two relief
+  directions, so any shading choice reads as a glitch from one side.  The
+  main control carries the 3D (raised dropdown field; sunken spinbutton
+  value field) and the arrow region stays flat.  The spinbutton's
+  button_relief defaults to flat; the raised/sunken per-region API remains.
+
 Version 5.6.0
 
 Extended-colour surface backgrounds (API change)
