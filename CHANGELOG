@@ -3,10 +3,11 @@ Version 5.7.0
 New widgets: vk_progress and vk_meter
 * [Bryan Christ] Add vk_progress -- a progress-bar widget.  Horizontal or
   vertical, configurable thickness, sunken or no relief, and a trough that is a
-  stipple, a solid block of another colour, or absent.  In UNICODE mode with a
-  solid/absent trough it fills at 1/8-cell resolution via block elements; a
-  stipple trough or ASCII mode (vk_progress_set_style) falls back to whole
-  cells.  Value / range are doubles.
+  stipple, a solid block of another colour, or absent.  Three fill styles
+  (vk_progress_set_style): UNICODE fills with the full block (U+2588) and, with
+  a solid/absent trough, at 1/8-cell resolution; ASCII fills with '#'; UNDERBAR
+  fills with a reverse-video underscore -- a flat, un-bevelled bar for
+  single-row meters drawn without relief.  Value / range are doubles.
 * [Bryan Christ] Add vk_meter -- derives from vk_progress and adds
   value-dependent fill colours: vk_meter_add_threshold(at, fg, bg), where the
   highest threshold <= the current value wins.  The colour breakpoints are

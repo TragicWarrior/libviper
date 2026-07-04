@@ -55,10 +55,15 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_PROGRESS_HORIZONTAL      0
 #define VK_PROGRESS_VERTICAL        1
 
-/* progress / meter fill style (charset).  sub-cell (1/8) fill needs UNICODE
- * plus a solid or absent trough; ASCII / stipple fall back to whole cells. */
+/* progress / meter fill style.  UNICODE fills with the full block (U+2588)
+ * and, with a solid or absent trough, at 1/8-cell (sub-cell) resolution;
+ * ASCII fills with '#' in whole cells.  UNDERBAR fills each cell with a
+ * reverse-video underscore: the cell shows the fill colour with a thin
+ * baseline (the fill background) along its bottom edge -- a flat, un-bevelled
+ * bar for single-row meters drawn without relief.  Whole-cell (no sub-cell). */
 #define VK_PROGRESS_UNICODE         0
 #define VK_PROGRESS_ASCII           1
+#define VK_PROGRESS_UNDERBAR        2
 
 /* progress / meter trough styles */
 #define VK_TROUGH_NONE              0

@@ -137,7 +137,7 @@ _vk_progress_render(vk_widget_t *widget)
     WINDOW          *canvas;
     int             ox, oy, iw, ih;         /* inner (post-relief) area */
     int             length, cross;
-    int             vertical, ascii, subcell;
+    int             vertical, ascii, underbar, subcell;
     double          span, frac;
     int             eighths, full, partial;
     short           ffg, fbg, fill_pair, trough_pair;
@@ -154,13 +154,16 @@ _vk_progress_render(vk_widget_t *widget)
 
     vertical = (progress->orientation == VK_PROGRESS_VERTICAL);
     ascii    = (progress->style == VK_PROGRESS_ASCII);
+    underbar = (progress->style == VK_PROGRESS_UNDERBAR);
 
     /*
-        1/8 sub-cell fill: UNICODE only, and only with a solid or absent
-        trough.  A partial block's unfilled half is a solid rectangle, which
-        blends against a solid trough (or blank) but not against a stipple.
+        1/8 sub-cell fill: UNICODE full-block only, and only with a solid or
+        absent trough.  A partial block's unfilled half is a solid rectangle,
+        which blends against a solid trough (or blank) but not against a
+        stipple.  ASCII and UNDERBAR are whole-cell.
     */
-    subcell  = (!ascii && progress->trough_style != VK_TROUGH_STIPPLE);
+    subcell  = (!ascii && !underbar
+                && progress->trough_style != VK_TROUGH_STIPPLE);
 
     ox = oy = 0;
     iw = widget->width;
@@ -199,10 +202,16 @@ _vk_progress_render(vk_widget_t *widget)
     progress->_fill_color(progress, &ffg, &fbg);
     fill_pair = vdk_color_pair(ffg, fbg);
 
-    /* full fill cell */
-    wbuf[0] = ascii ? L'#' : (wchar_t)0x2588;       /* '#' or U+2588 FULL BLOCK */
+    /* full fill cell.  UNDERBAR draws a reverse-video underscore -- the cell
+       shows the fill colour with a thin baseline in the fill bg -- so the
+       fill attrs carry A_REVERSE and the glyph is '_'. */
+    if(underbar)      wbuf[0] = L'_';
+    else if(ascii)    wbuf[0] = L'#';
+    else              wbuf[0] = (wchar_t)0x2588;     /* U+2588 FULL BLOCK */
     wbuf[1] = L'\0';
-    setcchar(&cc_full, wbuf, progress->fill_attrs, fill_pair, NULL);
+    setcchar(&cc_full, wbuf,
+        underbar ? (progress->fill_attrs | A_REVERSE) : progress->fill_attrs,
+        fill_pair, NULL);
 
     /* trough cell */
     if(progress->trough_style == VK_TROUGH_NONE)
