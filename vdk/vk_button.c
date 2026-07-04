@@ -7,6 +7,7 @@
 #include "vk_widget.h"
 #include "vk_button.h"
 #include "vk_event.h"
+#include "vdk_private.h"
 
 static int
 _vk_button_ctor(vk_object_t *object, va_list *argp, ...);
@@ -17,9 +18,6 @@ _vk_button_dtor(vk_object_t *object);
 static int
 _vk_button_update(vk_button_t *button);
 
-static void
-_vk_button_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
-    attr_t extra);
 
 static int
 _vk_button_text_width(const char *text)
@@ -241,17 +239,6 @@ _vk_button_dtor(vk_object_t *object)
     return 0;
 }
 
-static void
-_vk_button_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
-    attr_t extra)
-{
-    wchar_t     wch[CCHARW_MAX];
-    attr_t      attrs;
-    short       dummy;
-
-    getcchar(src, wch, &attrs, &dummy, NULL);
-    setcchar(dest, wch, attrs | extra, pair, NULL);
-}
 
 static int
 _vk_button_update(vk_button_t *button)
@@ -329,7 +316,8 @@ _vk_button_update(vk_button_t *button)
 
             /* highlight edges: top row, left column, and the two NW/SW
                corners */
-            wattr_set(widget->canvas, widget->attrs, hi_pair, NULL);
+            wattr_set(widget->canvas, VDK_RELIEF_HI_ATTRS(widget->attrs),
+                hi_pair, NULL);
             mvwaddch(widget->canvas, 0, 0, '+');
             for(i = 1; i < right_col; i++)
                 mvwaddch(widget->canvas, 0, i, '-');
@@ -340,7 +328,8 @@ _vk_button_update(vk_button_t *button)
 
             /* shadow edges: NE corner, right column, bottom edge, and
                the SE corner */
-            wattr_set(widget->canvas, widget->attrs, sh_pair, NULL);
+            wattr_set(widget->canvas, VDK_RELIEF_SH_ATTRS(widget->attrs),
+                sh_pair, NULL);
             mvwaddch(widget->canvas, 0, right_col, '+');
             for(i = 1; i < bottom_row; i++)
                 mvwaddch(widget->canvas, i, right_col, '|');
@@ -353,8 +342,6 @@ _vk_button_update(vk_button_t *button)
 
         default:
         {
-            cchar_t cc;
-
             if(button->text != NULL)
             {
                 int text_width = _vk_button_text_width(button->text);
@@ -369,33 +356,12 @@ _vk_button_update(vk_button_t *button)
                 wattr_set(widget->canvas, A_NORMAL, 0, NULL);
             }
 
-            _vk_button_build_cchar(&cc, WACS_ULCORNER, hi_pair, widget->attrs);
-            mvwadd_wch(widget->canvas, 0, 0, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_HLINE, hi_pair, widget->attrs);
-            for(i = 1; i < right_col; i++)
-                mvwadd_wch(widget->canvas, 0, i, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_URCORNER, sh_pair, 0);
-            mvwadd_wch(widget->canvas, 0, right_col, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_VLINE, hi_pair, widget->attrs);
-            for(i = 1; i < bottom_row; i++)
-                mvwadd_wch(widget->canvas, i, 0, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_VLINE, sh_pair, 0);
-            for(i = 1; i < bottom_row; i++)
-                mvwadd_wch(widget->canvas, i, right_col, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_LLCORNER, hi_pair, widget->attrs);
-            mvwadd_wch(widget->canvas, bottom_row, 0, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_HLINE, sh_pair, 0);
-            for(i = 1; i < right_col; i++)
-                mvwadd_wch(widget->canvas, bottom_row, i, &cc);
-
-            _vk_button_build_cchar(&cc, WACS_LRCORNER, sh_pair, 0);
-            mvwadd_wch(widget->canvas, bottom_row, right_col, &cc);
+            /* raised 3D border (sunken when pressed), centralised in
+               vdk_draw_relief(); the widget's attrs layer onto both edges
+               (highlight bold / shadow plain is enforced inside). */
+            vdk_draw_relief(widget,
+                button->pressed ? VK_RELIEF_SUNKEN : VK_RELIEF_RAISED,
+                bg, widget->attrs);
             break;
         }
     }

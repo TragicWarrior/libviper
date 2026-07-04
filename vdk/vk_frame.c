@@ -7,6 +7,7 @@
 #include "vk_container.h"
 #include "vk_frame.h"
 #include "vk_scroller.h"
+#include "vdk_private.h"
 
 static int
 _vk_frame_ctor(vk_object_t *object, va_list *argp, ...);
@@ -327,63 +328,12 @@ _vk_frame_draw_border(vk_frame_t *frame)
 
             if(relief != 0)
             {
-                /*
-                    3D relief: paint top + left edges (and the matching
-                    corners) in relief_hi, bottom + right in relief_lo --
-                    the eye reads brighter-NW + darker-SE as raised under
-                    conventional NW lighting.  SUNKEN swaps the two pairs.
-                    The transition corners (URCORNER, LLCORNER) take the
-                    color of their vertical edge to keep the seam clean.
-
-                    Drawn cell-by-cell with mvwadd_wch (not wborder_set)
-                    because wborder_set does not reliably honor per-cell
-                    color pairs in its cchar_t arguments -- it tends to
-                    use the window's current attrs, which would render
-                    one side of the relief invisible against the canvas.
-                */
-                cchar_t cc;
-                short   hi_pair = vdk_color_pair(widget->relief_hi, bg);
-                short   sh_pair = vdk_color_pair(widget->relief_lo, bg);
-                int     right_col  = widget->width  - 1;
-                int     bottom_row = widget->height - 1;
-                int     i;
-
-                if(relief & VK_RELIEF_SUNKEN)
-                {
-                    short tmp = hi_pair;
-                    hi_pair = sh_pair;
-                    sh_pair = tmp;
-                }
-
-                /* top edge + UL corner: hi */
-                _vk_frame_build_cchar(&cc, WACS_ULCORNER, hi_pair, extra);
-                mvwadd_wch(widget->canvas, 0, 0, &cc);
-                _vk_frame_build_cchar(&cc, WACS_HLINE, hi_pair, extra);
-                for(i = 1; i < right_col; i++)
-                    mvwadd_wch(widget->canvas, 0, i, &cc);
-
-                /* top-right corner: sh (matches right edge) */
-                _vk_frame_build_cchar(&cc, WACS_URCORNER, sh_pair, extra);
-                mvwadd_wch(widget->canvas, 0, right_col, &cc);
-
-                /* left edge: hi.  right edge: sh */
-                _vk_frame_build_cchar(&cc, WACS_VLINE, hi_pair, extra);
-                for(i = 1; i < bottom_row; i++)
-                    mvwadd_wch(widget->canvas, i, 0, &cc);
-                _vk_frame_build_cchar(&cc, WACS_VLINE, sh_pair, extra);
-                for(i = 1; i < bottom_row; i++)
-                    mvwadd_wch(widget->canvas, i, right_col, &cc);
-
-                /* bottom-left corner: hi (matches left edge) */
-                _vk_frame_build_cchar(&cc, WACS_LLCORNER, hi_pair, extra);
-                mvwadd_wch(widget->canvas, bottom_row, 0, &cc);
-
-                /* bottom edge + LR corner: sh */
-                _vk_frame_build_cchar(&cc, WACS_HLINE, sh_pair, extra);
-                for(i = 1; i < right_col; i++)
-                    mvwadd_wch(widget->canvas, bottom_row, i, &cc);
-                _vk_frame_build_cchar(&cc, WACS_LRCORNER, sh_pair, extra);
-                mvwadd_wch(widget->canvas, bottom_row, right_col, &cc);
+                /* 3D relief, centralised in vdk_draw_relief(): highlight
+                   edge forced bold, shadow edge kept plain (bold border_attrs
+                   used to leak onto the shadow, washing it out to grey);
+                   border_attrs/REVERSE still layer onto both edges.  The
+                   relief sits on the border-resolved bg, not widget->bg. */
+                vdk_draw_relief(widget, relief, bg, extra);
             }
             else
             {

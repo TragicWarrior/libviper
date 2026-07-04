@@ -6,12 +6,12 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_progress.h"
+#include "vdk_private.h"
 
 static int      _vk_progress_ctor(vk_object_t *object, va_list *argp, ...);
 static int      _vk_progress_dtor(vk_object_t *object);
 static int      _vk_progress_render(vk_widget_t *widget);
 static int      _vk_progress_recreate(vk_widget_t *widget);
-static void     _vk_progress_draw_sunken(vk_widget_t *widget);
 static void     _vk_progress_default_fill_color(vk_progress_t *progress,
                     short *fg, short *bg);
 
@@ -129,35 +129,6 @@ _vk_progress_default_fill_color(vk_progress_t *progress, short *fg, short *bg)
     *bg = progress->fill_bg;
 }
 
-/*
-    A simple sunken 3D edge: the whole box in the shadow (relief_lo) colour,
-    then the bottom + right inner edges overpainted in the highlight
-    (relief_hi) colour.  Only drawn when there is room for a border plus at
-    least one interior cell.
-*/
-static void
-_vk_progress_draw_sunken(vk_widget_t *widget)
-{
-    WINDOW  *canvas = widget->canvas;
-    int     w = widget->width;
-    int     h = widget->height;
-    short   lo = vdk_color_pair(widget->relief_lo, widget->bg);
-    short   hi = vdk_color_pair(widget->relief_hi, widget->bg);
-
-    wattr_set(canvas, A_NORMAL, lo, NULL);
-    mvwhline(canvas, 0, 0, ACS_HLINE, w);
-    mvwhline(canvas, h - 1, 0, ACS_HLINE, w);
-    mvwvline(canvas, 0, 0, ACS_VLINE, h);
-    mvwvline(canvas, 0, w - 1, ACS_VLINE, h);
-    mvwaddch(canvas, 0, 0, ACS_ULCORNER);
-    mvwaddch(canvas, 0, w - 1, ACS_URCORNER);
-    mvwaddch(canvas, h - 1, 0, ACS_LLCORNER);
-    mvwaddch(canvas, h - 1, w - 1, ACS_LRCORNER);
-
-    wattr_set(canvas, A_NORMAL, hi, NULL);
-    mvwhline(canvas, h - 1, 1, ACS_HLINE, w - 2);
-    mvwvline(canvas, 1, w - 1, ACS_VLINE, h - 2);
-}
 
 static int
 _vk_progress_render(vk_widget_t *widget)
@@ -195,10 +166,11 @@ _vk_progress_render(vk_widget_t *widget)
     iw = widget->width;
     ih = widget->height;
 
-    /* reserve a border for sunken relief when there's room for interior */
+    /* reserve a border for sunken relief when there's room for interior
+       (bright highlight / plain shadow enforced inside vdk_draw_relief) */
     if((progress->relief & VK_RELIEF_SUNKEN) && iw >= 3 && ih >= 3)
     {
-        _vk_progress_draw_sunken(widget);
+        vdk_draw_relief(widget, VK_RELIEF_SUNKEN, widget->bg, 0);
         ox = 1; oy = 1;
         iw -= 2; ih -= 2;
     }

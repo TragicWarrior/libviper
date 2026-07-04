@@ -40,6 +40,7 @@ include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_D
 
 set(VDK_SOURCES
     vdk/vdk_color.c
+    vdk/vdk_private.c
     vdk/vk_object.c
     vdk/vk_screen.c
     vdk/vk_widget.c

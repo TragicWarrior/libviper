@@ -5,6 +5,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_input.h"
+#include "vdk_private.h"
 
 #define VK_INPUT_INIT_CAP       256
 
@@ -17,9 +18,6 @@ _vk_input_dtor(vk_object_t *object);
 static int
 _vk_input_update(vk_input_t *input);
 
-static void
-_vk_input_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
-    attr_t extra);
 
 static int
 _vk_input_field_width(vk_input_t *input)
@@ -356,17 +354,6 @@ _vk_input_dtor(vk_object_t *object)
     return 0;
 }
 
-static void
-_vk_input_build_cchar(cchar_t *dest, const cchar_t *src, short pair,
-    attr_t extra)
-{
-    wchar_t     wch[CCHARW_MAX];
-    attr_t      attrs;
-    short       dummy;
-
-    getcchar(src, wch, &attrs, &dummy, NULL);
-    setcchar(dest, wch, attrs | extra, pair, NULL);
-}
 
 static int
 _vk_input_update(vk_input_t *input)
@@ -420,8 +407,9 @@ _vk_input_update(vk_input_t *input)
             field_start = 1;
             text_row = 1;
 
-            /* top-left region: entire top row plus the left column */
-            wattr_set(widget->canvas, widget->attrs, tl_pair, NULL);
+            /* top-left region (shadow): entire top row plus the left column */
+            wattr_set(widget->canvas, VDK_RELIEF_SH_ATTRS(widget->attrs),
+                tl_pair, NULL);
             mvwaddch(widget->canvas, 0, 0, '+');
             for(i = 1; i < right_col; i++)
                 mvwaddch(widget->canvas, 0, i, '-');
@@ -430,8 +418,10 @@ _vk_input_update(vk_input_t *input)
                 mvwaddch(widget->canvas, i, 0, '|');
             wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
-            /* bottom-right region: right column plus the entire bottom row */
-            wattr_set(widget->canvas, widget->attrs, br_pair, NULL);
+            /* bottom-right region (highlight): right column plus the entire
+               bottom row */
+            wattr_set(widget->canvas, VDK_RELIEF_HI_ATTRS(widget->attrs),
+                br_pair, NULL);
             for(i = 1; i < bottom_row; i++)
                 mvwaddch(widget->canvas, i, right_col, '|');
             mvwaddch(widget->canvas, bottom_row, 0, '+');
@@ -445,40 +435,13 @@ _vk_input_update(vk_input_t *input)
 
         default:
         {
-            cchar_t cc;
-            short tl_pair = vdk_color_pair(widget->relief_lo, bg);
-            short br_pair = vdk_color_pair(widget->relief_hi, bg);
-
             field_start = 1;
             text_row = 1;
 
-            _vk_input_build_cchar(&cc, WACS_ULCORNER, tl_pair, 0);
-            mvwadd_wch(widget->canvas, 0, 0, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_HLINE, tl_pair, 0);
-            for(i = 1; i < right_col; i++)
-                mvwadd_wch(widget->canvas, 0, i, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_URCORNER, tl_pair, 0);
-            mvwadd_wch(widget->canvas, 0, right_col, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_VLINE, tl_pair, 0);
-            for(i = 1; i < bottom_row; i++)
-                mvwadd_wch(widget->canvas, i, 0, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_VLINE, br_pair, 0);
-            for(i = 1; i < bottom_row; i++)
-                mvwadd_wch(widget->canvas, i, right_col, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_LLCORNER, br_pair, 0);
-            mvwadd_wch(widget->canvas, bottom_row, 0, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_HLINE, br_pair, 0);
-            for(i = 1; i < right_col; i++)
-                mvwadd_wch(widget->canvas, bottom_row, i, &cc);
-
-            _vk_input_build_cchar(&cc, WACS_LRCORNER, br_pair, 0);
-            mvwadd_wch(widget->canvas, bottom_row, right_col, &cc);
+            /* sunken 3D box, centralised in vdk_draw_relief(): shadow at the
+               top/left, bright (bold) highlight at the bottom/right -- the
+               same shading every other relief widget gets. */
+            vdk_draw_relief(widget, VK_RELIEF_SUNKEN, bg, 0);
 
             break;
         }

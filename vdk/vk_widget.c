@@ -280,6 +280,7 @@ vk_widget_fill_pair(vk_widget_t *widget, wchar_t wch, attr_t attrs, short pair)
     return;
 }
 
+
 inline int
 vk_widget_move(vk_widget_t *widget, int x, int y)
 {
