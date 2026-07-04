@@ -480,5 +480,13 @@ _vk_frame_update(vk_frame_t *frame)
         vk_widget_draw(frame->child);
     }
 
+    /*
+        Fire ON_FINALIZE now that the border, scrollers and child are all in
+        the canvas.  A consumer can register a handler to decorate the
+        finished frame at the last minute -- e.g. paint a caption onto the top
+        border -- without subclassing or racing the compositor.
+    */
+    vk_object_emit(VK_OBJECT(frame), VK_EVENT_ON_FINALIZE);
+
     return 0;
 }

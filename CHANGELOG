@@ -82,6 +82,11 @@ Deck member visibility, finalize event + menubar label updates
   e.g. to repaint focus decorations -- instead of hand-rolling the "who was top
   / who is top now" dance at each call site.  A per-deck re-entrancy guard
   prevents a handler from triggering a nested emit.  Additive; SOVERSION stays 5.
+* [Bryan Christ] vk_frame_t now also emits VK_EVENT_ON_FINALIZE at the end of
+  its update, once the border, scrollers and child are all in the canvas.  A
+  consumer can register a handler (vk_object_register_event) to decorate the
+  finished frame at the last minute -- e.g. paint a caption onto the top
+  border via vk_widget_get_canvas() -- without subclassing.  Additive.
 * [Bryan Christ] Add vk_menubar_set_item_label() -- replace a menu-bar item's
   label in place and re-render, for a live-updating label such as a count.
   Additive; SOVERSION stays 5.
