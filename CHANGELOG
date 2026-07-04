@@ -87,6 +87,11 @@ Deck member visibility, finalize event + menubar label updates
   consumer can register a handler (vk_object_register_event) to decorate the
   finished frame at the last minute -- e.g. paint a caption onto the top
   border via vk_widget_get_canvas() -- without subclassing.  Additive.
+* [Bryan Christ] vk_frame_t now paints its interior in its own background
+  before erasing, so a childless (decorative / grouping-box) frame reads as an
+  opaque panel instead of punching the surface's default (black) through its
+  interior.  A frame with a child is unaffected -- the child draws over the
+  interior.  vk_window keeps its own update path and is untouched.
 * [Bryan Christ] Add vk_menubar_set_item_label() -- replace a menu-bar item's
   label in place and re-render, for a live-updating label such as a count.
   Additive; SOVERSION stays 5.

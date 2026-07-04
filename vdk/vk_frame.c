@@ -460,6 +460,14 @@ _vk_frame_update(vk_frame_t *frame)
 
     widget = VK_WIDGET(frame);
 
+    /*
+        Paint the interior in the frame's own background before erasing, so a
+        childless (decorative) frame reads as an opaque panel instead of
+        punching the surface's default (black) through its interior.  A frame
+        with a child is unaffected -- the child draws over the interior.
+    */
+    wbkgd(widget->canvas, COLOR_PAIR(vdk_color_pair(widget->fg, widget->bg)));
+
     widget->_erase(widget);
     frame->_draw_border(frame);
 
