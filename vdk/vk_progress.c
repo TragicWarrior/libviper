@@ -9,7 +9,8 @@
 
 static int      _vk_progress_ctor(vk_object_t *object, va_list *argp, ...);
 static int      _vk_progress_dtor(vk_object_t *object);
-static int      _vk_progress_draw(vk_widget_t *widget);
+static int      _vk_progress_render(vk_widget_t *widget);
+static int      _vk_progress_recreate(vk_widget_t *widget);
 static void     _vk_progress_draw_sunken(vk_widget_t *widget);
 static void     _vk_progress_default_fill_color(vk_progress_t *progress,
                     short *fg, short *bg);
@@ -99,7 +100,11 @@ _vk_progress_ctor(vk_object_t *object, va_list *argp, ...)
     progress->dtor = _vk_progress_dtor;
     progress->_fill_color = _vk_progress_default_fill_color;
 
-    VK_WIDGET(object)->_draw = _vk_progress_draw;
+    /* Follow the toolkit convention: _update-style rendering draws the bar
+       into the widget's own canvas; the inherited base _draw composites that
+       canvas onto the surface.  _recreate re-renders after a teleport/resize
+       rebuilds the canvas (mirrors vk_label). */
+    VK_WIDGET(object)->_recreate = _vk_progress_recreate;
 
     return 0;
 }
@@ -155,7 +160,7 @@ _vk_progress_draw_sunken(vk_widget_t *widget)
 }
 
 static int
-_vk_progress_draw(vk_widget_t *widget)
+_vk_progress_render(vk_widget_t *widget)
 {
     vk_progress_t   *progress;
     WINDOW          *canvas;
@@ -283,6 +288,27 @@ _vk_progress_draw(vk_widget_t *widget)
     return 0;
 }
 
+/*
+    After a teleport/resize rebuilds the canvas it is empty -- re-render the
+    bar so the new SCREEN shows current state instead of a blank slot.
+*/
+static int
+_vk_progress_recreate(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    if(widget->composer != widget->canvas)
+        delwin(widget->composer);
+
+    widget->canvas = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state &= ~VK_STATE_FROZEN;
+
+    if(widget->canvas == NULL) return -1;
+
+    return _vk_progress_render(widget);
+}
+
 int
 vk_progress_set_range(vk_progress_t *progress, double min, double max)
 {
@@ -391,7 +417,9 @@ vk_progress_update(vk_progress_t *progress)
 {
     if(progress == NULL) return -1;
 
-    return vk_widget_draw(VK_WIDGET(progress));
+    /* render current state into the canvas; vk_screen_refresh's base _draw
+       composites it onto the surface (mirrors vk_label_update). */
+    return _vk_progress_render(VK_WIDGET(progress));
 }
 
 void
