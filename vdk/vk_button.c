@@ -94,7 +94,7 @@ vk_button_get_text(vk_button_t *button)
 }
 
 inline int
-vk_button_set_relief_style(vk_button_t *button, int style)
+vk_button_set_border_style(vk_button_t *button, int style)
 {
     vk_widget_t *widget;
     int         text_width;
@@ -105,7 +105,7 @@ vk_button_set_relief_style(vk_button_t *button, int style)
         && style != VK_BUTTON_BASIC)
         return -1;
 
-    button->relief_style = style;
+    button->border_style = style;
 
     widget = VK_WIDGET(button);
     text_width = _vk_button_text_width(button->text);
@@ -202,7 +202,7 @@ _vk_button_ctor(vk_object_t *object, va_list *argp, ...)
     button = VK_BUTTON(object);
 
     button->text = NULL;
-    button->relief_style = VK_BORDER_SINGLE;
+    button->border_style = VK_BORDER_SINGLE;
     button->pressed = false;
     button->pressed_fg = COLOR_WHITE;
     button->pressed_bg = COLOR_BLACK;
@@ -275,7 +275,7 @@ _vk_button_update(vk_button_t *button)
     right_col = widget->width - 1;
     bottom_row = widget->height - 1;
 
-    switch(button->relief_style)
+    switch(button->border_style)
     {
         case VK_BUTTON_BASIC:
         {

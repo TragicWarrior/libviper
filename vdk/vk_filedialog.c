@@ -164,7 +164,7 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
 
     dialog->path_input = vk_input_create(width);
     if(style != VK_BORDER_SINGLE)
-        vk_input_set_relief_style(dialog->path_input, style);
+        vk_input_set_border_style(dialog->path_input, style);
 
     if(multiselect)
     {
@@ -193,13 +193,13 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
 
     if(style == VK_BUTTON_BASIC)
     {
-        vk_button_set_relief_style(dialog->btn_ok, VK_BUTTON_BASIC);
-        vk_button_set_relief_style(dialog->btn_cancel, VK_BUTTON_BASIC);
+        vk_button_set_border_style(dialog->btn_ok, VK_BUTTON_BASIC);
+        vk_button_set_border_style(dialog->btn_cancel, VK_BUTTON_BASIC);
     }
     else if(style == VK_BORDER_ASCII)
     {
-        vk_button_set_relief_style(dialog->btn_ok, VK_BORDER_ASCII);
-        vk_button_set_relief_style(dialog->btn_cancel, VK_BORDER_ASCII);
+        vk_button_set_border_style(dialog->btn_ok, VK_BORDER_ASCII);
+        vk_button_set_border_style(dialog->btn_cancel, VK_BORDER_ASCII);
     }
 
     dialog->button_bar = vk_box_create(width, btn_h, VK_BOX_HORIZONTAL, 2);

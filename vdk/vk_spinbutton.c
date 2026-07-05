@@ -28,13 +28,13 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke);
 static int
 _vk_spinbutton_field_start(vk_spinbutton_t *spin)
 {
-    return (spin->relief_style == VK_BUTTON_BASIC) ? 2 : 1;
+    return (spin->border_style == VK_BUTTON_BASIC) ? 2 : 1;
 }
 
 static int
 _vk_spinbutton_text_row(vk_spinbutton_t *spin)
 {
-    return (spin->relief_style == VK_BUTTON_BASIC) ? 0 : 1;
+    return (spin->border_style == VK_BUTTON_BASIC) ? 0 : 1;
 }
 
 static int
@@ -42,7 +42,7 @@ _vk_spinbutton_field_width(vk_spinbutton_t *spin)
 {
     vk_widget_t *widget = VK_WIDGET(spin);
 
-    if(spin->relief_style == VK_BUTTON_BASIC)
+    if(spin->border_style == VK_BUTTON_BASIC)
         return widget->width - 4;
 
     return widget->width - 2;
@@ -233,7 +233,7 @@ _vk_spinbutton_draw_vsep(vk_spinbutton_t *spin, int col, short pair,
     int         bottom_row = widget->height - 1;
     int         r;
 
-    if(spin->relief_style == VK_BUTTON_BASIC)
+    if(spin->border_style == VK_BUTTON_BASIC)
     {
         wattr_set(widget->canvas, attr, pair, NULL);
         mvwaddch(widget->canvas, 0, col, '|');
@@ -241,7 +241,7 @@ _vk_spinbutton_draw_vsep(vk_spinbutton_t *spin, int col, short pair,
         return;
     }
 
-    if(spin->relief_style == VK_BORDER_ASCII)
+    if(spin->border_style == VK_BORDER_ASCII)
     {
         wattr_set(widget->canvas, attr, pair, NULL);
         mvwaddch(widget->canvas, 0, col, '+');
@@ -301,7 +301,7 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
     _vk_spinbutton_arrow_cols(spin, NULL, &down_col);
     mid_col = down_col - 1;
 
-    if(spin->relief_style == VK_BUTTON_BASIC)
+    if(spin->border_style == VK_BUTTON_BASIC)
     {
         wattr_set(widget->canvas, widget->attrs, face, NULL);
         mvwaddch(widget->canvas, 0, 0, '[');
@@ -314,7 +314,7 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
         return;
     }
 
-    if(spin->relief_style == VK_BORDER_ASCII)
+    if(spin->border_style == VK_BORDER_ASCII)
     {
         /* top row: value-near NW corner + top edge */
         wattr_set(widget->canvas, vna, vn, NULL);
@@ -497,7 +497,7 @@ vk_spinbutton_set_editable(vk_spinbutton_t *spin, bool editable)
 }
 
 inline int
-vk_spinbutton_set_relief_style(vk_spinbutton_t *spin, int style)
+vk_spinbutton_set_border_style(vk_spinbutton_t *spin, int style)
 {
     vk_widget_t *widget;
 
@@ -507,7 +507,7 @@ vk_spinbutton_set_relief_style(vk_spinbutton_t *spin, int style)
         && style != VK_BUTTON_BASIC)
         return -1;
 
-    spin->relief_style = style;
+    spin->border_style = style;
 
     widget = VK_WIDGET(spin);
 
@@ -658,7 +658,7 @@ _vk_spinbutton_ctor(vk_object_t *object, va_list *argp, ...)
     spin->max = 100.0;
     spin->step = 1.0;
     spin->precision = 0;
-    spin->relief_style = VK_BORDER_SINGLE;
+    spin->border_style = VK_BORDER_SINGLE;
     spin->field_relief = VK_RELIEF_SUNKEN;      /* input-like by default */
     spin->button_relief = 0;                    /* flat by default: a shared
                                                    tee cell can't satisfy two
@@ -791,7 +791,7 @@ _vk_spinbutton_update(vk_spinbutton_t *spin)
         attr_t  a = widget->attrs | A_BOLD;
         short   pair = vdk_color_pair(fg, bg);
 
-        if(spin->relief_style == VK_BORDER_ASCII)
+        if(spin->border_style == VK_BORDER_ASCII)
         {
             wattr_set(widget->canvas, a, pair, NULL);
             mvwaddch(widget->canvas, text_row, up_col, '+');

@@ -17,7 +17,7 @@ struct _vk_input_s
     int                 max_len;
     int                 cursor;
     int                 scroll;
-    int                 relief_style;
+    int                 border_style;
     bool                show_cursor;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);

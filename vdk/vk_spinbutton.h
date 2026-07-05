@@ -35,7 +35,7 @@ struct _vk_spinbutton_s
     double              max;
     double              step;
     int                 precision;      /* fractional digits shown */
-    int                 relief_style;   /* border glyph style (SINGLE/ASCII) */
+    int                 border_style;   /* border glyph style (SINGLE/ASCII) */
     int                 field_relief;   /* 3D dir of the value field */
     int                 button_relief;  /* 3D dir of the arrow controls */
     bool                editable;       /* manual text edit allowed */

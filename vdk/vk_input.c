@@ -24,7 +24,7 @@ _vk_input_field_width(vk_input_t *input)
 {
     vk_widget_t *widget = VK_WIDGET(input);
 
-    if(input->relief_style == VK_BUTTON_BASIC)
+    if(input->border_style == VK_BUTTON_BASIC)
         return widget->width - 4;
 
     return widget->width - 2;
@@ -121,7 +121,7 @@ vk_input_get_text(vk_input_t *input)
 }
 
 inline int
-vk_input_set_relief_style(vk_input_t *input, int style)
+vk_input_set_border_style(vk_input_t *input, int style)
 {
     vk_widget_t *widget;
 
@@ -131,7 +131,7 @@ vk_input_set_relief_style(vk_input_t *input, int style)
         && style != VK_BUTTON_BASIC)
         return -1;
 
-    input->relief_style = style;
+    input->border_style = style;
 
     widget = VK_WIDGET(input);
 
@@ -321,7 +321,7 @@ _vk_input_ctor(vk_object_t *object, va_list *argp, ...)
     input->max_len = 0;
     input->cursor = 0;
     input->scroll = 0;
-    input->relief_style = VK_BORDER_SINGLE;
+    input->border_style = VK_BORDER_SINGLE;
     input->show_cursor = false;
 
     input->ctor = _vk_input_ctor;
@@ -384,7 +384,7 @@ _vk_input_update(vk_input_t *input)
     right_col = widget->width - 1;
     bottom_row = widget->height - 1;
 
-    switch(input->relief_style)
+    switch(input->border_style)
     {
         case VK_BUTTON_BASIC:
         {

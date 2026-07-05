@@ -1,4 +1,21 @@
-Version 5.7.0
+Version 6.0.0
+
+API BREAK: relief-style setters renamed to border-style (SOVERSION 5 -> 6)
+* [Bryan Christ] Rename vk_button_set_relief_style, vk_dropdown_set_relief_style,
+  vk_spinbutton_set_relief_style and vk_input_set_relief_style to their
+  vk_*_set_border_style equivalents.  These four select a BOX style
+  (VK_BORDER_SINGLE / VK_BORDER_ASCII / VK_BUTTON_BASIC), not a relief
+  direction -- the "_relief_style" name invited passing a VK_RELIEF_* constant
+  by mistake.  The convention is now unambiguous:
+    - _set_relief(VK_RELIEF_RAISED|SUNKEN)  -- direction (vk_progress,
+      vk_spinbutton field/button)
+    - _set_border_style(VK_BORDER_*|VK_BUTTON_BASIC) -- which box (vk_frame,
+      vk_scroller, vk_window, vk_popup, and now vk_button, vk_dropdown,
+      vk_spinbutton, vk_input)
+    - _set_style(...) -- unchanged; widget content style (vk_progress fill,
+      vk_selectbox, vk_activity)
+  The private per-widget "relief_style" field is renamed "border_style" to
+  match.  Four public symbols removed, four added: SOVERSION bumps to 6.
 
 New widgets: vk_progress and vk_meter
 * [Bryan Christ] Add vk_progress -- a progress-bar widget.  Horizontal or

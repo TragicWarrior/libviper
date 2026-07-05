@@ -1455,7 +1455,7 @@ int main(void)
             vk_button_set_pressed_colors(deck_buttons[bi],
                 COLOR_BLACK, COLOR_WHITE);
             if(bi == 3)
-                vk_button_set_relief_style(deck_buttons[bi],
+                vk_button_set_border_style(deck_buttons[bi],
                     VK_BORDER_ASCII);
             vk_button_update(deck_buttons[bi]);
         }

@@ -13,7 +13,7 @@ struct _vk_button_s
     vk_widget_t         parent_klass;
 
     char                *text;
-    int                 relief_style;
+    int                 border_style;
     bool                pressed;
 
     short               pressed_fg;

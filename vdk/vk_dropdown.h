@@ -17,7 +17,7 @@ struct _vk_dropdown_s
     bool                expanded;
     int                 collapsed_height;
     int                 max_visible;
-    int                 relief_style;
+    int                 border_style;
 
     vk_window_t         *popup;
     vk_listbox_t        *popup_listbox;

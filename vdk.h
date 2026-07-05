@@ -413,7 +413,7 @@ void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
 /* vk_dropdown */
 vk_dropdown_t*  vk_dropdown_create(int width, int max_visible);
-int             vk_dropdown_set_relief_style(vk_dropdown_t *dropdown,
+int             vk_dropdown_set_border_style(vk_dropdown_t *dropdown,
                     int style);
 int             vk_dropdown_set_expanded(vk_dropdown_t *dropdown,
                     bool expanded);
@@ -648,7 +648,7 @@ void            vk_deck_destroy(vk_deck_t *deck);
 vk_button_t*    vk_button_create(const char *text);
 int             vk_button_set_text(vk_button_t *button, const char *text);
 const char*     vk_button_get_text(vk_button_t *button);
-int             vk_button_set_relief_style(vk_button_t *button, int style);
+int             vk_button_set_border_style(vk_button_t *button, int style);
 void            vk_button_set_pressed_colors(vk_button_t *button,
                     short fg, short bg);
 int             vk_button_set_on_press(vk_button_t *button,
@@ -691,7 +691,7 @@ int             vk_spinbutton_set_precision(vk_spinbutton_t *spin,
                     int precision);
 int             vk_spinbutton_set_editable(vk_spinbutton_t *spin,
                     bool editable);
-int             vk_spinbutton_set_relief_style(vk_spinbutton_t *spin,
+int             vk_spinbutton_set_border_style(vk_spinbutton_t *spin,
                     int style);
 int             vk_spinbutton_set_field_relief(vk_spinbutton_t *spin,
                     int relief);
@@ -709,7 +709,7 @@ void            vk_spinbutton_destroy(vk_spinbutton_t *spin);
 vk_input_t*     vk_input_create(int width);
 int             vk_input_set_text(vk_input_t *input, const char *text);
 const char*     vk_input_get_text(vk_input_t *input);
-int             vk_input_set_relief_style(vk_input_t *input, int style);
+int             vk_input_set_border_style(vk_input_t *input, int style);
 int             vk_input_set_max_length(vk_input_t *input, int max);
 int             vk_input_insert_char(vk_input_t *input, int ch);
 int             vk_input_backspace(vk_input_t *input);

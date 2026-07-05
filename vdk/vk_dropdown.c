@@ -50,13 +50,13 @@ vk_dropdown_create(int width, int max_visible)
 }
 
 inline int
-vk_dropdown_set_relief_style(vk_dropdown_t *dropdown, int style)
+vk_dropdown_set_border_style(vk_dropdown_t *dropdown, int style)
 {
     vk_widget_t *widget;
 
     if(dropdown == NULL) return -1;
 
-    dropdown->relief_style = style;
+    dropdown->border_style = style;
 
     widget = VK_WIDGET(dropdown);
 
@@ -226,7 +226,7 @@ _vk_dropdown_ctor(vk_object_t *object, va_list *argp, ...)
 
     dropdown->max_visible = va_arg(*argp, int);
     dropdown->expanded = false;
-    dropdown->relief_style = VK_BUTTON_BASIC;
+    dropdown->border_style = VK_BUTTON_BASIC;
     dropdown->collapsed_height = 1;
     dropdown->popup = NULL;
     dropdown->popup_listbox = NULL;
@@ -303,7 +303,7 @@ _vk_dropdown_update(vk_listbox_t *listbox)
         idx++;
     }
 
-    if(dropdown->relief_style == VK_BORDER_SINGLE)
+    if(dropdown->border_style == VK_BORDER_SINGLE)
     {
         short hi_pair = vdk_color_pair(widget->relief_hi, widget->bg);
         short sh_pair = vdk_color_pair(widget->relief_lo, widget->bg);
