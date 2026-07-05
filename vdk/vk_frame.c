@@ -394,17 +394,7 @@ _vk_frame_on_resize(vk_object_t *object, int event, void *anything)
     if(frame->child != NULL && (frame->child->state & VK_STATE_EXPAND))
         vk_widget_resize(frame->child, widget->width - 2, widget->height - 2);
 
-    if(widget->vscroller != NULL)
-    {
-        vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);
-        vk_widget_move(VK_WIDGET(widget->vscroller), widget->width - 1, 0);
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        vk_widget_resize(VK_WIDGET(widget->hscroller), widget->width, 1);
-        vk_widget_move(VK_WIDGET(widget->hscroller), 0, widget->height - 1);
-    }
+    vdk_scroller_reflow(widget);
 
     return 0;
 }
@@ -420,17 +410,7 @@ _vk_frame_recreate(vk_widget_t *widget)
 
     frame = VK_FRAME(widget);
 
-    if(widget->vscroller != NULL)
-    {
-        VK_WIDGET(widget->vscroller)->surface = widget->canvas;
-        vk_widget_recreate(VK_WIDGET(widget->vscroller));
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        VK_WIDGET(widget->hscroller)->surface = widget->canvas;
-        vk_widget_recreate(VK_WIDGET(widget->hscroller));
-    }
+    vdk_scroller_recreate(widget);
 
     if(frame->child != NULL)
     {
@@ -471,17 +451,7 @@ _vk_frame_update(vk_frame_t *frame)
     widget->_erase(widget);
     frame->_draw_border(frame);
 
-    if(widget->vscroller != NULL)
-    {
-        if(vk_scroller_update(widget->vscroller) > 0)
-            vk_widget_draw(VK_WIDGET(widget->vscroller));
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        if(vk_scroller_update(widget->hscroller) > 0)
-            vk_widget_draw(VK_WIDGET(widget->hscroller));
-    }
+    vdk_scroller_draw(widget);
 
     if(frame->child != NULL)
     {

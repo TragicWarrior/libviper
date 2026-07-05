@@ -8,6 +8,7 @@
 #include "vk_item.h"
 #include "vk_scroller.h"
 #include "vk_event.h"
+#include "vdk_private.h"
 
 // base klass methods
 static int
@@ -723,17 +724,7 @@ _vk_listbox_on_recreate(vk_object_t *object, int event, void *anything)
     (void)event;
     (void)anything;
 
-    if(widget->vscroller != NULL)
-    {
-        VK_WIDGET(widget->vscroller)->surface = widget->canvas;
-        vk_widget_recreate(VK_WIDGET(widget->vscroller));
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        VK_WIDGET(widget->hscroller)->surface = widget->canvas;
-        vk_widget_recreate(VK_WIDGET(widget->hscroller));
-    }
+    vdk_scroller_recreate(widget);
 
     return _vk_listbox_update(VK_LISTBOX(widget));
 }
@@ -746,17 +737,7 @@ _vk_listbox_on_resize(vk_object_t *object, int event, void *anything)
     (void)event;
     (void)anything;
 
-    if(widget->vscroller != NULL)
-    {
-        vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);
-        vk_widget_move(VK_WIDGET(widget->vscroller), widget->width - 1, 0);
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        vk_widget_resize(VK_WIDGET(widget->hscroller), widget->width, 1);
-        vk_widget_move(VK_WIDGET(widget->hscroller), 0, widget->height - 1);
-    }
+    vdk_scroller_reflow(widget);
 
     return _vk_listbox_update(VK_LISTBOX(widget));
 }
@@ -892,17 +873,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
 
     wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
-    if(widget->vscroller != NULL)
-    {
-        if(vk_scroller_update(widget->vscroller) > 0)
-            vk_widget_draw(VK_WIDGET(widget->vscroller));
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        if(vk_scroller_update(widget->hscroller) > 0)
-            vk_widget_draw(VK_WIDGET(widget->hscroller));
-    }
+    vdk_scroller_draw(widget);
 
     return 0;
 }
