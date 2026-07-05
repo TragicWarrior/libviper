@@ -139,3 +139,19 @@ vdk_scroller_draw(vk_widget_t *widget)
             vk_widget_draw(VK_WIDGET(widget->hscroller));
     }
 }
+
+/* see vdk_private.h -- the canvas-reset shared by every widget's _recreate. */
+int
+vdk_widget_reset_canvas(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    if(widget->composer != widget->canvas)
+        delwin(widget->composer);
+
+    widget->canvas   = newwin(widget->height, widget->width, 0, 0);
+    widget->composer = widget->canvas;
+    widget->state   &= ~VK_STATE_FROZEN;
+
+    return (widget->canvas == NULL) ? -1 : 0;
+}

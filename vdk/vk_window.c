@@ -8,6 +8,7 @@
 #include "vk_frame.h"
 #include "vk_scroller.h"
 #include "vk_window.h"
+#include "vdk_private.h"
 
 static int
 _vk_window_ctor(vk_object_t *object, va_list *argp, ...);
@@ -272,23 +273,11 @@ _vk_window_recreate(vk_widget_t *widget)
 {
     vk_frame_t  *frame;
 
-    widget->canvas = newwin(widget->height, widget->width, 0, 0);
-    widget->composer = widget->canvas;
-    widget->state &= ~VK_STATE_FROZEN;
+    if(vdk_widget_reset_canvas(widget) < 0) return -1;
 
     frame = VK_FRAME(widget);
 
-    if(widget->vscroller != NULL)
-    {
-        VK_WIDGET(widget->vscroller)->surface = widget->canvas;
-        vk_widget_recreate(VK_WIDGET(widget->vscroller));
-    }
-
-    if(widget->hscroller != NULL)
-    {
-        VK_WIDGET(widget->hscroller)->surface = widget->canvas;
-        vk_widget_recreate(VK_WIDGET(widget->hscroller));
-    }
+    vdk_scroller_recreate(widget);
 
     if(frame->child != NULL)
     {

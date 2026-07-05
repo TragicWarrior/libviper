@@ -276,16 +276,7 @@ _vk_progress_render(vk_widget_t *widget)
 static int
 _vk_progress_recreate(vk_widget_t *widget)
 {
-    if(widget == NULL) return -1;
-
-    if(widget->composer != widget->canvas)
-        delwin(widget->composer);
-
-    widget->canvas = newwin(widget->height, widget->width, 0, 0);
-    widget->composer = widget->canvas;
-    widget->state &= ~VK_STATE_FROZEN;
-
-    if(widget->canvas == NULL) return -1;
+    if(vdk_widget_reset_canvas(widget) < 0) return -1;
 
     return _vk_progress_render(widget);
 }

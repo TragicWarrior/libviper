@@ -7,6 +7,7 @@
 #include "vk_container.h"
 #include "vk_box.h"
 #include "vk_event.h"
+#include "vdk_private.h"
 
 static int
 _vk_box_ctor(vk_object_t *object, va_list *argp, ...);
@@ -376,9 +377,7 @@ _vk_box_recreate(vk_widget_t *widget)
     vk_box_t    *box;
     int         i;
 
-    widget->canvas = newwin(widget->height, widget->width, 0, 0);
-    widget->composer = widget->canvas;
-    widget->state &= ~VK_STATE_FROZEN;
+    if(vdk_widget_reset_canvas(widget) < 0) return -1;
 
     box = VK_BOX(widget);
 

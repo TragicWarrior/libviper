@@ -5,6 +5,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_label.h"
+#include "vdk_private.h"
 
 static int
 _vk_label_ctor(vk_object_t *object, va_list *argp, ...);
@@ -136,16 +137,7 @@ _vk_label_ctor(vk_object_t *object, va_list *argp, ...)
 static int
 _vk_label_recreate(vk_widget_t *widget)
 {
-    if(widget == NULL) return -1;
-
-    if(widget->composer != widget->canvas)
-        delwin(widget->composer);
-
-    widget->canvas = newwin(widget->height, widget->width, 0, 0);
-    widget->composer = widget->canvas;
-    widget->state &= ~VK_STATE_FROZEN;
-
-    if(widget->canvas == NULL) return -1;
+    if(vdk_widget_reset_canvas(widget) < 0) return -1;
 
     return _vk_label_update(VK_LABEL(widget));
 }

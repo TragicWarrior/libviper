@@ -404,9 +404,7 @@ _vk_frame_recreate(vk_widget_t *widget)
 {
     vk_frame_t  *frame;
 
-    widget->canvas = newwin(widget->height, widget->width, 0, 0);
-    widget->composer = widget->canvas;
-    widget->state &= ~VK_STATE_FROZEN;
+    if(vdk_widget_reset_canvas(widget) < 0) return -1;
 
     frame = VK_FRAME(widget);
 
