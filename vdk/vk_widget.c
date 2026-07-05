@@ -7,6 +7,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_event.h"
+#include "vdk_private.h"
 
 static int
 _vk_widget_ctor(vk_object_t *object, va_list *argp, ...);
@@ -490,16 +491,7 @@ _vk_widget_draw(vk_widget_t *widget)
 static int
 _vk_widget_recreate(vk_widget_t *widget)
 {
-    if(widget == NULL) return -1;
-
-    if(widget->composer != widget->canvas)
-        delwin(widget->composer);
-
-    widget->canvas = newwin(widget->height, widget->width, 0, 0);
-    widget->composer = widget->canvas;
-    widget->state &= ~VK_STATE_FROZEN;
-
-    return (widget->canvas == NULL) ? -1 : 0;
+    return vdk_widget_reset_canvas(widget);
 }
 
 static int

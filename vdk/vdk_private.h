@@ -75,4 +75,15 @@ void    vdk_scroller_reflow(vk_widget_t *widget);
 void    vdk_scroller_recreate(vk_widget_t *widget);
 void    vdk_scroller_draw(vk_widget_t *widget);
 
+/*
+    The canvas-reset every widget's _recreate performs after a teleport/resize:
+    drop the old composer if it was a separate window, make a fresh full-size
+    canvas, re-point the composer at it, and clear the FROZEN bit.  Returns 0,
+    or -1 if the widget is NULL or newwin() fails.  A _recreate calls this, then
+    re-attaches its own children/scrollers and re-renders -- so the fiddly
+    delwin/newwin/composer dance lives in exactly one place (and every widget
+    gets the same NULL-guarding, instead of the containers silently skipping it).
+*/
+int     vdk_widget_reset_canvas(vk_widget_t *widget);
+
 #endif  /* _VDK_PRIVATE_H_ */
