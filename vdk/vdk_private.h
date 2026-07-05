@@ -57,4 +57,22 @@ void    vdk_relief_wch(WINDOW *win, int y, int x, const cchar_t *src,
 void    vdk_draw_relief(vk_widget_t *widget, int relief, short bg,
             attr_t extra);
 
+/*
+    Edge-scrollbar wiring, shared by every widget that hosts a vscroller /
+    hscroller (vk_frame, vk_listbox, vk_textbox, vk_selectbox).  The vertical
+    bar runs down the right column, the horizontal bar along the bottom row; a
+    NULL scroller is skipped.  Each helper mirrors one lifecycle step so the
+    host's _on_resize / _recreate / _update just calls the matching one instead
+    of hand-wiring both bars identically in every widget:
+
+      vdk_scroller_reflow    -- size + place the bars at the edges (_on_resize)
+      vdk_scroller_recreate  -- re-point the bars at the rebuilt canvas and
+                                recreate theirs (_recreate)
+      vdk_scroller_draw      -- refresh each bar and composite it if it wants to
+                                be shown (_update)
+*/
+void    vdk_scroller_reflow(vk_widget_t *widget);
+void    vdk_scroller_recreate(vk_widget_t *widget);
+void    vdk_scroller_draw(vk_widget_t *widget);
+
 #endif  /* _VDK_PRIVATE_H_ */

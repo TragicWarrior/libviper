@@ -82,3 +82,60 @@ vdk_draw_relief(vk_widget_t *widget, int relief, short bg, attr_t extra)
         vdk_relief_wch(canvas, bottom, i, WACS_HLINE, se_pair, se_attr);
     vdk_relief_wch(canvas, bottom, right, WACS_LRCORNER, se_pair, se_attr);
 }
+
+/* see vdk_private.h -- size + place the edge scrollbars (call from _on_resize). */
+void
+vdk_scroller_reflow(vk_widget_t *widget)
+{
+    if(widget == NULL) return;
+
+    if(widget->vscroller != NULL)
+    {
+        vk_widget_resize(VK_WIDGET(widget->vscroller), 1, widget->height);
+        vk_widget_move(VK_WIDGET(widget->vscroller), widget->width - 1, 0);
+    }
+
+    if(widget->hscroller != NULL)
+    {
+        vk_widget_resize(VK_WIDGET(widget->hscroller), widget->width, 1);
+        vk_widget_move(VK_WIDGET(widget->hscroller), 0, widget->height - 1);
+    }
+}
+
+/* see vdk_private.h -- re-point the bars at the rebuilt canvas (from _recreate). */
+void
+vdk_scroller_recreate(vk_widget_t *widget)
+{
+    if(widget == NULL) return;
+
+    if(widget->vscroller != NULL)
+    {
+        VK_WIDGET(widget->vscroller)->surface = widget->canvas;
+        vk_widget_recreate(VK_WIDGET(widget->vscroller));
+    }
+
+    if(widget->hscroller != NULL)
+    {
+        VK_WIDGET(widget->hscroller)->surface = widget->canvas;
+        vk_widget_recreate(VK_WIDGET(widget->hscroller));
+    }
+}
+
+/* see vdk_private.h -- refresh + composite each visible bar (call from _update). */
+void
+vdk_scroller_draw(vk_widget_t *widget)
+{
+    if(widget == NULL) return;
+
+    if(widget->vscroller != NULL)
+    {
+        if(vk_scroller_update(widget->vscroller) > 0)
+            vk_widget_draw(VK_WIDGET(widget->vscroller));
+    }
+
+    if(widget->hscroller != NULL)
+    {
+        if(vk_scroller_update(widget->hscroller) > 0)
+            vk_widget_draw(VK_WIDGET(widget->hscroller));
+    }
+}
