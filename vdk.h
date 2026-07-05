@@ -51,6 +51,25 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_ACTIVITY_CIRCLES         2
 #define VK_ACTIVITY_BAR             3
 
+/* progress / meter orientation */
+#define VK_PROGRESS_HORIZONTAL      0
+#define VK_PROGRESS_VERTICAL        1
+
+/* progress / meter fill style.  UNICODE fills with the full block (U+2588)
+ * and, with a solid or absent trough, at 1/8-cell (sub-cell) resolution;
+ * ASCII fills with '#' in whole cells.  UNDERBAR fills each cell with a
+ * reverse-video underscore: the cell shows the fill colour with a thin
+ * baseline (the fill background) along its bottom edge -- a flat, un-bevelled
+ * bar for single-row meters drawn without relief.  Whole-cell (no sub-cell). */
+#define VK_PROGRESS_UNICODE         0
+#define VK_PROGRESS_ASCII           1
+#define VK_PROGRESS_UNDERBAR        2
+
+/* progress / meter trough styles */
+#define VK_TROUGH_NONE              0
+#define VK_TROUGH_STIPPLE           1
+#define VK_TROUGH_SOLID             2
+
 /* separator styles */
 #define VK_SEPARATOR_BLANK          1
 #define VK_SEPARATOR_SINGLE         2
@@ -156,6 +175,8 @@ typedef struct  _vk_button_s        vk_button_t;
 typedef struct  _vk_filler_s        vk_filler_t;
 typedef struct  _vk_input_s         vk_input_t;
 typedef struct  _vk_activity_s      vk_activity_t;
+typedef struct  _vk_progress_s      vk_progress_t;
+typedef struct  _vk_meter_s         vk_meter_t;
 typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 typedef struct  _vk_calendar_s      vk_calendar_t;
@@ -215,6 +236,8 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_FILLER(x)            ((vk_filler_t *)x)
 #define VK_INPUT(x)             ((vk_input_t *)x)
 #define VK_ACTIVITY(x)          ((vk_activity_t *)x)
+#define VK_PROGRESS(x)          ((vk_progress_t *)x)
+#define VK_METER(x)             ((vk_meter_t *)x)
 #define VK_MENUBAR(x)           ((vk_menubar_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 #define VK_CALENDAR(x)          ((vk_calendar_t *)x)
@@ -390,7 +413,7 @@ void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
 /* vk_dropdown */
 vk_dropdown_t*  vk_dropdown_create(int width, int max_visible);
-int             vk_dropdown_set_relief_style(vk_dropdown_t *dropdown,
+int             vk_dropdown_set_border_style(vk_dropdown_t *dropdown,
                     int style);
 int             vk_dropdown_set_expanded(vk_dropdown_t *dropdown,
                     bool expanded);
@@ -450,6 +473,32 @@ int             vk_scroller_set_scroll_source(vk_scroller_t *scroller,
                     vk_widget_t *source);
 int             vk_scroller_update(vk_scroller_t *scroller);
 void            vk_scroller_destroy(vk_scroller_t *scroller);
+
+/* vk_progress */
+vk_progress_t*  vk_progress_create(int orientation, int length, int thickness);
+int             vk_progress_set_range(vk_progress_t *progress,
+                    double min, double max);
+int             vk_progress_set_value(vk_progress_t *progress, double value);
+double          vk_progress_get_value(vk_progress_t *progress);
+int             vk_progress_set_style(vk_progress_t *progress, int style);
+int             vk_progress_set_colors(vk_progress_t *progress,
+                    short fill_fg, short fill_bg);
+int             vk_progress_set_attrs(vk_progress_t *progress, attr_t attrs);
+int             vk_progress_set_relief(vk_progress_t *progress, int relief);
+int             vk_progress_set_trough(vk_progress_t *progress,
+                    int trough_style, short fg, short bg);
+int             vk_progress_set_thickness(vk_progress_t *progress,
+                    int thickness);
+int             vk_progress_update(vk_progress_t *progress);
+void            vk_progress_destroy(vk_progress_t *progress);
+
+/* vk_meter -- derives from vk_progress; use vk_progress_* via VK_PROGRESS() for
+ * range / value / relief / trough / style / thickness */
+vk_meter_t*     vk_meter_create(int orientation, int length, int thickness);
+int             vk_meter_add_threshold(vk_meter_t *meter, double at,
+                    short fg, short bg);
+int             vk_meter_clear_thresholds(vk_meter_t *meter);
+void            vk_meter_destroy(vk_meter_t *meter);
 
 int             vk_widget_attach_scroller(vk_widget_t *host,
                     vk_scroller_t *scroller);
@@ -599,7 +648,7 @@ void            vk_deck_destroy(vk_deck_t *deck);
 vk_button_t*    vk_button_create(const char *text);
 int             vk_button_set_text(vk_button_t *button, const char *text);
 const char*     vk_button_get_text(vk_button_t *button);
-int             vk_button_set_relief_style(vk_button_t *button, int style);
+int             vk_button_set_border_style(vk_button_t *button, int style);
 void            vk_button_set_pressed_colors(vk_button_t *button,
                     short fg, short bg);
 int             vk_button_set_on_press(vk_button_t *button,
@@ -642,7 +691,7 @@ int             vk_spinbutton_set_precision(vk_spinbutton_t *spin,
                     int precision);
 int             vk_spinbutton_set_editable(vk_spinbutton_t *spin,
                     bool editable);
-int             vk_spinbutton_set_relief_style(vk_spinbutton_t *spin,
+int             vk_spinbutton_set_border_style(vk_spinbutton_t *spin,
                     int style);
 int             vk_spinbutton_set_field_relief(vk_spinbutton_t *spin,
                     int relief);
@@ -660,7 +709,7 @@ void            vk_spinbutton_destroy(vk_spinbutton_t *spin);
 vk_input_t*     vk_input_create(int width);
 int             vk_input_set_text(vk_input_t *input, const char *text);
 const char*     vk_input_get_text(vk_input_t *input);
-int             vk_input_set_relief_style(vk_input_t *input, int style);
+int             vk_input_set_border_style(vk_input_t *input, int style);
 int             vk_input_set_max_length(vk_input_t *input, int max);
 int             vk_input_insert_char(vk_input_t *input, int ch);
 int             vk_input_backspace(vk_input_t *input);

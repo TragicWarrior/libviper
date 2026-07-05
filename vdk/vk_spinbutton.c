@@ -9,6 +9,7 @@
 #include "vk_widget.h"
 #include "vk_spinbutton.h"
 #include "vk_event.h"
+#include "vdk_private.h"
 
 static int
 _vk_spinbutton_ctor(vk_object_t *object, va_list *argp, ...);
@@ -27,13 +28,13 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke);
 static int
 _vk_spinbutton_field_start(vk_spinbutton_t *spin)
 {
-    return (spin->relief_style == VK_BUTTON_BASIC) ? 2 : 1;
+    return (spin->border_style == VK_BUTTON_BASIC) ? 2 : 1;
 }
 
 static int
 _vk_spinbutton_text_row(vk_spinbutton_t *spin)
 {
-    return (spin->relief_style == VK_BUTTON_BASIC) ? 0 : 1;
+    return (spin->border_style == VK_BUTTON_BASIC) ? 0 : 1;
 }
 
 static int
@@ -41,7 +42,7 @@ _vk_spinbutton_field_width(vk_spinbutton_t *spin)
 {
     vk_widget_t *widget = VK_WIDGET(spin);
 
-    if(spin->relief_style == VK_BUTTON_BASIC)
+    if(spin->border_style == VK_BUTTON_BASIC)
         return widget->width - 4;
 
     return widget->width - 2;
@@ -188,28 +189,13 @@ _vk_spinbutton_put_wch(WINDOW *win, int y, int x, wchar_t wc,
     mvwadd_wch(win, y, x, &cc);
 }
 
-/* re-pair a WACS box-drawing glyph and place it, layering on `extra`
-   attrs (mirrors vk_input / vk_button) */
-static void
-_vk_spinbutton_relief_wch(WINDOW *win, int y, int x, const cchar_t *src,
-    short pair, attr_t extra)
-{
-    cchar_t cc;
-    wchar_t wch[CCHARW_MAX];
-    attr_t  attrs;
-    short   dummy;
-
-    getcchar(src, wch, &attrs, &dummy, NULL);
-    setcchar(&cc, wch, attrs | extra, pair, NULL);
-    mvwadd_wch(win, y, x, &cc);
-}
-
 /*
     Resolve a relief direction to its near (top/left) and far (bottom/right)
-    edges, each as a (colour pair, attrs) pair.  vk_button's rule: the
-    highlight edge carries the widget's bold attrs so relief_hi reads as
-    bright; the shadow edge is plain so relief_lo reads dark.  RAISED puts
-    the highlight at the NW, SUNKEN at the SE; flat is a single face colour.
+    edges, each as a (colour pair, attrs) pair, shaded by the toolkit-wide
+    VDK_RELIEF_HI/SH_ATTRS rule (vdk_private.h): the highlight edge is bold so
+    relief_hi reads bright, the shadow edge is not so relief_lo reads dark.
+    RAISED puts the highlight at the NW, SUNKEN at the SE; flat is a single
+    face colour.
 */
 static void
 _vk_spinbutton_relief_pairs(int relief, short hi, short sh, short face,
@@ -217,32 +203,37 @@ _vk_spinbutton_relief_pairs(int relief, short hi, short sh, short face,
 {
     if(relief & VK_RELIEF_RAISED)
     {
-        *np = hi;   *na = battr;    /* highlight (bold) at top/left   */
-        *fp = sh;   *fa = 0;        /* shadow (plain) at bottom/right */
+        *np = hi;   *na = VDK_RELIEF_HI_ATTRS(battr);   /* bright top/left  */
+        *fp = sh;   *fa = VDK_RELIEF_SH_ATTRS(battr);   /* dark bottom/right */
     }
     else if(relief & VK_RELIEF_SUNKEN)
     {
-        *np = sh;   *na = 0;        /* shadow at top/left      */
-        *fp = hi;   *fa = battr;    /* highlight at bottom/right */
+        *np = sh;   *na = VDK_RELIEF_SH_ATTRS(battr);   /* dark top/left     */
+        *fp = hi;   *fa = VDK_RELIEF_HI_ATTRS(battr);   /* bright bottom/right */
     }
     else
     {
-        *np = face; *na = battr;
-        *fp = face; *fa = battr;
+        /* flat: face colour, plain -- no bold, so no edge reads as lit and
+           there are no bright/dark transitions at the tees */
+        *np = face; *na = VDK_RELIEF_SH_ATTRS(battr);
+        *fp = face; *fa = VDK_RELIEF_SH_ATTRS(battr);
     }
 }
 
 /* draw a full-height vertical separator at `col`, teeing into the frame
-   top and bottom (relief-style aware) */
+   top and bottom (relief-style aware).  The body and head tee use
+   (pair, attr); the foot tee uses (fpair, fattr) -- pass the colour of the
+   bottom edge it lands on, so a bright divider doesn't puncture a shadow
+   edge with a lit tee. */
 static void
 _vk_spinbutton_draw_vsep(vk_spinbutton_t *spin, int col, short pair,
-    attr_t attr)
+    attr_t attr, short fpair, attr_t fattr)
 {
     vk_widget_t *widget = VK_WIDGET(spin);
     int         bottom_row = widget->height - 1;
     int         r;
 
-    if(spin->relief_style == VK_BUTTON_BASIC)
+    if(spin->border_style == VK_BUTTON_BASIC)
     {
         wattr_set(widget->canvas, attr, pair, NULL);
         mvwaddch(widget->canvas, 0, col, '|');
@@ -250,23 +241,24 @@ _vk_spinbutton_draw_vsep(vk_spinbutton_t *spin, int col, short pair,
         return;
     }
 
-    if(spin->relief_style == VK_BORDER_ASCII)
+    if(spin->border_style == VK_BORDER_ASCII)
     {
         wattr_set(widget->canvas, attr, pair, NULL);
         mvwaddch(widget->canvas, 0, col, '+');
         for(r = 1; r < bottom_row; r++)
             mvwaddch(widget->canvas, r, col, '|');
+        wattr_set(widget->canvas, fattr, fpair, NULL);
         mvwaddch(widget->canvas, bottom_row, col, '+');
         wattr_set(widget->canvas, A_NORMAL, 0, NULL);
         return;
     }
 
-    _vk_spinbutton_relief_wch(widget->canvas, 0, col, WACS_TTEE, pair, attr);
+    vdk_relief_wch(widget->canvas, 0, col, WACS_TTEE, pair, attr);
     for(r = 1; r < bottom_row; r++)
-        _vk_spinbutton_relief_wch(widget->canvas, r, col, WACS_VLINE,
+        vdk_relief_wch(widget->canvas, r, col, WACS_VLINE,
             pair, attr);
-    _vk_spinbutton_relief_wch(widget->canvas, bottom_row, col, WACS_BTEE,
-        pair, attr);
+    vdk_relief_wch(widget->canvas, bottom_row, col, WACS_BTEE,
+        fpair, fattr);
 }
 
 /*
@@ -299,7 +291,9 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
         &vn, &vna, &vf, &vfa);
     _vk_spinbutton_relief_pairs(spin->button_relief, hi, sh, face, battr,
         &bn, &bna, &bf, &bfa);
-    sep = vf; sepa = vfa;   /* separator = value field's (far) right edge */
+    sep = bn; sepa = bna;   /* separator bounds the arrow region: it takes
+                               the button region's near-edge shading (flat
+                               face by default, so no tee transitions) */
 
     /* second divider between the inc (up) and dec (down) arrows; it sits
        in the gap cell just left of the down arrow, coloured like the
@@ -307,7 +301,7 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
     _vk_spinbutton_arrow_cols(spin, NULL, &down_col);
     mid_col = down_col - 1;
 
-    if(spin->relief_style == VK_BUTTON_BASIC)
+    if(spin->border_style == VK_BUTTON_BASIC)
     {
         wattr_set(widget->canvas, widget->attrs, face, NULL);
         mvwaddch(widget->canvas, 0, 0, '[');
@@ -316,11 +310,11 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
         wattr_set(widget->canvas, sepa, sep, NULL);
         mvwaddch(widget->canvas, 0, sep_col, '|');
         wattr_set(widget->canvas, A_NORMAL, 0, NULL);
-        _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna);
+        _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna, bf, bfa);
         return;
     }
 
-    if(spin->relief_style == VK_BORDER_ASCII)
+    if(spin->border_style == VK_BORDER_ASCII)
     {
         /* top row: value-near NW corner + top edge */
         wattr_set(widget->canvas, vna, vn, NULL);
@@ -372,43 +366,43 @@ _vk_spinbutton_draw_frame(vk_spinbutton_t *spin)
             mvwaddch(widget->canvas, bottom_row, i, '-');
         mvwaddch(widget->canvas, bottom_row, right_col, '+');
         wattr_set(widget->canvas, A_NORMAL, 0, NULL);
-        _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna);
+        _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna, bf, bfa);
         return;
     }
 
     /* default: WACS box drawing, two regions */
-    _vk_spinbutton_relief_wch(widget->canvas, 0, 0, WACS_ULCORNER, vn, vna);
+    vdk_relief_wch(widget->canvas, 0, 0, WACS_ULCORNER, vn, vna);
     for(i = 1; i < sep_col; i++)
-        _vk_spinbutton_relief_wch(widget->canvas, 0, i, WACS_HLINE, vn, vna);
-    _vk_spinbutton_relief_wch(widget->canvas, 0, sep_col, WACS_TTEE, sep, sepa);
+        vdk_relief_wch(widget->canvas, 0, i, WACS_HLINE, vn, vna);
+    vdk_relief_wch(widget->canvas, 0, sep_col, WACS_TTEE, sep, sepa);
     for(i = sep_col + 1; i < right_col; i++)
-        _vk_spinbutton_relief_wch(widget->canvas, 0, i, WACS_HLINE, bn, bna);
-    _vk_spinbutton_relief_wch(widget->canvas, 0, right_col,
+        vdk_relief_wch(widget->canvas, 0, i, WACS_HLINE, bn, bna);
+    vdk_relief_wch(widget->canvas, 0, right_col,
         WACS_URCORNER, bf, bfa);
 
     for(i = 1; i < bottom_row; i++)
     {
-        _vk_spinbutton_relief_wch(widget->canvas, i, 0, WACS_VLINE, vn, vna);
-        _vk_spinbutton_relief_wch(widget->canvas, i, sep_col,
+        vdk_relief_wch(widget->canvas, i, 0, WACS_VLINE, vn, vna);
+        vdk_relief_wch(widget->canvas, i, sep_col,
             WACS_VLINE, sep, sepa);
-        _vk_spinbutton_relief_wch(widget->canvas, i, right_col,
+        vdk_relief_wch(widget->canvas, i, right_col,
             WACS_VLINE, bf, bfa);
     }
 
-    _vk_spinbutton_relief_wch(widget->canvas, bottom_row, 0,
+    vdk_relief_wch(widget->canvas, bottom_row, 0,
         WACS_LLCORNER, vn, vna);
     for(i = 1; i < sep_col; i++)
-        _vk_spinbutton_relief_wch(widget->canvas, bottom_row, i,
+        vdk_relief_wch(widget->canvas, bottom_row, i,
             WACS_HLINE, vf, vfa);
-    _vk_spinbutton_relief_wch(widget->canvas, bottom_row, sep_col,
+    vdk_relief_wch(widget->canvas, bottom_row, sep_col,
         WACS_BTEE, sep, sepa);
     for(i = sep_col + 1; i < right_col; i++)
-        _vk_spinbutton_relief_wch(widget->canvas, bottom_row, i,
+        vdk_relief_wch(widget->canvas, bottom_row, i,
             WACS_HLINE, bf, bfa);
-    _vk_spinbutton_relief_wch(widget->canvas, bottom_row, right_col,
+    vdk_relief_wch(widget->canvas, bottom_row, right_col,
         WACS_LRCORNER, bf, bfa);
 
-    _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna);
+    _vk_spinbutton_draw_vsep(spin, mid_col, bn, bna, bf, bfa);
 }
 
 require_klass(VK_WIDGET_KLASS);
@@ -503,7 +497,7 @@ vk_spinbutton_set_editable(vk_spinbutton_t *spin, bool editable)
 }
 
 inline int
-vk_spinbutton_set_relief_style(vk_spinbutton_t *spin, int style)
+vk_spinbutton_set_border_style(vk_spinbutton_t *spin, int style)
 {
     vk_widget_t *widget;
 
@@ -513,7 +507,7 @@ vk_spinbutton_set_relief_style(vk_spinbutton_t *spin, int style)
         && style != VK_BUTTON_BASIC)
         return -1;
 
-    spin->relief_style = style;
+    spin->border_style = style;
 
     widget = VK_WIDGET(spin);
 
@@ -664,9 +658,13 @@ _vk_spinbutton_ctor(vk_object_t *object, va_list *argp, ...)
     spin->max = 100.0;
     spin->step = 1.0;
     spin->precision = 0;
-    spin->relief_style = VK_BORDER_SINGLE;
+    spin->border_style = VK_BORDER_SINGLE;
     spin->field_relief = VK_RELIEF_SUNKEN;      /* input-like by default */
-    spin->button_relief = VK_RELIEF_RAISED;     /* button-like by default */
+    spin->button_relief = 0;                    /* flat by default: a shared
+                                                   tee cell can't satisfy two
+                                                   relief directions, so the
+                                                   arrow box stays flat and
+                                                   the field carries the 3D */
     spin->editable = false;
 
     spin->editing = false;
@@ -793,7 +791,7 @@ _vk_spinbutton_update(vk_spinbutton_t *spin)
         attr_t  a = widget->attrs | A_BOLD;
         short   pair = vdk_color_pair(fg, bg);
 
-        if(spin->relief_style == VK_BORDER_ASCII)
+        if(spin->border_style == VK_BORDER_ASCII)
         {
             wattr_set(widget->canvas, a, pair, NULL);
             mvwaddch(widget->canvas, text_row, up_col, '+');

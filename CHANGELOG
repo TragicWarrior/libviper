@@ -1,3 +1,60 @@
+Version 6.0.0
+
+API BREAK: relief-style setters renamed to border-style (SOVERSION 5 -> 6)
+* [Bryan Christ] Rename vk_button_set_relief_style, vk_dropdown_set_relief_style,
+  vk_spinbutton_set_relief_style and vk_input_set_relief_style to their
+  vk_*_set_border_style equivalents.  These four select a BOX style
+  (VK_BORDER_SINGLE / VK_BORDER_ASCII / VK_BUTTON_BASIC), not a relief
+  direction -- the "_relief_style" name invited passing a VK_RELIEF_* constant
+  by mistake.  The convention is now unambiguous:
+    - _set_relief(VK_RELIEF_RAISED|SUNKEN)  -- direction (vk_progress,
+      vk_spinbutton field/button)
+    - _set_border_style(VK_BORDER_*|VK_BUTTON_BASIC) -- which box (vk_frame,
+      vk_scroller, vk_window, vk_popup, and now vk_button, vk_dropdown,
+      vk_spinbutton, vk_input)
+    - _set_style(...) -- unchanged; widget content style (vk_progress fill,
+      vk_selectbox, vk_activity)
+  The private per-widget "relief_style" field is renamed "border_style" to
+  match.  Four public symbols removed, four added: SOVERSION bumps to 6.
+
+New widgets: vk_progress and vk_meter
+* [Bryan Christ] Add vk_progress -- a progress-bar widget.  Horizontal or
+  vertical, configurable thickness, sunken or no relief, and a trough that is a
+  stipple, a solid block of another colour, or absent.  Three fill styles
+  (vk_progress_set_style): UNICODE fills with the full block (U+2588) and, with
+  a solid/absent trough, at 1/8-cell resolution; ASCII fills with '#'; UNDERBAR
+  fills with a reverse-video underscore -- a flat, un-bevelled bar for
+  single-row meters drawn without relief.  Value / range are doubles.
+* [Bryan Christ] Add vk_meter -- derives from vk_progress and adds
+  value-dependent fill colours: vk_meter_add_threshold(at, fg, bg), where the
+  highest threshold <= the current value wins.  The colour breakpoints are
+  independent of the fill range, so symmetric voltage/temperature bands (low
+  and high both bad) and monotone ramps are both expressible.  It overrides
+  only the fill-colour virtual; all geometry is inherited.  SOVERSION stays 5.
+
+Relief drawing centralised (and fixed) in vdk_private
+* [Bryan Christ] vk_progress/vk_meter render into their own canvas via the
+  _update path and inherit the base compositing _draw, per the toolkit
+  convention -- the first cut rendered from _draw and never composited, so
+  the widgets drew nothing when attached to a screen.
+* [Bryan Christ] All 3D relief drawing now lives in one internal helper unit,
+  vdk/vdk_private.c: vdk_relief_wch() is the single relief-cell primitive
+  (recolours a WACS_ glyph; neutralises window attrs, which wadd_wch would
+  otherwise merge into the cell) and vdk_draw_relief() draws a full relief
+  box over a caller-supplied background.  vk_frame, vk_input, vk_button,
+  vk_progress, vk_dropdown and vk_spinbutton drop their private copies.
+  Shading is uniform via VDK_RELIEF_HI/SH_ATTRS: the highlight edge is
+  always bold (bright white), the shadow edge never is (black, not washed-out
+  grey).  Fixes two long-standing filedialog artifacts: the path input's
+  highlight rendered dull, and the list frame's bold border attrs leaked
+  onto its shadow edge, turning it grey.
+* [Bryan Christ] Dropdown and spinbutton arrow boxes are now flat (face
+  colour): a tee cell is shared by two regions and cannot satisfy two relief
+  directions, so any shading choice reads as a glitch from one side.  The
+  main control carries the 3D (raised dropdown field; sunken spinbutton
+  value field) and the arrow region stays flat.  The spinbutton's
+  button_relief defaults to flat; the raised/sunken per-region API remains.
+
 Version 5.6.0
 
 Extended-colour surface backgrounds (API change)
@@ -42,6 +99,16 @@ Deck member visibility, finalize event + menubar label updates
   e.g. to repaint focus decorations -- instead of hand-rolling the "who was top
   / who is top now" dance at each call site.  A per-deck re-entrancy guard
   prevents a handler from triggering a nested emit.  Additive; SOVERSION stays 5.
+* [Bryan Christ] vk_frame_t now also emits VK_EVENT_ON_FINALIZE at the end of
+  its update, once the border, scrollers and child are all in the canvas.  A
+  consumer can register a handler (vk_object_register_event) to decorate the
+  finished frame at the last minute -- e.g. paint a caption onto the top
+  border via vk_widget_get_canvas() -- without subclassing.  Additive.
+* [Bryan Christ] vk_frame_t now paints its interior in its own background
+  before erasing, so a childless (decorative / grouping-box) frame reads as an
+  opaque panel instead of punching the surface's default (black) through its
+  interior.  A frame with a child is unaffected -- the child draws over the
+  interior.  vk_window keeps its own update path and is untouched.
 * [Bryan Christ] Add vk_menubar_set_item_label() -- replace a menu-bar item's
   label in place and re-render, for a live-updating label such as a count.
   Additive; SOVERSION stays 5.

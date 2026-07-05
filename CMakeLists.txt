@@ -34,12 +34,13 @@ if (!GPM_FOUND)
 add_definitions("-D_NO_GPM")
 endif()
 
-set(PROJECT_VERSION 5.6.0)
+set(PROJECT_VERSION 6.0.0)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
 set(VDK_SOURCES
     vdk/vdk_color.c
+    vdk/vdk_private.c
     vdk/vk_object.c
     vdk/vk_screen.c
     vdk/vk_widget.c
@@ -61,6 +62,8 @@ set(VDK_SOURCES
     vdk/vk_deck.c
     vdk/vk_filler.c
     vdk/vk_activity.c
+    vdk/vk_progress.c
+    vdk/vk_meter.c
     vdk/vk_input.c
     vdk/vk_filedialog.c
     vdk/vk_menubar.c
@@ -92,7 +95,7 @@ target_link_libraries(vdk-shared ${CURSES_LIBRARIES})
 endif()
 
 SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
-SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION 5)
+SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION 6)
 
 set(PKG_CONFIG_LIBS
     "-lvdk"

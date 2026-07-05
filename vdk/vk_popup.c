@@ -39,9 +39,9 @@ _popup_init_button(vk_popup_t *popup, int idx, const char *text)
     btn = vk_button_create(text);
 
     if(popup->style == VK_BUTTON_BASIC)
-        vk_button_set_relief_style(btn, VK_BUTTON_BASIC);
+        vk_button_set_border_style(btn, VK_BUTTON_BASIC);
     else if(popup->style == VK_BORDER_ASCII)
-        vk_button_set_relief_style(btn, VK_BORDER_ASCII);
+        vk_button_set_border_style(btn, VK_BORDER_ASCII);
 
     popup->btn_ctx[idx].popup = popup;
     popup->btn_ctx[idx].index = idx;

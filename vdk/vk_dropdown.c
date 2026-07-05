@@ -10,6 +10,7 @@
 #include "vk_dropdown.h"
 #include "vk_window.h"
 #include "vk_item.h"
+#include "vdk_private.h"
 #include "vk_event.h"
 
 static int
@@ -49,13 +50,13 @@ vk_dropdown_create(int width, int max_visible)
 }
 
 inline int
-vk_dropdown_set_relief_style(vk_dropdown_t *dropdown, int style)
+vk_dropdown_set_border_style(vk_dropdown_t *dropdown, int style)
 {
     vk_widget_t *widget;
 
     if(dropdown == NULL) return -1;
 
-    dropdown->relief_style = style;
+    dropdown->border_style = style;
 
     widget = VK_WIDGET(dropdown);
 
@@ -225,7 +226,7 @@ _vk_dropdown_ctor(vk_object_t *object, va_list *argp, ...)
 
     dropdown->max_visible = va_arg(*argp, int);
     dropdown->expanded = false;
-    dropdown->relief_style = VK_BUTTON_BASIC;
+    dropdown->border_style = VK_BUTTON_BASIC;
     dropdown->collapsed_height = 1;
     dropdown->popup = NULL;
     dropdown->popup_listbox = NULL;
@@ -278,7 +279,6 @@ _vk_dropdown_update(vk_listbox_t *listbox)
     int                 name_width;
     int                 idx = 0;
     const char          *text = "";
-    cchar_t             cc;
 
     if(listbox == NULL) return -1;
 
@@ -303,112 +303,58 @@ _vk_dropdown_update(vk_listbox_t *listbox)
         idx++;
     }
 
-    if(dropdown->relief_style == VK_BORDER_SINGLE)
+    if(dropdown->border_style == VK_BORDER_SINGLE)
     {
         short hi_pair = vdk_color_pair(widget->relief_hi, widget->bg);
         short sh_pair = vdk_color_pair(widget->relief_lo, widget->bg);
-        int row;
+        int   row, c;
 
         vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
 
-        row = 0;
-        {
-            wchar_t wch[2] = { 0 };
-            attr_t attrs;
-            short dummy;
+        /* Composite relief (an exception to vdk_draw_relief): the selection
+           field carries the 3D (raised: lit top/left, dark bottom) while the
+           arrow control is FLAT -- face colour, plain.  A tee cell is shared
+           by two regions, so it cannot satisfy two relief directions; keeping
+           the arrow box flat removes the bright/dark transitions at the tees
+           and leaves the field's relief honest.  Every cell goes through the
+           shared vdk_relief_wch primitive. */
 
-            getcchar(WACS_ULCORNER, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs | widget->attrs, hi_pair, NULL);
-            mvwadd_wch(widget->canvas, 0, 0, &cc);
-
-            getcchar(WACS_HLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs | widget->attrs, hi_pair, NULL);
-            for(int c = 1; c < widget->width - 3; c++)
-                mvwadd_wch(widget->canvas, 0, c, &cc);
-
-            getcchar(WACS_TTEE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, 0, widget->width - 3, &cc);
-
-            getcchar(WACS_HLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, 0, widget->width - 2, &cc);
-
-            getcchar(WACS_URCORNER, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, 0, widget->width - 1, &cc);
-        }
+        /* row 0: field top lit (raised); arrow region flat from the tee on */
+        vdk_relief_wch(widget->canvas, 0, 0, WACS_ULCORNER, hi_pair, VDK_RELIEF_HI_ATTRS(widget->attrs));
+        for(c = 1; c < widget->width - 3; c++)
+            vdk_relief_wch(widget->canvas, 0, c, WACS_HLINE, hi_pair, VDK_RELIEF_HI_ATTRS(widget->attrs));
+        vdk_relief_wch(widget->canvas, 0, widget->width - 3, WACS_TTEE, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
+        vdk_relief_wch(widget->canvas, 0, widget->width - 2, WACS_HLINE, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
+        vdk_relief_wch(widget->canvas, 0, widget->width - 1, WACS_URCORNER, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
 
         row = 1;
         name_width = widget->width - 5;
         if(name_width < 1) name_width = 1;
 
-        {
-            wchar_t wch[2] = { 0 };
-            attr_t attrs;
-            short dummy;
-
-            getcchar(WACS_VLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs | widget->attrs, hi_pair, NULL);
-            mvwadd_wch(widget->canvas, row, 0, &cc);
-        }
+        vdk_relief_wch(widget->canvas, row, 0, WACS_VLINE, hi_pair, VDK_RELIEF_HI_ATTRS(widget->attrs));
 
         wattr_set(widget->canvas, widget->attrs, pair, NULL);
         mvwprintw(widget->canvas, row, 1, " %-*.*s",
             name_width, name_width, text);
         wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
-        {
-            wchar_t wch[2] = { 0 };
-            attr_t attrs;
-            short dummy;
-
-            getcchar(WACS_VLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, row, widget->width - 3, &cc);
-        }
+        vdk_relief_wch(widget->canvas, row, widget->width - 3, WACS_VLINE, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
 
         wattr_set(widget->canvas, widget->attrs, pair, NULL);
         mvwaddstr(widget->canvas, row, widget->width - 2, "\xe2\x96\xbc");
         wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
-        {
-            wchar_t wch[2] = { 0 };
-            attr_t attrs;
-            short dummy;
+        vdk_relief_wch(widget->canvas, row, widget->width - 1, WACS_VLINE, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
 
-            getcchar(WACS_VLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, row, widget->width - 1, &cc);
-        }
-
-        row = 2;
-        {
-            wchar_t wch[2] = { 0 };
-            attr_t attrs;
-            short dummy;
-
-            getcchar(WACS_LLCORNER, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs | widget->attrs, hi_pair, NULL);
-            mvwadd_wch(widget->canvas, row, 0, &cc);
-
-            getcchar(WACS_HLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            for(int c = 1; c < widget->width - 3; c++)
-                mvwadd_wch(widget->canvas, row, c, &cc);
-
-            getcchar(WACS_BTEE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, row, widget->width - 3, &cc);
-
-            getcchar(WACS_HLINE, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, row, widget->width - 2, &cc);
-
-            getcchar(WACS_LRCORNER, wch, &attrs, &dummy, NULL);
-            setcchar(&cc, wch, attrs, sh_pair, NULL);
-            mvwadd_wch(widget->canvas, row, widget->width - 1, &cc);
-        }
+        /* row 2: field bottom dark (raised field's shadow edge); arrow
+           region flat from the tee on; the LL corner takes the highlighted
+           left edge's colour */
+        vdk_relief_wch(widget->canvas, 2, 0, WACS_LLCORNER, hi_pair, VDK_RELIEF_HI_ATTRS(widget->attrs));
+        for(c = 1; c < widget->width - 3; c++)
+            vdk_relief_wch(widget->canvas, 2, c, WACS_HLINE, sh_pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
+        vdk_relief_wch(widget->canvas, 2, widget->width - 3, WACS_BTEE, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
+        vdk_relief_wch(widget->canvas, 2, widget->width - 2, WACS_HLINE, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
+        vdk_relief_wch(widget->canvas, 2, widget->width - 1, WACS_LRCORNER, pair, VDK_RELIEF_SH_ATTRS(widget->attrs));
     }
     else
     {
