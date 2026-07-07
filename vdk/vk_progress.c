@@ -96,6 +96,8 @@ _vk_progress_ctor(vk_object_t *object, va_list *argp, ...)
     progress->trough_bg    = COLOR_BLACK;
     progress->trough_ch    = 0x2591;            /* U+2591 LIGHT SHADE */
 
+    progress->value_text[0] = '\0';             /* no centred read-out */
+
     progress->ctor = _vk_progress_ctor;
     progress->dtor = _vk_progress_dtor;
     progress->_fill_color = _vk_progress_default_fill_color;
@@ -266,6 +268,47 @@ _vk_progress_render(vk_widget_t *widget)
         }
     }
 
+    /*
+        Optional centred read-out: block bars only (UNDERBAR's thin baseline
+        has nothing to knock out) and horizontal only.  Each glyph is drawn in
+        reverse video over the cell it lands on, so the text reads as a knockout
+        that inverts where the fill meets the trough -- and its colour tracks
+        the fill (e.g. a meter's zone colour) for free.
+    */
+    if(progress->value_text[0] != '\0' && !underbar && !vertical)
+    {
+        wchar_t vtext[VK_PROGRESS_VALUE_MAX];
+        size_t  vn;
+        int     vw, start, crow, col, j;
+
+        vn = mbstowcs(vtext, progress->value_text, VK_PROGRESS_VALUE_MAX - 1);
+        if(vn == (size_t)-1) vn = 0;                /* invalid text: draw none */
+        vtext[vn] = L'\0';
+
+        vw = wcswidth(vtext, vn);
+        if(vw < 0) vw = (int)vn;
+
+        start = (length - vw) / 2;                  /* centre on the fill axis */
+        if(start < 0) start = 0;
+        crow  = oy + (cross - 1) / 2;               /* the bar's centre row    */
+
+        col = ox + start;
+        for(j = 0; (size_t)j < vn && (col - ox) < length; j++)
+        {
+            cchar_t glyph;
+            wchar_t gb[2];
+            int     cw = wcwidth(vtext[j]);
+            short   pr = ((col - ox) < full) ? fill_pair : trough_pair;
+
+            if(cw < 1) cw = 1;
+            gb[0] = vtext[j];
+            gb[1] = L'\0';
+            setcchar(&glyph, gb, A_REVERSE, pr, NULL);
+            mvwadd_wch(canvas, crow, col, &glyph);
+            col += cw;
+        }
+    }
+
     return 0;
 }
 
@@ -308,6 +351,29 @@ vk_progress_get_value(vk_progress_t *progress)
     if(progress == NULL) return 0.0;
 
     return progress->value;
+}
+
+/*
+    Set the read-out drawn centred on the bar (reverse video, block styles
+    only).  NULL or "" disables it.  The caller formats the string (value,
+    units, whatever); vk_progress just centres and inverts it.
+*/
+int
+vk_progress_set_value_text(vk_progress_t *progress, const char *text)
+{
+    if(progress == NULL) return -1;
+
+    if(text == NULL)
+    {
+        progress->value_text[0] = '\0';
+    }
+    else
+    {
+        strncpy(progress->value_text, text, sizeof(progress->value_text) - 1);
+        progress->value_text[sizeof(progress->value_text) - 1] = '\0';
+    }
+
+    return 0;
 }
 
 int
