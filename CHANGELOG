@@ -1,3 +1,14 @@
+Version 6.1.0
+
+vk_progress: optional value read-out centred in the bar
+* [Bryan Christ] Add vk_progress_set_value_text(progress, text) -- an optional
+  string drawn centred on the bar's fill axis, in reverse video, over whichever
+  cells it covers.  Each glyph inverts the cell beneath it, so the read-out
+  reads as a knockout that flips as the fill sweeps past, and its colour tracks
+  the fill (a vk_meter's zone colour) for free.  Block styles only (UNICODE /
+  ASCII) and horizontal bars -- UNDERBAR's thin baseline has nothing to knock
+  out; "" (the default) disables it.  Additive API -- SOVERSION stays 6.
+
 Version 6.0.0
 
 API BREAK: relief-style setters renamed to border-style (SOVERSION 5 -> 6)

@@ -70,6 +70,9 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_TROUGH_STIPPLE           1
 #define VK_TROUGH_SOLID             2
 
+/* max bytes of an optional value read-out centred on a progress/meter bar */
+#define VK_PROGRESS_VALUE_MAX       64
+
 /* separator styles */
 #define VK_SEPARATOR_BLANK          1
 #define VK_SEPARATOR_SINGLE         2
@@ -480,6 +483,8 @@ int             vk_progress_set_range(vk_progress_t *progress,
                     double min, double max);
 int             vk_progress_set_value(vk_progress_t *progress, double value);
 double          vk_progress_get_value(vk_progress_t *progress);
+int             vk_progress_set_value_text(vk_progress_t *progress,
+                    const char *text);
 int             vk_progress_set_style(vk_progress_t *progress, int style);
 int             vk_progress_set_colors(vk_progress_t *progress,
                     short fill_fg, short fill_bg);

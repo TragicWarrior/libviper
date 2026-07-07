@@ -42,6 +42,10 @@ struct _vk_progress_s
         only the fill colour is virtual.
     */
     void                (*_fill_color)  (vk_progress_t *, short *fg, short *bg);
+
+    /* optional read-out centred on the bar, drawn in reverse video over the
+       cells it covers (block styles only).  "" (default) disables it. */
+    char                value_text[VK_PROGRESS_VALUE_MAX];
 };
 
 #endif
