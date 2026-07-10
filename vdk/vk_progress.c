@@ -269,13 +269,22 @@ _vk_progress_render(vk_widget_t *widget)
     }
 
     /*
-        Optional centred read-out: block bars only (UNDERBAR's thin baseline
-        has nothing to knock out) and horizontal only.  Each glyph is drawn in
-        reverse video over the cell it lands on, so the text reads as a knockout
-        that inverts where the fill meets the trough -- and its colour tracks
-        the fill (e.g. a meter's zone colour) for free.
+        Optional centred read-out.  Preconditions (enforced by
+        vk_progress_set_value_text / set_trough / set_style):
+          - horizontal block bar (UNICODE or ASCII, not UNDERBAR)
+          - trough is solid colour or absent -- NOT a character stipple
+
+        The read-out is reverse video over the cell it lands on: invert the
+        fill pair on filled cells and the trough pair on unfilled ones.
+        That only looks right when each cell is a solid colour.  A stipple
+        trough is a shade *character* (e.g. U+2591) on a colour pair; reverse
+        of that pair does not match the shaded body, so captions are refused
+        when trough_style is VK_TROUGH_STIPPLE (same constraint sub-cell fill
+        already has: partial blocks blend against solid troughs only).
     */
-    if(progress->value_text[0] != '\0' && !underbar && !vertical)
+    if(progress->value_text[0] != '\0'
+        && !underbar && !vertical
+        && progress->trough_style != VK_TROUGH_STIPPLE)
     {
         wchar_t vtext[VK_PROGRESS_VALUE_MAX];
         size_t  vn;
@@ -354,24 +363,35 @@ vk_progress_get_value(vk_progress_t *progress)
 }
 
 /*
-    Set the read-out drawn centred on the bar (reverse video, block styles
-    only).  NULL or "" disables it.  The caller formats the string (value,
-    units, whatever); vk_progress just centres and inverts it.
+    Set the read-out drawn centred on the bar.  NULL or "" disables it.
+
+    Requires a horizontal block bar (UNICODE / ASCII) whose trough is a
+    solid colour or absent -- reverse-video knockout needs a solid cell
+    pair under each glyph.  Returns -1 (and does not change the stored
+    text) if text is non-empty and the bar is UNDERBAR, vertical, or has
+    a character-shaded (STIPPLE) trough.
 */
 int
 vk_progress_set_value_text(vk_progress_t *progress, const char *text)
 {
     if(progress == NULL) return -1;
 
-    if(text == NULL)
+    if(text == NULL || text[0] == '\0')
     {
         progress->value_text[0] = '\0';
+        return 0;
     }
-    else
-    {
-        strncpy(progress->value_text, text, sizeof(progress->value_text) - 1);
-        progress->value_text[sizeof(progress->value_text) - 1] = '\0';
-    }
+
+    /* refuse combinations where reverse-over-cell cannot look right */
+    if(progress->style == VK_PROGRESS_UNDERBAR)
+        return -1;
+    if(progress->orientation == VK_PROGRESS_VERTICAL)
+        return -1;
+    if(progress->trough_style == VK_TROUGH_STIPPLE)
+        return -1;
+
+    strncpy(progress->value_text, text, sizeof(progress->value_text) - 1);
+    progress->value_text[sizeof(progress->value_text) - 1] = '\0';
 
     return 0;
 }
@@ -382,6 +402,10 @@ vk_progress_set_style(vk_progress_t *progress, int style)
     if(progress == NULL) return -1;
 
     progress->style = style;
+
+    /* UNDERBAR cannot host a reverse knockout -- drop any caption */
+    if(style == VK_PROGRESS_UNDERBAR)
+        progress->value_text[0] = '\0';
 
     return 0;
 }
@@ -426,6 +450,10 @@ vk_progress_set_trough(vk_progress_t *progress, int trough_style,
     progress->trough_style = trough_style;
     progress->trough_fg = fg;
     progress->trough_bg = bg;
+
+    /* character-shaded troughs cannot invert cleanly under a caption */
+    if(trough_style == VK_TROUGH_STIPPLE)
+        progress->value_text[0] = '\0';
 
     return 0;
 }

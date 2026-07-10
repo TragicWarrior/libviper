@@ -1,3 +1,15 @@
+Version 6.1.1
+
+vk_progress: inline caption only with solid (or absent) trough
+* [Bryan Christ] The centred value read-out is reverse video over the cell it
+  lands on.  That requires a solid colour under each glyph.  A STIPPLE trough
+  is a shade character, not a solid field -- reverse of its pair never matches
+  the shaded body (same reason sub-cell fill already refuses stipple).
+  vk_progress_set_value_text() now returns -1 for non-empty text when the bar
+  is UNDERBAR, vertical, or has a STIPPLE trough; set_trough(STIPPLE) and
+  set_style(UNDERBAR) clear any stored caption.  Callers that want an inline
+  read-out must use UNICODE/ASCII fill with VK_TROUGH_SOLID or VK_TROUGH_NONE.
+
 Version 6.1.0
 
 vk_progress: optional value read-out centred in the bar

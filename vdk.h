@@ -67,10 +67,14 @@ short           vdk_color_pair(short fg, short bg);
 
 /* progress / meter trough styles */
 #define VK_TROUGH_NONE              0
-#define VK_TROUGH_STIPPLE           1
-#define VK_TROUGH_SOLID             2
+#define VK_TROUGH_STIPPLE           1   /* shade *character* -- no inline caption */
+#define VK_TROUGH_SOLID             2   /* solid colour body -- OK with caption */
 
-/* max bytes of an optional value read-out centred on a progress/meter bar */
+/* max bytes of an optional value read-out centred on a progress/meter bar.
+ * Only drawn for horizontal UNICODE/ASCII bars with a solid or absent trough
+ * (not STIPPLE, not UNDERBAR).  vk_progress_set_value_text() returns -1 if
+ * the bar is incompatible; set_trough(STIPPLE) / set_style(UNDERBAR) clear
+ * any stored caption. */
 #define VK_PROGRESS_VALUE_MAX       64
 
 /* separator styles */
@@ -483,6 +487,7 @@ int             vk_progress_set_range(vk_progress_t *progress,
                     double min, double max);
 int             vk_progress_set_value(vk_progress_t *progress, double value);
 double          vk_progress_get_value(vk_progress_t *progress);
+/* centred reverse-video read-out; see VK_PROGRESS_VALUE_MAX notes above */
 int             vk_progress_set_value_text(vk_progress_t *progress,
                     const char *text);
 int             vk_progress_set_style(vk_progress_t *progress, int style);
