@@ -192,14 +192,7 @@ vk_widget_get_hscroller(vk_widget_t *widget)
     return widget->hscroller;
 }
 
-/* Stock helpers: stubs returning -1 for now (T3-T5). */
-
-int vk_listbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
-{
-    /* Stubbed for now (T3). */
-    (void)source; (void)scroll_y; (void)scroll_x;
-    return -1;
-}
+/* Stock helpers: textbox/viewport stubs returning -1 for now (T4-T5). */
 
 int vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
 {

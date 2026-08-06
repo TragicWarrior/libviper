@@ -285,9 +285,25 @@ vk_listbox_set_scroll_pos(vk_listbox_t *listbox, int pos)
     if(pos < 0) pos = 0;
     if(pos > max_top) pos = max_top;
 
+    int old_top = listbox->scroll_top;
     listbox->scroll_top = pos;
 
-    return 0;
+    if(old_top != pos)
+    {
+        vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SCROLL);
+        return 0;  /* changed */
+    }
+    return 1;    /* unchanged */
+}
+
+int
+vk_listbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
+{
+    (void)scroll_x;  /* listbox is vertical-only for now */
+    if(source == NULL) return -1;
+    if(!vk_object_assert(source, vk_listbox_t)) return -1;
+    /* set_scroll_pos clamps and emits ON_SCROLL on change */
+    return vk_listbox_set_scroll_pos(VK_LISTBOX(source), scroll_y);
 }
 
 inline int
