@@ -1,3 +1,11 @@
+Version 6.1.2
+
+vk_listbox_set_scroll_pos(): pan the list viewport without moving
+curr_item.  Selection changes (set_curr / set_next / set_prev) still
+ensure the cursor stays visible; update no longer forces that on every
+paint, so wheel/scrollbar consumers can scroll the view while the
+highlight stays put (possibly off-screen).
+
 Version 6.1.1
 
 vk_progress: inline caption only with solid (or absent) trough

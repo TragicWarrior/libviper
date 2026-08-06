@@ -364,6 +364,11 @@ int             vk_listbox_get_item(vk_listbox_t *listbox, int idx,
                     char *buf, int buf_sz);
 int             vk_listbox_get_item_count(vk_listbox_t *listbox);
 int             vk_listbox_get_scroll_pos(vk_listbox_t *listbox);
+/* View-port-only scroll: clamp pos to valid range but leave curr_item
+   (cursor/highlight) untouched.  Useful for mouse-wheel panning where
+   the consumer wants to move the viewport without moving the selection.
+   Caller must invoke vk_listbox_update() afterwards to re-render. */
+int             vk_listbox_set_scroll_pos(vk_listbox_t *listbox, int pos);
 int             vk_listbox_get_curr(vk_listbox_t *listbox);
 int             vk_listbox_set_curr(vk_listbox_t *listbox, int idx);
 int             vk_listbox_exec_curr(vk_listbox_t *listbox);

@@ -47,6 +47,14 @@ _vk_listbox_add_separator(vk_listbox_t *listbox, int style);
 static int
 _vk_listbox_update(vk_listbox_t *listbox);
 
+/* paint_height available for list items (widget height minus chrome). */
+static int
+_vk_listbox_paint_height(vk_listbox_t *listbox);
+
+/* keep curr_item inside the visible window by adjusting scroll_top */
+static void
+_vk_listbox_ensure_visible(vk_listbox_t *listbox);
+
 static int
 _vk_listbox_on_recreate(vk_object_t *object, int event, void *anything);
 
@@ -255,6 +263,33 @@ vk_listbox_get_scroll_pos(vk_listbox_t *listbox)
     return listbox->scroll_top;
 }
 
+/*
+    Pan the viewport without moving the selection (curr_item).  pos is
+    clamped to [0, max(0, item_count - paint_height)].  Caller must
+    vk_listbox_update() to repaint.
+*/
+int
+vk_listbox_set_scroll_pos(vk_listbox_t *listbox, int pos)
+{
+    int paint_height;
+    int max_top;
+
+    if(listbox == NULL) return -1;
+
+    paint_height = _vk_listbox_paint_height(listbox);
+    if(paint_height < 1) paint_height = 1;
+
+    max_top = listbox->item_count - paint_height;
+    if(max_top < 0) max_top = 0;
+
+    if(pos < 0) pos = 0;
+    if(pos > max_top) pos = max_top;
+
+    listbox->scroll_top = pos;
+
+    return 0;
+}
+
 inline int
 vk_listbox_get_curr(vk_listbox_t *listbox)
 {
@@ -287,6 +322,7 @@ vk_listbox_set_curr(vk_listbox_t *listbox, int idx)
     if(idx < 0 || idx >= listbox->item_count) return -1;
 
     listbox->curr_item = idx;
+    _vk_listbox_ensure_visible(listbox);
 
     vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SELECT);
 
@@ -330,6 +366,7 @@ vk_listbox_set_next(vk_listbox_t *listbox)
     while(vk_listbox_item_is_separator(listbox, idx));
 
     listbox->curr_item = idx;
+    _vk_listbox_ensure_visible(listbox);
 
     vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SELECT);
 
@@ -363,6 +400,7 @@ vk_listbox_set_prev(vk_listbox_t *listbox)
     while(vk_listbox_item_is_separator(listbox, idx));
 
     listbox->curr_item = idx;
+    _vk_listbox_ensure_visible(listbox);
 
     vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_SELECT);
 
@@ -743,6 +781,62 @@ _vk_listbox_on_resize(vk_object_t *object, int event, void *anything)
 }
 
 static int
+_vk_listbox_paint_height(vk_listbox_t *listbox)
+{
+    vk_widget_t *widget;
+    int         paint_height;
+
+    if(listbox == NULL) return 0;
+
+    widget = VK_WIDGET(listbox);
+    paint_height = widget->height;
+
+    if(widget->hscroller != NULL) paint_height--;
+    if(listbox->title != NULL) paint_height--;
+
+    if(paint_height < 1) paint_height = 1;
+
+    return paint_height;
+}
+
+static void
+_vk_listbox_ensure_visible(vk_listbox_t *listbox)
+{
+    int paint_height;
+    int max_top;
+
+    if(listbox == NULL) return;
+    if(listbox->item_count <= 0) return;
+
+    paint_height = _vk_listbox_paint_height(listbox);
+
+    if(listbox->item_count <= paint_height)
+    {
+        listbox->scroll_top = 0;
+        listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
+        return;
+    }
+
+    max_top = listbox->item_count - paint_height;
+    if(listbox->scroll_top < 0) listbox->scroll_top = 0;
+    if(listbox->scroll_top > max_top) listbox->scroll_top = max_top;
+
+    listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
+
+    while(listbox->curr_item < listbox->scroll_top)
+    {
+        listbox->scroll_top--;
+        listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
+    }
+
+    while(listbox->curr_item > listbox->scroll_bottom)
+    {
+        listbox->scroll_top++;
+        listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
+    }
+}
+
+static int
 _vk_listbox_update(vk_listbox_t *listbox)
 {
     vk_widget_t         *widget;
@@ -750,6 +844,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
     struct list_head    *pos;
     int                 paint_width;
     int                 paint_height;
+    int                 max_top;
     short               pair;
     short               hl_pair;
     attr_t              highlight_attr;
@@ -794,29 +889,22 @@ _vk_listbox_update(vk_listbox_t *listbox)
         y = 1;
     }
 
-    // set simple bounds when all items will fit in the paint area
+    /* Clamp the viewport only.  Do not force curr_item into view here —
+       selection changes call _vk_listbox_ensure_visible(); pure
+       set_scroll_pos pan must leave the highlight where it is (possibly
+       off-screen). */
     if(listbox->item_count <= paint_height)
     {
         listbox->scroll_top = 0;
     }
+    else
+    {
+        max_top = listbox->item_count - paint_height;
+        if(listbox->scroll_top < 0) listbox->scroll_top = 0;
+        if(listbox->scroll_top > max_top) listbox->scroll_top = max_top;
+    }
 
     listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
-
-    // clamp region when items don't fit in paint area
-    if(listbox->item_count > paint_height)
-    {
-        while(listbox->curr_item < listbox->scroll_top)
-        {
-            listbox->scroll_top--;
-            listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
-        }
-
-        while(listbox->curr_item > listbox->scroll_bottom)
-        {
-            listbox->scroll_top++;
-            listbox->scroll_bottom = listbox->scroll_top + (paint_height - 1);
-        }
-    }
 
     list_for_each(pos, &listbox->item_list)
     {
