@@ -16,6 +16,7 @@ struct _vk_scroller_s
     vk_widget_t         *scroll_source;
 
     VkScrollInfoFunc    scroll_info_func;
+    VkScrollApplyFunc   scroll_apply_func;
 
     int                 content_height;
     int                 content_width;

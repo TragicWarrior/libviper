@@ -114,6 +114,65 @@ vk_scroller_set_scroll_source(vk_scroller_t *scroller, vk_widget_t *source)
 }
 
 inline int
+vk_scroller_set_scroll_apply(vk_scroller_t *scroller, VkScrollApplyFunc func)
+{
+    if (scroller == NULL) return -1;
+
+    scroller->scroll_apply_func = func;
+
+    return 0;
+}
+
+/* -- stubs: real logic in T2 -- */
+
+inline int
+vk_scroller_nudge(vk_scroller_t *scroller, int dy, int dx)
+{
+    /* Stubbed for now (T2). Always returns -1. */
+    if (scroller == NULL) return -1;
+    (void)dy; (void)dx;
+    return -1;
+}
+
+inline vk_scroller_t *
+vk_widget_get_vscroller(vk_widget_t *widget)
+{
+    if (widget == NULL) return NULL;
+    return widget->vscroller;
+}
+
+inline vk_scroller_t *
+vk_widget_get_hscroller(vk_widget_t *widget)
+{
+    if (widget == NULL) return NULL;
+    return widget->hscroller;
+}
+
+/* Stock helpers: stubs returning -1 for now (T3-T5). */
+
+int vk_listbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
+{
+    /* Stubbed for now (T3). */
+    (void)source; (void)scroll_y; (void)scroll_x;
+    return -1;
+}
+
+int vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
+{
+    /* Stubbed for now (T4). */
+    (void)source; (void)scroll_y; (void)scroll_x;
+    return -1;
+}
+
+int vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
+{
+    /* Stubbed for now (T5). */
+    (void)source; (void)scroll_y; (void)scroll_x;
+    return -1;
+}
+/* -- end stubs -- */
+
+inline int
 vk_scroller_update(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return -1;
@@ -216,6 +275,7 @@ _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
     scroller->host = NULL;
     scroller->scroll_source = NULL;
     scroller->scroll_info_func = NULL;
+    scroller->scroll_apply_func = NULL;
     scroller->content_height = 0;
     scroller->content_width = 0;
     scroller->scroll_y = 0;
