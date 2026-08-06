@@ -123,8 +123,6 @@ vk_scroller_set_scroll_apply(vk_scroller_t *scroller, VkScrollApplyFunc func)
     return 0;
 }
 
-/* -- stubs: real logic in T2 -- */
-
 inline int
 vk_scroller_nudge(vk_scroller_t *scroller, int dy, int dx)
 {
@@ -191,17 +189,6 @@ vk_widget_get_hscroller(vk_widget_t *widget)
     if (widget == NULL) return NULL;
     return widget->hscroller;
 }
-
-/* Stock viewport apply: real implementation lives in vk_viewport.c (T5). */
-int
-vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
-{
-    (void)source;
-    (void)scroll_y;
-    (void)scroll_x;
-    return -1;
-}
-/* -- end stubs -- */
 
 inline int
 vk_scroller_update(vk_scroller_t *scroller)
