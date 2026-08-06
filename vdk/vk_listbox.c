@@ -5,6 +5,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_listbox.h"
+#include "vk_selectbox.h"
 #include "vk_item.h"
 #include "vk_scroller.h"
 #include "vk_event.h"
@@ -301,7 +302,12 @@ vk_listbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
 {
     (void)scroll_x;  /* listbox is vertical-only for now */
     if(source == NULL) return -1;
-    if(!vk_object_assert(source, vk_listbox_t)) return -1;
+
+    /* selectbox embeds listbox as parent_klass and shares scroll_top */
+    if(!vk_object_assert(source, vk_listbox_t)
+        && !vk_object_assert(source, vk_selectbox_t))
+        return -1;
+
     /* set_scroll_pos clamps and emits ON_SCROLL on change */
     return vk_listbox_set_scroll_pos(VK_LISTBOX(source), scroll_y);
 }
