@@ -14,6 +14,13 @@ Makefile
 *.so
 *.so.*
 demo/vk_demo
+demo/vk_viewport_demo
 
-# editor backups
+# editor backups / swap
 *.save
+*.swp
+*.swo
+*~
+
+# local agent plans and machine-local config
+.claude/
