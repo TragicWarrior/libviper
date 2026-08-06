@@ -107,6 +107,44 @@ vk_textbox_get_scroll_pos(vk_textbox_t *textbox)
     return textbox->scroll_top;
 }
 
+/*
+    Absolute vertical apply for scroller nudge.  Returns 0 if scroll_top
+    changed (and emits ON_SCROLL), 1 if unchanged, -1 on error.
+*/
+int
+vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
+{
+    vk_textbox_t    *textbox;
+    vk_widget_t     *widget;
+    int             paint_height;
+    int             max_top;
+
+    (void)scroll_x;  /* vertical textbox only for now */
+
+    if(source == NULL) return -1;
+    if(!vk_object_assert(source, vk_textbox_t)) return -1;
+
+    textbox = VK_TEXTBOX(source);
+    widget = VK_WIDGET(textbox);
+
+    paint_height = widget->height;
+    if(widget->hscroller != NULL) paint_height--;
+    if(paint_height < 1) paint_height = 1;
+
+    max_top = textbox->line_count - paint_height;
+    if(max_top < 0) max_top = 0;
+
+    if(scroll_y < 0) scroll_y = 0;
+    if(scroll_y > max_top) scroll_y = max_top;
+
+    if(scroll_y == textbox->scroll_top) return 1;
+
+    textbox->scroll_top = scroll_y;
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+
+    return 0;
+}
+
 inline int
 vk_textbox_scroll_up(vk_textbox_t *textbox)
 {
