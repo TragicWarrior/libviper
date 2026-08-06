@@ -143,6 +143,7 @@ main(void)
     vk_scroller_set_border_colors(vscr, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscr, VK_WIDGET(vp));
     vk_scroller_set_scroll_info(vscr, vk_viewport_scroll_info);
+    vk_scroller_set_scroll_apply(vscr, vk_viewport_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(vp), vscr);
 
     hscr = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
@@ -150,6 +151,7 @@ main(void)
     vk_scroller_set_border_colors(hscr, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(hscr, VK_WIDGET(vp));
     vk_scroller_set_scroll_info(hscr, vk_viewport_scroll_info);
+    vk_scroller_set_scroll_apply(hscr, vk_viewport_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(window), hscr);
 
     vk_screen_attach_widget(screen, 0, VK_WIDGET(window));

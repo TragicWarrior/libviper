@@ -215,6 +215,13 @@ typedef int         (*VkKmioFunc)(vk_object_t *object, int32_t keystroke);
 typedef void        (*VkScrollInfoFunc)(vk_widget_t *child,
                         int *content_h, int *content_w,
                         int *scroll_y, int *scroll_x);
+
+/* Absolute apply: set scroll position on the content source.
+   Return 0 if position changed, 1 if unchanged, -1 on error.
+   On change, implementor must emit VK_EVENT_ON_SCROLL on the source. */
+typedef int         (*VkScrollApplyFunc)(vk_widget_t *source,
+                        int scroll_y, int scroll_x);
+
 typedef void        (*VkSurfaceBkgdFunc)(vk_screen_t *screen,
                         int surface_id, WINDOW *canvas);
 typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
@@ -364,6 +371,11 @@ int             vk_listbox_get_item(vk_listbox_t *listbox, int idx,
                     char *buf, int buf_sz);
 int             vk_listbox_get_item_count(vk_listbox_t *listbox);
 int             vk_listbox_get_scroll_pos(vk_listbox_t *listbox);
+/* View-port-only scroll: clamp pos to valid range but leave curr_item
+   (cursor/highlight) untouched.  Useful for mouse-wheel panning where
+   the consumer wants to move the viewport without moving the selection.
+   Caller must invoke vk_listbox_update() afterwards to re-render. */
+int             vk_listbox_set_scroll_pos(vk_listbox_t *listbox, int pos);
 int             vk_listbox_get_curr(vk_listbox_t *listbox);
 int             vk_listbox_set_curr(vk_listbox_t *listbox, int idx);
 int             vk_listbox_exec_curr(vk_listbox_t *listbox);
@@ -478,6 +490,21 @@ int             vk_scroller_set_scroll_info(vk_scroller_t *scroller,
                     VkScrollInfoFunc func);
 int             vk_scroller_set_scroll_source(vk_scroller_t *scroller,
                     vk_widget_t *source);
+/* Absolute apply: assign callback invoked by nudge to write scroll pos. */
+int vk_scroller_set_scroll_apply(vk_scroller_t *scroller,
+    VkScrollApplyFunc func);
+
+/* Nudge by content deltas (e.g., list rows, text lines).
+   Stubbed for now; real logic in T2.  Always returns -1. */
+int vk_scroller_nudge(vk_scroller_t *scroller, int dy, int dx);
+
+vk_scroller_t* vk_widget_get_vscroller(vk_widget_t *widget);
+vk_scroller_t* vk_widget_get_hscroller(vk_widget_t *widget);
+
+int vk_listbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
+int vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
+int vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
+
 int             vk_scroller_update(vk_scroller_t *scroller);
 void            vk_scroller_destroy(vk_scroller_t *scroller);
 

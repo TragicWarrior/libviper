@@ -6,6 +6,7 @@
 #include "vk_widget.h"
 #include "vk_scroller.h"
 #include "vk_viewport.h"
+#include "vk_event.h"
 
 static int
 _vk_viewport_ctor(vk_object_t *object, va_list *argp, ...);
@@ -73,12 +74,20 @@ vk_viewport_set_scroll(vk_viewport_t *vp, int row, int col)
 {
     if(vp == NULL) return -1;
 
+    int old_row = vp->scroll_row;
+    int old_col = vp->scroll_col;
+
     vp->scroll_row = row;
     vp->scroll_col = col;
 
     _vk_viewport_clamp_scroll(vp);
 
-    return 0;
+    if(vp->scroll_row != old_row || vp->scroll_col != old_col) {
+        vk_object_emit(VK_OBJECT(vp), VK_EVENT_ON_SCROLL);
+        return 0;
+    }
+
+    return 1;
 }
 
 inline int
@@ -305,4 +314,12 @@ _vk_viewport_dtor(vk_object_t *object)
     vk_widget_destroy(VK_WIDGET(object));
 
     return 0;
+}
+
+int
+vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
+{
+    if(source == NULL) return -1;
+    if(!vk_object_assert(source, vk_viewport_t)) return -1;
+    return vk_viewport_set_scroll(VK_VIEWPORT(source), scroll_y, scroll_x);
 }

@@ -114,6 +114,83 @@ vk_scroller_set_scroll_source(vk_scroller_t *scroller, vk_widget_t *source)
 }
 
 inline int
+vk_scroller_set_scroll_apply(vk_scroller_t *scroller, VkScrollApplyFunc func)
+{
+    if (scroller == NULL) return -1;
+
+    scroller->scroll_apply_func = func;
+
+    return 0;
+}
+
+inline int
+vk_scroller_nudge(vk_scroller_t *scroller, int dy, int dx)
+{
+    vk_widget_t     *scroll_source;
+    VkScrollApplyFunc scroll_apply_func;
+    int              content_h = 0;
+    int              content_w = 0;
+    int              scroll_y = 0;
+    int              scroll_x = 0;
+    int              visible_h;
+    int              visible_w;
+    int              max_y;
+    int              max_x;
+    int              new_y;
+    int              new_x;
+    vk_widget_t     *sw;
+
+    if(scroller == NULL) return -1;
+
+    scroll_source = scroller->scroll_source;
+    if(scroll_source == NULL) return -1;
+    if(scroller->scroll_info_func == NULL) return -1;
+
+    scroll_apply_func = scroller->scroll_apply_func;
+    if(scroll_apply_func == NULL) return -1;
+
+    scroller->scroll_info_func(scroll_source,
+        &content_h, &content_w, &scroll_y, &scroll_x);
+
+    sw = VK_WIDGET(scroller);
+    visible_h = sw->height;
+    visible_w = sw->width;
+    if (visible_h < 1) visible_h = 1;
+    if (visible_w < 1) visible_w = 1;
+
+    new_y = scroll_y + dy;
+    new_x = scroll_x + dx;
+
+    max_y = content_h - visible_h;
+    if (max_y < 0) max_y = 0;
+    if (new_y < 0) new_y = 0;
+    if (new_y > max_y) new_y = max_y;
+
+    max_x = content_w - visible_w;
+    if (max_x < 0) max_x = 0;
+    if (new_x < 0) new_x = 0;
+    if (new_x > max_x) new_x = max_x;
+
+    if (new_y == scroll_y && new_x == scroll_x) return 1;
+
+    return scroll_apply_func(scroll_source, new_y, new_x);
+}
+
+inline vk_scroller_t *
+vk_widget_get_vscroller(vk_widget_t *widget)
+{
+    if (widget == NULL) return NULL;
+    return widget->vscroller;
+}
+
+inline vk_scroller_t *
+vk_widget_get_hscroller(vk_widget_t *widget)
+{
+    if (widget == NULL) return NULL;
+    return widget->hscroller;
+}
+
+inline int
 vk_scroller_update(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return -1;
@@ -216,6 +293,7 @@ _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
     scroller->host = NULL;
     scroller->scroll_source = NULL;
     scroller->scroll_info_func = NULL;
+    scroller->scroll_apply_func = NULL;
     scroller->content_height = 0;
     scroller->content_width = 0;
     scroller->scroll_y = 0;

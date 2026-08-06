@@ -1,3 +1,37 @@
+Version 7.0.0
+
+Scroll state management by content, not chrome
+* [Bryan Christ] Introduce VkScrollApplyFunc and vk_scroller_set_scroll_apply()
+  so a scroller delegates scroll requests to its host widget instead of mutating
+  itself directly.  Stock helpers (vk_listbox_scroll_apply, vk_textbox_scroll_apply,
+  vk_viewport_scroll_apply) update the actual view scroll position; scrollers remain
+  display chrome only -- content owns state and is responsible for emitting change
+  events (ON_SCROLL) when scrolling takes effect.
+
+vk_scroller_nudge() now reads information from the widget's internal data to clamp
+the requested delta against [min, max], then fires the stored scroll_apply callback;
+this prevents over-scroll past content bounds.
+
+Stock helpers added: vk_listbox_scroll_apply(), vk_textbox_scroll_apply(),
+vk_viewport_scroll_apply().
+
+ON_SCROLL now fires on real view changes in listbox set_scroll_pos, textbox apply,
+and viewport set_scroll -- so consumer listeners get notifications only when the view
+actually moves.
+
+Add vk_widget_get_vscroller() and vk_widget_get_hscroller() for content widgets to
+retrieve their attached scrollers without casting.
+
+ABI/SONAME bump: SOVERSION advances from 6 to 7.
+
+Version 6.1.2
+
+vk_listbox_set_scroll_pos(): pan the list viewport without moving
+curr_item.  Selection changes (set_curr / set_next / set_prev) still
+ensure the cursor stays visible; update no longer forces that on every
+paint, so wheel/scrollbar consumers can scroll the view while the
+highlight stays put (possibly off-screen).
+
 Version 6.1.1
 
 vk_progress: inline caption only with solid (or absent) trough
