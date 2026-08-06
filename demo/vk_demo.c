@@ -1135,6 +1135,7 @@ int main(void)
     vk_scroller_set_border_colors(vscroller1, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller1, VK_WIDGET(listbox));
     vk_scroller_set_scroll_info(vscroller1, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(vscroller1, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(listbox), vscroller1);
 
     hscroller1 = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
@@ -1142,6 +1143,7 @@ int main(void)
     vk_scroller_set_border_colors(hscroller1, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(hscroller1, VK_WIDGET(listbox));
     vk_scroller_set_scroll_info(hscroller1, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(hscroller1, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(window1), hscroller1);
 
     // panel 2: window with menu + scrollers
@@ -1161,6 +1163,7 @@ int main(void)
     vk_scroller_set_border_colors(vscroller2, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller2, VK_WIDGET(menu));
     vk_scroller_set_scroll_info(vscroller2, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(vscroller2, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(window2), vscroller2);
 
     hscroller2 = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
@@ -1168,6 +1171,7 @@ int main(void)
     vk_scroller_set_border_colors(hscroller2, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(hscroller2, VK_WIDGET(menu));
     vk_scroller_set_scroll_info(hscroller2, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(hscroller2, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(window2), hscroller2);
 
     // panel 3: window with textbox + scroller attached to textbox
@@ -1187,6 +1191,7 @@ int main(void)
     vk_scroller_set_border_colors(vscroller3, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller3, VK_WIDGET(textbox3));
     vk_scroller_set_scroll_info(vscroller3, textbox_scroll_info);
+    vk_scroller_set_scroll_apply(vscroller3, vk_textbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(textbox3), vscroller3);
 
     vk_widget_set_expand(VK_WIDGET(window1));
@@ -1249,6 +1254,7 @@ int main(void)
     vk_scroller_set_border_colors(lang_vscroller, COLOR_YELLOW, COLOR_BLACK);
     vk_scroller_set_scroll_source(lang_vscroller, VK_WIDGET(lang_listbox));
     vk_scroller_set_scroll_info(lang_vscroller, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(lang_vscroller, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(lang_frame), lang_vscroller);
 
     lang_hscroller = vk_scroller_create(VK_SCROLLBAR_HORIZONTAL);
@@ -1256,6 +1262,7 @@ int main(void)
     vk_scroller_set_border_colors(lang_hscroller, COLOR_YELLOW, COLOR_BLACK);
     vk_scroller_set_scroll_source(lang_hscroller, VK_WIDGET(lang_listbox));
     vk_scroller_set_scroll_info(lang_hscroller, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(lang_hscroller, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(lang_frame), lang_hscroller);
 
     vk_screen_attach_widget(vk_screen, 1, VK_WIDGET(lang_frame));
@@ -1290,6 +1297,7 @@ int main(void)
     vk_scroller_set_border_colors(vscroller4, COLOR_CYAN, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller4, VK_WIDGET(checkbox));
     vk_scroller_set_scroll_info(vscroller4, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(vscroller4, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(window4), vscroller4);
 
     // pane 2: radio selectbox
@@ -1309,6 +1317,7 @@ int main(void)
     vk_scroller_set_border_colors(vscroller5, COLOR_WHITE, COLOR_BLACK);
     vk_scroller_set_scroll_source(vscroller5, VK_WIDGET(radio));
     vk_scroller_set_scroll_info(vscroller5, listbox_scroll_info);
+    vk_scroller_set_scroll_apply(vscroller5, vk_listbox_scroll_apply);
     vk_widget_attach_scroller(VK_WIDGET(window5), vscroller5);
 
     // pane 3: about
