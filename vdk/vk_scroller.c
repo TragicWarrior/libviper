@@ -128,10 +128,54 @@ vk_scroller_set_scroll_apply(vk_scroller_t *scroller, VkScrollApplyFunc func)
 inline int
 vk_scroller_nudge(vk_scroller_t *scroller, int dy, int dx)
 {
-    /* Stubbed for now (T2). Always returns -1. */
-    if (scroller == NULL) return -1;
-    (void)dy; (void)dx;
-    return -1;
+    vk_widget_t     *scroll_source;
+    VkScrollApplyFunc scroll_apply_func;
+    int              content_h = 0;
+    int              content_w = 0;
+    int              scroll_y = 0;
+    int              scroll_x = 0;
+    int              visible_h;
+    int              visible_w;
+    int              max_y;
+    int              max_x;
+    int              new_y;
+    int              new_x;
+    vk_widget_t     *sw;
+
+    if(scroller == NULL) return -1;
+
+    scroll_source = scroller->scroll_source;
+    if(scroll_source == NULL) return -1;
+    if(scroller->scroll_info_func == NULL) return -1;
+
+    scroll_apply_func = scroller->scroll_apply_func;
+    if(scroll_apply_func == NULL) return -1;
+
+    scroller->scroll_info_func(scroll_source,
+        &content_h, &content_w, &scroll_y, &scroll_x);
+
+    sw = VK_WIDGET(scroller);
+    visible_h = sw->height;
+    visible_w = sw->width;
+    if (visible_h < 1) visible_h = 1;
+    if (visible_w < 1) visible_w = 1;
+
+    new_y = scroll_y + dy;
+    new_x = scroll_x + dx;
+
+    max_y = content_h - visible_h;
+    if (max_y < 0) max_y = 0;
+    if (new_y < 0) new_y = 0;
+    if (new_y > max_y) new_y = max_y;
+
+    max_x = content_w - visible_w;
+    if (max_x < 0) max_x = 0;
+    if (new_x < 0) new_x = 0;
+    if (new_x > max_x) new_x = max_x;
+
+    if (new_y == scroll_y && new_x == scroll_x) return 1;
+
+    return scroll_apply_func(scroll_source, new_y, new_x);
 }
 
 inline vk_scroller_t *
