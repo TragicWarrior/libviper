@@ -5,6 +5,9 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_scroller.h"
+#include "vk_textbox.h"
+
+#define CLAMP_VAL(v, lo, hi) ((v) < (lo) ? (lo) : ((v) > (hi) ? (hi) : (v)))
 
 static int
 _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...);
@@ -192,13 +195,28 @@ vk_widget_get_hscroller(vk_widget_t *widget)
     return widget->hscroller;
 }
 
-/* Stock helpers: textbox/viewport stubs returning -1 for now (T4-T5). */
+/* Stock helpers (textbox implementor, viewport stub). */
 
 int vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
 {
-    /* Stubbed for now (T4). */
-    (void)source; (void)scroll_y; (void)scroll_x;
-    return -1;
+    (void)scroll_x;  /* vertical textbox only for now */
+    if(source == NULL) return -1;
+    if(!vk_object_assert(source, vk_textbox_t)) return -1;
+
+    vk_textbox_t *textbox = VK_TEXTBOX(source);
+    int max_top;
+
+    max_top = textbox->line_count - (int)(VK_WIDGET(textbox)->height -
+        ((VK_WIDGET(textbox)->hscroller != NULL) ? 1 : 0));
+    if(max_top < 0) max_top = 0;
+
+    scroll_y = CLAMP_VAL(scroll_y, 0, max_top);
+
+    if(scroll_y == textbox->scroll_top) return 1;  /* unchanged */
+
+    textbox->scroll_top = scroll_y;
+    vk_object_emit(VK_OBJECT(textbox), VK_EVENT_ON_SCROLL);
+    return 0;
 }
 
 int vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x)
