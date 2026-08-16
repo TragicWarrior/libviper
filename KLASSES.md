@@ -837,6 +837,13 @@ object via `vk_object_register_event()`.
 
 ## Widget State Flags
 
+`vk_widget_t` carries a process-lifetime `uint32_t id`, assigned in
+`_vk_widget_ctor` (every visual klass chains there). `0` is reserved
+(null widget / unset). Ids are not reused for the life of the process.
+There is no registry and no setter; read with `vk_widget_get_id()`.
+`_recreate` (teleport) rebuilds the ncurses `WINDOW`, not the widget,
+so the id is unchanged.
+
 `vk_widget_t` carries a `uint32_t state` bitfield. The ctor initializes it
 to `VK_STATE_VISIBLE`. State can be read with `vk_widget_get_state()` and
 written with `vk_widget_set_state()`.

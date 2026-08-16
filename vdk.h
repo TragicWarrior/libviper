@@ -339,6 +339,8 @@ void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
 void            vk_widget_set_userptr(vk_widget_t *widget, void *ptr);
 void*           vk_widget_get_userptr(vk_widget_t *widget);
+/* process-lifetime id assigned in the widget ctor.  0 if widget is NULL. */
+uint32_t        vk_widget_get_id(vk_widget_t *widget);
 void            vk_widget_destroy(vk_widget_t *widget);
 
 /* vk_container */
