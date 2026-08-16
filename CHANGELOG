@@ -1,3 +1,13 @@
+Version 7.2.0
+
+Host bracketed paste
+* [Bryan Christ] VK_KMIO_BRACKET_PASTE arms DECSET 2004 on the host
+  tty (and clears it on shutdown).  vk_kmio_fetch recognizes
+  ESC[200~ ... ESC[201~ and returns VK_KMIO_PASTE; the payload is
+  available via vk_kmio_get_paste() until the next fetch.  Lets an
+  embedder (vwm) forward an xfce/VTE paste as one blob instead of a
+  stream of keystrokes whose newlines look like Enter.
+
 Version 7.1.0
 
 Widget identity

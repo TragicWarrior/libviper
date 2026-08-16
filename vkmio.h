@@ -2,6 +2,7 @@
 #define _VKMIO_H_
 
 #include <inttypes.h>
+#include <stddef.h>
 
 #undef  NCURSES_OPAQUE
 #define NCURSES_OPAQUE 0
@@ -11,6 +12,11 @@
 #define VK_KMIO_MOUSE          (1 << 0)
 #define VK_KMIO_MOUSE_HOVER    (1 << 1)
 #define VK_KMIO_GPM_SIGIO      (1 << 2)
+#define VK_KMIO_BRACKET_PASTE  (1 << 3)
+
+/* vk_kmio_fetch() return when a host bracketed-paste payload is ready.
+   retrieve it with vk_kmio_get_paste() before the next fetch. */
+#define VK_KMIO_PASTE          0x50415354
 
 /* kmio return codes */
 #define KMIO_HANDLED            0
@@ -25,6 +31,10 @@ int         vk_kmio_init(int fd, uint32_t flags);
 void        vk_kmio_shutdown(int fd);
 int32_t     vk_kmio_fetch(MEVENT *mouse_event);
 MEVENT*     vk_kmio_get_mouse_event(void);
+
+/* payload of the last VK_KMIO_PASTE.  valid until the next
+   vk_kmio_fetch().  *len is set; NULL / 0 if none. */
+const char *vk_kmio_get_paste(size_t *len);
 
 /* non-blocking: read the next already-pending mouse event (used to
    coalesce drag/move events).  returns 0 if one was read, -1 if none is

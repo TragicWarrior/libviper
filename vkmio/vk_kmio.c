@@ -1,5 +1,6 @@
 #include <poll.h>
 #include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -66,6 +67,99 @@ static bool         sgr_in_body = false;
    keyboard path. */
 #define VK_KMIO_SGR_MAX_STALL   32
 
+#define VK_KMIO_PASTE_MAX       (256 * 1024)
+
+static char         *paste_buf = NULL;
+static size_t       paste_len = 0;
+static size_t       paste_cap = 0;
+static int          paste_in_body = 0;
+static char         paste_hold[6];
+static int          paste_hold_len = 0;
+
+static void
+paste_reset(void)
+{
+    paste_in_body = 0;
+    paste_hold_len = 0;
+    paste_len = 0;
+}
+
+static int
+paste_append(const char *p, size_t n)
+{
+    char    *neu;
+    size_t  cap;
+
+    if(n == 0) return 0;
+    if(paste_len + n > VK_KMIO_PASTE_MAX) return -1;
+
+    if(paste_len + n > paste_cap)
+    {
+        cap = paste_cap ? paste_cap * 2 : 4096;
+        while(cap < paste_len + n) cap *= 2;
+        if(cap > VK_KMIO_PASTE_MAX) cap = VK_KMIO_PASTE_MAX;
+
+        neu = (char *)realloc(paste_buf, cap + 1);
+        if(neu == NULL) return -1;
+
+        paste_buf = neu;
+        paste_cap = cap;
+    }
+
+    memcpy(paste_buf + paste_len, p, n);
+    paste_len += n;
+    paste_buf[paste_len] = '\0';
+    return 0;
+}
+
+/*
+    Feed one byte of a bracketed-paste body.  Returns 1 when ESC[201~
+    completes the paste, 0 if more bytes are needed, -1 on overflow.
+*/
+static int
+paste_feed(int c)
+{
+    /* hold ESC [ 2 0 1 until '~' confirms the terminator */
+    if(c == 0x1b && paste_hold_len == 0)
+    {
+        paste_hold[paste_hold_len++] = (char)c;
+        return 0;
+    }
+
+    if(paste_hold_len > 0)
+    {
+        static const char term[] = "\033[201~";
+
+        if(paste_hold_len < 6 && (char)c == term[paste_hold_len])
+        {
+            paste_hold[paste_hold_len++] = (char)c;
+            if(paste_hold_len == 6)
+            {
+                paste_hold_len = 0;
+                return 1;
+            }
+            return 0;
+        }
+
+        /* false alarm -- hold was payload */
+        if(paste_append(paste_hold, (size_t)paste_hold_len) != 0)
+            return -1;
+        paste_hold_len = 0;
+
+        if(c == 0x1b)
+        {
+            paste_hold[paste_hold_len++] = (char)c;
+            return 0;
+        }
+    }
+
+    {
+        char ch = (char)c;
+
+        return paste_append(&ch, 1);
+    }
+}
+
 static void
 _vk_kmio_write(int fd, const char *esc)
 {
@@ -86,6 +180,10 @@ vk_kmio_init(int fd, uint32_t flags)
     sgr_in_body = false;
     sgr_len = 0;
     sgr_stall = 0;
+    paste_reset();
+
+    if(flags & VK_KMIO_BRACKET_PASTE)
+        _vk_kmio_write(fd, "\033[?2004h");
 
     if(flags & VK_KMIO_MOUSE)
     {
@@ -128,6 +226,10 @@ vk_kmio_shutdown(int fd)
         _vk_kmio_write(fd, "\033[?1000l\033[?1002l\033[?1003l\033[?1006l");
     }
 
+    if(vk_kmio_flags & VK_KMIO_BRACKET_PASTE)
+        _vk_kmio_write(fd, "\033[?2004l");
+
+    paste_reset();
     vk_kmio_flags = 0;
 }
 
@@ -268,6 +370,30 @@ vk_kmio_fetch(MEVENT *mouse_event)
     if(sgr_in_body)
         return _vk_kmio_pump_sgr(mouse_event);
 
+    /* finish a split bracketed-paste body */
+    if(paste_in_body)
+    {
+        for(;;)
+        {
+            int c = getch();
+            int rc;
+
+            if(c == -1) return -1;
+
+            rc = paste_feed(c);
+            if(rc == 1)
+            {
+                paste_in_body = 0;
+                return VK_KMIO_PASTE;
+            }
+            if(rc < 0)
+            {
+                paste_reset();
+                return -1;
+            }
+        }
+    }
+
     key_code = getch();
 
     if(key_code != -1)
@@ -286,6 +412,70 @@ vk_kmio_fetch(MEVENT *mouse_event)
             return key_code;
         }
 
+        /* ESC: look ahead for [200~ (bracketed-paste start) */
+        if(vk_kmio_flags & VK_KMIO_BRACKET_PASTE)
+        {
+            int     tmp[5];
+            int     n = 0;
+            int     c;
+            int     i;
+            int     match = 1;
+            static const char start[] = "[200~";
+
+            for(i = 0; i < 5; i++)
+            {
+                c = getch();
+                if(c == -1)
+                {
+                    match = 0;
+                    break;
+                }
+                tmp[n++] = c;
+                if(c != (unsigned char)start[i])
+                {
+                    match = 0;
+                    break;
+                }
+            }
+
+            if(match && n == 5)
+            {
+                paste_reset();
+                paste_in_body = 1;
+                /* drain whatever of the payload is already queued */
+                for(;;)
+                {
+                    int rc;
+
+                    c = getch();
+                    if(c == -1) return -1;
+
+                    rc = paste_feed(c);
+                    if(rc == 1)
+                    {
+                        paste_in_body = 0;
+                        return VK_KMIO_PASTE;
+                    }
+                    if(rc < 0)
+                    {
+                        paste_reset();
+                        return -1;
+                    }
+                }
+            }
+
+            /* not a paste start -- pack ESC + whatever we consumed */
+            keystroke = 27;
+            shift_op = 4;
+            for(i = 0; i < n; i++)
+            {
+                shift_op = shift_op << 1;
+                if(shift_op >= 32) break;
+                keystroke |= (tmp[i] << shift_op);
+            }
+            return keystroke;
+        }
+
         keystroke = 27;
         do
         {
@@ -298,6 +488,17 @@ vk_kmio_fetch(MEVENT *mouse_event)
     }
 
     return keystroke;
+}
+
+const char *
+vk_kmio_get_paste(size_t *len)
+{
+    if(len != NULL) *len = paste_len;
+
+    if(paste_buf == NULL || paste_len == 0)
+        return NULL;
+
+    return paste_buf;
 }
 
 MEVENT*
