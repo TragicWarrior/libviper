@@ -32,6 +32,9 @@ _vk_widget_erase(vk_widget_t *widget);
 
 require_klass(VK_OBJECT_KLASS);
 
+/* process-lifetime widget ids.  0 is reserved (null getter / unset). */
+static uint32_t vk_widget_id_seq = 0;
+
 declare_klass(VK_WIDGET_KLASS)
 {
     .size = KLASS_SIZE(vk_widget_t),
@@ -325,6 +328,14 @@ vk_widget_get_userptr(vk_widget_t *widget)
     return widget->anything;
 }
 
+inline uint32_t
+vk_widget_get_id(vk_widget_t *widget)
+{
+    if(widget == NULL) return 0;
+
+    return widget->id;
+}
+
 inline void
 vk_widget_destroy(vk_widget_t *widget)
 {
@@ -365,6 +376,10 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     widget->relief_hi = COLOR_WHITE;
     widget->relief_lo = COLOR_BLACK;
     widget->state = VK_STATE_VISIBLE;
+
+    widget->id = ++vk_widget_id_seq;
+    if(widget->id == 0)
+        widget->id = ++vk_widget_id_seq;
 
     widget->ctor = _vk_widget_ctor;
     widget->dtor = _vk_widget_dtor;

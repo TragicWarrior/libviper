@@ -21,6 +21,7 @@ FEATURES
 Widgets
 
   Base                vk_object (RTTI, ctor/dtor chaining), vk_widget
+                      (process-lifetime id via vk_widget_get_id)
   Layout              vk_frame, vk_window, vk_box, vk_grid, vk_table,
                       vk_deck (z-order with drop shadows), vk_container
   Primitives          vk_label, vk_marquee, vk_button, vk_input,

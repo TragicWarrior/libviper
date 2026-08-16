@@ -51,6 +51,8 @@ struct _vk_widget_s
     int                 (*_recreate)        (vk_widget_t *);
     int                 (*_erase)           (vk_widget_t *);
 
+    uint32_t            id;                 // process-lifetime identity
+                                            // (0 = unset / not a widget)
 };
 
 #endif

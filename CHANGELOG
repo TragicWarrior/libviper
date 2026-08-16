@@ -1,3 +1,14 @@
+Version 7.1.0
+
+Widget identity
+* [Bryan Christ] Every vk_widget_t (and therefore every window, button,
+  listbox, scroller, …) gets a process-lifetime uint32_t id in
+  _vk_widget_ctor.  0 is reserved.  Ids are not reused.  Read with
+  vk_widget_get_id(); there is no setter and no registry -- the
+  widget is the record.  Recreate/teleport keeps the same id.
+  Appended to the struct so 7.0 field offsets stay valid.  SOVERSION
+  remains 7.
+
 Version 7.0.0
 
 Scroll state management by content, not chrome
