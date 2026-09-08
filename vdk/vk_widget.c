@@ -109,7 +109,15 @@ vk_widget_set_state(vk_widget_t *widget, uint32_t state)
 
     if((state & VK_STATE_FROZEN) && !(old_state & VK_STATE_FROZEN))
     {
-        widget->composer = newwin(widget->height, widget->width, 0, 0);
+        int frozen_w = (widget->width < 1) ? 1 : widget->width;
+        int frozen_h = (widget->height < 1) ? 1 : widget->height;
+
+        widget->composer = newwin(frozen_h, frozen_w, 0, 0);
+        if (widget->composer == NULL)
+        {
+            widget->composer = widget->canvas;
+            return;
+        }
         overwrite(widget->canvas, widget->composer);
     }
 
@@ -211,7 +219,11 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     if(width == WSIZE_UNCHANGED) width = widget->width;
     if(height == WSIZE_UNCHANGED) height = widget->height;
 
-    if(width < 0 || height < 0) return -1;
+    /* ncurses newwin/wresize reject 0; a 0-high expand filler segfaults. */
+    if (width < 1 || height < 1)
+    {
+        return -1;
+    }
     if(width == widget->width && height == widget->height) return 0;
 
     retval = widget->_resize(widget, width, height);
@@ -395,6 +407,15 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     height = va_arg(*argp, int);
     va_end(args);
 
+    if (width < 1)
+    {
+        width = 1;
+    }
+    if (height < 1)
+    {
+        height = 1;
+    }
+
     widget->canvas = newwin(height, width, 0, 0);
     widget->composer = widget->canvas;
     widget->width = width;
@@ -438,24 +459,32 @@ _vk_widget_resize(vk_widget_t *widget, int width, int height)
     int     pad_height;
     int     pad_x;
     int     pad_y;
+    int     copy_h;
+    int     copy_w;
 
-    // create a copy of the window contents before resizing
     getmaxyx(widget->canvas, pad_height, pad_width);
     getbegyx(widget->canvas, pad_y, pad_x);
-    copy_pad = newwin(pad_height - 1, pad_width - 1, pad_y, pad_x);
+
+    /* newwin(0, ...) is "use remaining LINES/COLS" or NULL — never 0. */
+    copy_h = (pad_height > 1) ? pad_height - 1 : 1;
+    copy_w = (pad_width > 1) ? pad_width - 1 : 1;
+    copy_pad = newwin(copy_h, copy_w, pad_y, pad_x);
+    if (copy_pad == NULL)
+    {
+        return -1;
+    }
     overwrite(widget->canvas, copy_pad);
 
-    // erase and resize canvas
     werase(widget->canvas);
-    wresize(widget->canvas, height, width);
+    if (wresize(widget->canvas, height, width) == ERR)
+    {
+        delwin(copy_pad);
+        return -1;
+    }
 
-    // copy the contents back (overwrite() will clip as needed)
     overwrite(copy_pad, widget->canvas);
-
-    // delete our copy pad
     delwin(copy_pad);
 
-    // update width and height properties of widget
     widget->width = width;
     widget->height = height;
 

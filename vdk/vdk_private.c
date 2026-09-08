@@ -144,14 +144,25 @@ vdk_scroller_draw(vk_widget_t *widget)
 int
 vdk_widget_reset_canvas(vk_widget_t *widget)
 {
-    if(widget == NULL) return -1;
+    int width;
+    int height;
 
-    if(widget->composer != widget->canvas)
+    if (widget == NULL)
+    {
+        return -1;
+    }
+
+    width = (widget->width < 1) ? 1 : widget->width;
+    height = (widget->height < 1) ? 1 : widget->height;
+
+    if (widget->composer != widget->canvas)
+    {
         delwin(widget->composer);
+    }
 
-    widget->canvas   = newwin(widget->height, widget->width, 0, 0);
+    widget->canvas = newwin(height, width, 0, 0);
     widget->composer = widget->canvas;
-    widget->state   &= ~VK_STATE_FROZEN;
+    widget->state &= ~VK_STATE_FROZEN;
 
     return (widget->canvas == NULL) ? -1 : 0;
 }
