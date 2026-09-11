@@ -135,7 +135,7 @@ main(void)
     src.anything = NULL;
     vk_viewport_set_src(vp, &src);
 
-    vk_window_set_child(window, VK_WIDGET(vp));
+    vk_window_set_child(window, VK_WIDGET(vp), VK_INHERIT_NONE);
 
     /* Vertical + horizontal scrollers that drive off the viewport. */
     vscr = vk_scroller_create(VK_SCROLLBAR_VERTICAL);

@@ -24,7 +24,7 @@ struct _vk_frame_s
     int                 (*dtor)             (vk_object_t *);
 
     int                 (*_set_border_style)(vk_frame_t *, int);
-    int                 (*_set_child)       (vk_frame_t *, vk_widget_t *);
+    int                 (*_set_child)       (vk_frame_t *, vk_widget_t *, uint32_t);
     int                 (*_draw_border)     (vk_frame_t *);
     int                 (*_update)          (vk_frame_t *);
 };

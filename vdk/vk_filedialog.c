@@ -203,8 +203,8 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
     }
 
     dialog->button_bar = vk_box_create(width, btn_h, VK_BOX_HORIZONTAL, 2);
-    vk_box_set_widget(dialog->button_bar, 0, VK_WIDGET(dialog->btn_ok));
-    vk_box_set_widget(dialog->button_bar, 1, VK_WIDGET(dialog->btn_cancel));
+    vk_box_set_widget(dialog->button_bar, 0, VK_WIDGET(dialog->btn_ok), VK_INHERIT_NONE);
+    vk_box_set_widget(dialog->button_bar, 1, VK_WIDGET(dialog->btn_cancel), VK_INHERIT_NONE);
 
     /*
         Wrap the file_list in a sunken-relief frame for visual
@@ -218,7 +218,7 @@ vk_filedialog_create(int width, int height, int style, bool multiselect)
         VK_BORDER_SINGLE | VK_RELIEF_SUNKEN);
     vk_frame_set_border_attrs(dialog->list_frame, A_BOLD);
     vk_widget_set_expand(VK_WIDGET(dialog->list_frame));
-    vk_frame_set_child(dialog->list_frame, VK_WIDGET(dialog->file_list));
+    vk_frame_set_child(dialog->list_frame, VK_WIDGET(dialog->file_list), VK_INHERIT_NONE);
 
     _vk_filedialog_set_child(dialog, 0, VK_WIDGET(dialog->path_input));
     _vk_filedialog_set_child(dialog, 1, VK_WIDGET(dialog->list_frame));

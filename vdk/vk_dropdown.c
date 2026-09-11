@@ -125,7 +125,7 @@ vk_dropdown_set_expanded(vk_dropdown_t *dropdown, bool expanded)
         vk_listbox_set_curr(popup_lb, listbox->curr_item);
         vk_listbox_update(popup_lb);
 
-        vk_window_set_child(dropdown->popup, VK_WIDGET(popup_lb));
+        vk_window_set_child(dropdown->popup, VK_WIDGET(popup_lb), VK_INHERIT_NONE);
         dropdown->popup_listbox = popup_lb;
 
         vk_window_update(dropdown->popup);

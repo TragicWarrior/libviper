@@ -1128,7 +1128,7 @@ int main(void)
     listbox = build_listbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(listbox), listbox_kmio);
     vk_widget_set_expand(VK_WIDGET(listbox));
-    vk_window_set_child(window1, VK_WIDGET(listbox));
+    vk_window_set_child(window1, VK_WIDGET(listbox), VK_INHERIT_NONE);
 
     vscroller1 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller1, VK_BORDER_SINGLE);
@@ -1156,7 +1156,7 @@ int main(void)
     menu = build_menu(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(menu), listbox_kmio);
     vk_widget_set_expand(VK_WIDGET(menu));
-    vk_window_set_child(window2, VK_WIDGET(menu));
+    vk_window_set_child(window2, VK_WIDGET(menu), VK_INHERIT_NONE);
 
     vscroller2 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller2, VK_BORDER_DOUBLE);
@@ -1184,7 +1184,7 @@ int main(void)
     textbox3 = build_textbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(textbox3), textbox_kmio);
     vk_widget_set_expand(VK_WIDGET(textbox3));
-    vk_window_set_child(window3, VK_WIDGET(textbox3));
+    vk_window_set_child(window3, VK_WIDGET(textbox3), VK_INHERIT_NONE);
 
     vscroller3 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller3, VK_BORDER_SINGLE);
@@ -1197,9 +1197,9 @@ int main(void)
     vk_widget_set_expand(VK_WIDGET(window1));
     vk_widget_set_expand(VK_WIDGET(window2));
     vk_widget_set_expand(VK_WIDGET(window3));
-    vk_box_set_widget(box, 0, VK_WIDGET(window1));
-    vk_box_set_widget(box, 1, VK_WIDGET(window2));
-    vk_box_set_widget(box, 2, VK_WIDGET(window3));
+    vk_box_set_widget(box, 0, VK_WIDGET(window1), VK_INHERIT_NONE);
+    vk_box_set_widget(box, 1, VK_WIDGET(window2), VK_INHERIT_NONE);
+    vk_box_set_widget(box, 2, VK_WIDGET(window3), VK_INHERIT_NONE);
 
     vk_listbox_update(listbox);
     vk_listbox_update(menu);
@@ -1247,7 +1247,7 @@ int main(void)
     lang_listbox = build_lang_listbox(max_x - 2, box_h - 2);
     vk_object_set_kmio(VK_OBJECT(lang_listbox), listbox_kmio);
     vk_widget_set_expand(VK_WIDGET(lang_listbox));
-    vk_frame_set_child(lang_frame, VK_WIDGET(lang_listbox));
+    vk_frame_set_child(lang_frame, VK_WIDGET(lang_listbox), VK_INHERIT_NONE);
 
     lang_vscroller = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(lang_vscroller, VK_BORDER_DOUBLE);
@@ -1290,7 +1290,7 @@ int main(void)
     checkbox = build_checkbox(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(checkbox), selectbox_kmio);
     vk_widget_set_expand(VK_WIDGET(checkbox));
-    vk_window_set_child(window4, VK_WIDGET(checkbox));
+    vk_window_set_child(window4, VK_WIDGET(checkbox), VK_INHERIT_NONE);
 
     vscroller4 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller4, VK_BORDER_SINGLE);
@@ -1310,7 +1310,7 @@ int main(void)
     radio = build_radio(inner_w, inner_h);
     vk_object_set_kmio(VK_OBJECT(radio), selectbox_kmio);
     vk_widget_set_expand(VK_WIDGET(radio));
-    vk_window_set_child(window5, VK_WIDGET(radio));
+    vk_window_set_child(window5, VK_WIDGET(radio), VK_INHERIT_NONE);
 
     vscroller5 = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
     vk_scroller_set_border_style(vscroller5, VK_BORDER_SINGLE);
@@ -1330,14 +1330,14 @@ int main(void)
 
     about = build_about_widget(inner_w, inner_h);
     vk_widget_set_expand(about);
-    vk_window_set_child(about_window, about);
+    vk_window_set_child(about_window, about, VK_INHERIT_NONE);
 
     vk_widget_set_expand(VK_WIDGET(window4));
     vk_widget_set_expand(VK_WIDGET(window5));
     vk_widget_set_expand(VK_WIDGET(about_window));
-    vk_box_set_widget(box2, 0, VK_WIDGET(window4));
-    vk_box_set_widget(box2, 1, VK_WIDGET(window5));
-    vk_box_set_widget(box2, 2, VK_WIDGET(about_window));
+    vk_box_set_widget(box2, 0, VK_WIDGET(window4), VK_INHERIT_NONE);
+    vk_box_set_widget(box2, 1, VK_WIDGET(window5), VK_INHERIT_NONE);
+    vk_box_set_widget(box2, 2, VK_WIDGET(about_window), VK_INHERIT_NONE);
 
     vk_selectbox_update(checkbox);
     vk_selectbox_update(radio);
@@ -1473,14 +1473,14 @@ int main(void)
         vk_widget_set_colors(VK_WIDGET(deck_box5), COLOR_WHITE, COLOR_RED);
 
         for(bi = 0; bi < 5; bi++)
-            vk_box_set_widget(deck_box5, bi, VK_WIDGET(deck_buttons[bi]));
+            vk_box_set_widget(deck_box5, bi, VK_WIDGET(deck_buttons[bi]), VK_INHERIT_NONE);
 
         vk_object_set_kmio(VK_OBJECT(deck_box5), transport_kmio);
 
 
         vk_widget_set_attrs(VK_WIDGET(deck_buttons[0]), A_BOLD);
 
-        vk_window_set_child(deck_win5, VK_WIDGET(deck_box5));
+        vk_window_set_child(deck_win5, VK_WIDGET(deck_box5), VK_INHERIT_NONE);
         vk_widget_move(VK_WIDGET(deck_box5), 1, 6);
         vk_window_update(deck_win5);
         vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
@@ -1502,7 +1502,7 @@ int main(void)
 
 
 
-        vk_window_set_child(deck_win6, VK_WIDGET(filedialog));
+        vk_window_set_child(deck_win6, VK_WIDGET(filedialog), VK_INHERIT_NONE);
         vk_widget_move(VK_WIDGET(filedialog), 1, 3);
         vk_filedialog_update(filedialog);
         vk_window_update(deck_win6);

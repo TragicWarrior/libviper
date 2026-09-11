@@ -45,6 +45,18 @@ short           vdk_color_pair(short fg, short bg);
 /* button relief styles (in addition to VK_BORDER_SINGLE / VK_BORDER_ASCII) */
 #define VK_BUTTON_BASIC             4
 
+/* Attach-time inheritance flags -- last arg of vk_box_set_widget,
+ * vk_grid_set_widget, vk_frame_set_child, vk_window_set_child.  One-time
+ * snapshot at attach: the selected value(s) of the container are copied
+ * onto the child.  The container must already hold the desired value(s)
+ * at attach time (attach top-down); the caller may override afterward. */
+#define VK_INHERIT_NONE             0u
+#define VK_INHERIT_FG               (1u << 0)
+#define VK_INHERIT_BG               (1u << 1)
+#define VK_INHERIT_ATTRS            (1u << 2)
+#define VK_INHERIT_COLOR            (VK_INHERIT_FG | VK_INHERIT_BG)
+#define VK_INHERIT_ALL              (VK_INHERIT_FG | VK_INHERIT_BG | VK_INHERIT_ATTRS)
+
 /* activity indicator styles */
 #define VK_ACTIVITY_SPINNER         0
 #define VK_ACTIVITY_DOTS            1
@@ -475,7 +487,8 @@ int             vk_frame_set_border_colors(vk_frame_t *frame,
 int             vk_frame_set_border_attrs(vk_frame_t *frame, attr_t attrs);
 short           vk_frame_get_border_fg(vk_frame_t *frame);
 short           vk_frame_get_border_bg(vk_frame_t *frame);
-int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child);
+int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child,
+                    uint32_t flags);
 vk_widget_t*    vk_frame_get_child(vk_frame_t *frame);
 int             vk_frame_update(vk_frame_t *frame);
 void            vk_frame_destroy(vk_frame_t *frame);
@@ -561,8 +574,8 @@ int             vk_window_set_title_justify(vk_window_t *window, int justify);
                     vk_frame_get_border_fg(VK_FRAME(w))
 #define         vk_window_get_border_bg(w) \
                     vk_frame_get_border_bg(VK_FRAME(w))
-#define         vk_window_set_child(w, child) \
-                    vk_frame_set_child(VK_FRAME(w), (child))
+#define         vk_window_set_child(w, child, flags) \
+                    vk_frame_set_child(VK_FRAME(w), (child), (flags))
 #define         vk_window_get_child(w) \
                     vk_frame_get_child(VK_FRAME(w))
 int             vk_window_set_decorate(vk_window_t *window,
@@ -576,7 +589,7 @@ vk_box_t*       vk_box_create(int width, int height,
                     int orientation, int slots);
 int             vk_box_set_homogeneous(vk_box_t *box, bool homogeneous);
 int             vk_box_set_widget(vk_box_t *box, int slot,
-                    vk_widget_t *widget);
+                    vk_widget_t *widget, uint32_t flags);
 vk_widget_t*    vk_box_get_widget(vk_box_t *box, int slot);
 int             vk_box_get_slot_count(vk_box_t *box);
 int             vk_box_set_subfocus(vk_box_t *box, int slot);
@@ -594,7 +607,7 @@ int             vk_grid_set_row_height(vk_grid_t *grid, int row, int height);
 int             vk_grid_set_col_expand(vk_grid_t *grid, int col, bool expand);
 int             vk_grid_set_row_expand(vk_grid_t *grid, int row, bool expand);
 int             vk_grid_set_widget(vk_grid_t *grid, int col, int row,
-                    vk_widget_t *widget);
+                    vk_widget_t *widget, uint32_t flags);
 vk_widget_t*    vk_grid_get_widget(vk_grid_t *grid, int col, int row);
 int             vk_grid_get_cell_rect(vk_grid_t *grid, int col, int row,
                     int *out_x, int *out_y, int *out_w, int *out_h);
