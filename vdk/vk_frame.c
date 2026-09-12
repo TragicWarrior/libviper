@@ -19,7 +19,7 @@ static int
 _vk_frame_set_border_style(vk_frame_t *frame, int style);
 
 static int
-_vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child);
+_vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child, uint32_t flags);
 
 static int
 _vk_frame_draw_border(vk_frame_t *frame);
@@ -116,11 +116,11 @@ vk_frame_get_border_bg(vk_frame_t *frame)
 }
 
 inline int
-vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
+vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child, uint32_t flags)
 {
     if(frame == NULL) return -1;
 
-    return frame->_set_child(frame, child);
+    return frame->_set_child(frame, child, flags);
 }
 
 inline vk_widget_t*
@@ -243,7 +243,7 @@ _vk_frame_set_border_style(vk_frame_t *frame, int style)
 }
 
 static int
-_vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
+_vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child, uint32_t flags)
 {
     vk_widget_t     *widget;
     vk_container_t  *container;
@@ -260,6 +260,19 @@ _vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child)
     }
 
     if(child == NULL) return 0;
+
+    if(flags & VK_INHERIT_FG)
+    {
+        child->fg = widget->fg;
+    }
+    if(flags & VK_INHERIT_BG)
+    {
+        child->bg = widget->bg;
+    }
+    if(flags & VK_INHERIT_ATTRS)
+    {
+        child->attrs = widget->attrs;
+    }
 
     frame->child = child;
     container->add_widget(container, child);

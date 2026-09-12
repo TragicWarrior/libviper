@@ -250,7 +250,7 @@ vk_grid_set_row_expand(vk_grid_t *grid, int row, bool expand)
 }
 
 inline int
-vk_grid_set_widget(vk_grid_t *grid, int col, int row, vk_widget_t *widget)
+vk_grid_set_widget(vk_grid_t *grid, int col, int row, vk_widget_t *widget, uint32_t flags)
 {
     vk_container_t  *container;
     int             idx;
@@ -269,8 +269,23 @@ vk_grid_set_widget(vk_grid_t *grid, int col, int row, vk_widget_t *widget)
 
     if(widget != NULL)
     {
+        vk_widget_t *gw = VK_WIDGET(grid);
+
+        if(flags & VK_INHERIT_FG)
+        {
+            widget->fg = gw->fg;
+        }
+        if(flags & VK_INHERIT_BG)
+        {
+            widget->bg = gw->bg;
+        }
+        if(flags & VK_INHERIT_ATTRS)
+        {
+            widget->attrs = gw->attrs;
+        }
+
         container->add_widget(container, widget);
-        vk_widget_set_surface(widget, VK_WIDGET(grid)->canvas);
+        vk_widget_set_surface(widget, gw->canvas);
     }
 
     return 0;

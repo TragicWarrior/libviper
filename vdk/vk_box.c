@@ -62,7 +62,7 @@ vk_box_set_homogeneous(vk_box_t *box, bool homogeneous)
 }
 
 inline int
-vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
+vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget, uint32_t flags)
 {
     vk_container_t  *container;
 
@@ -82,6 +82,19 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget)
     if(widget != NULL)
     {
         vk_widget_t *bw = VK_WIDGET(box);
+
+        if(flags & VK_INHERIT_FG)
+        {
+            widget->fg = bw->fg;
+        }
+        if(flags & VK_INHERIT_BG)
+        {
+            widget->bg = bw->bg;
+        }
+        if(flags & VK_INHERIT_ATTRS)
+        {
+            widget->attrs = bw->attrs;
+        }
 
         container->add_widget(container, widget);
         vk_widget_set_surface(widget, bw->canvas);

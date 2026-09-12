@@ -91,7 +91,7 @@ vk_popup_create(int width, int height, int style, ...)
 
     popup->default_client = vk_filler_create();
     vk_widget_set_expand(VK_WIDGET(popup->default_client));
-    vk_box_set_widget(popup->layout, 0, VK_WIDGET(popup->default_client));
+    vk_box_set_widget(popup->layout, 0, VK_WIDGET(popup->default_client), VK_INHERIT_NONE);
 
     if(btn_count > 0)
     {
@@ -102,16 +102,16 @@ vk_popup_create(int width, int height, int style, ...)
         {
             _popup_init_button(popup, i, labels[i]);
             vk_box_set_widget(popup->button_bar, i,
-                VK_WIDGET(popup->buttons[i]));
+                VK_WIDGET(popup->buttons[i]), VK_INHERIT_NONE);
         }
 
         popup->button_count = btn_count;
 
         vk_box_set_widget(popup->layout, 1,
-            VK_WIDGET(popup->button_bar));
+            VK_WIDGET(popup->button_bar), VK_INHERIT_NONE);
     }
 
-    vk_window_set_child(VK_WINDOW(popup), VK_WIDGET(popup->layout));
+    vk_window_set_child(VK_WINDOW(popup), VK_WIDGET(popup->layout), VK_INHERIT_NONE);
 
     popup->result = -1;
 
@@ -126,7 +126,7 @@ vk_popup_set_client(vk_popup_t *popup, vk_widget_t *widget)
     if(widget != NULL)
     {
         vk_widget_set_expand(widget);
-        vk_box_set_widget(popup->layout, 0, widget);
+        vk_box_set_widget(popup->layout, 0, widget, VK_INHERIT_NONE);
         popup->client = widget;
     }
     else
@@ -134,7 +134,7 @@ vk_popup_set_client(vk_popup_t *popup, vk_widget_t *widget)
         if(popup->default_client != NULL)
         {
             vk_box_set_widget(popup->layout, 0,
-                VK_WIDGET(popup->default_client));
+                VK_WIDGET(popup->default_client), VK_INHERIT_NONE);
         }
         popup->client = NULL;
     }
@@ -175,11 +175,11 @@ vk_popup_add_button(vk_popup_t *popup, const char *text)
             VK_BOX_HORIZONTAL, VK_POPUP_MAX_BUTTONS);
 
         vk_box_set_widget(popup->button_bar, 0,
-            VK_WIDGET(popup->buttons[idx]));
+            VK_WIDGET(popup->buttons[idx]), VK_INHERIT_NONE);
         popup->button_count = 1;
 
         vk_box_set_widget(popup->layout, 1,
-            VK_WIDGET(popup->button_bar));
+            VK_WIDGET(popup->button_bar), VK_INHERIT_NONE);
 
         return 0;
     }
@@ -187,7 +187,7 @@ vk_popup_add_button(vk_popup_t *popup, const char *text)
     if(idx < vk_box_get_slot_count(popup->button_bar))
     {
         vk_box_set_widget(popup->button_bar, idx,
-            VK_WIDGET(popup->buttons[idx]));
+            VK_WIDGET(popup->buttons[idx]), VK_INHERIT_NONE);
         popup->button_count++;
         return idx;
     }
@@ -206,15 +206,15 @@ vk_popup_add_button(vk_popup_t *popup, const char *text)
 
         for(i = 0; i < idx; i++)
         {
-            vk_box_set_widget(old_bar, i, NULL);
+            vk_box_set_widget(old_bar, i, NULL, VK_INHERIT_NONE);
             vk_box_set_widget(new_bar, i,
-                VK_WIDGET(popup->buttons[i]));
+                VK_WIDGET(popup->buttons[i]), VK_INHERIT_NONE);
         }
 
         vk_box_set_widget(new_bar, idx,
-            VK_WIDGET(popup->buttons[idx]));
+            VK_WIDGET(popup->buttons[idx]), VK_INHERIT_NONE);
 
-        vk_box_set_widget(popup->layout, 1, VK_WIDGET(new_bar));
+        vk_box_set_widget(popup->layout, 1, VK_WIDGET(new_bar), VK_INHERIT_NONE);
 
         vk_box_destroy(old_bar);
 
