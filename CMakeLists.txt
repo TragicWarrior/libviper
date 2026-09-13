@@ -34,7 +34,7 @@ if (!GPM_FOUND)
 add_definitions("-D_NO_GPM")
 endif()
 
-set(PROJECT_VERSION 7.3.0)
+set(PROJECT_VERSION 7.4.0)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
@@ -64,6 +64,7 @@ set(VDK_SOURCES
     vdk/vk_activity.c
     vdk/vk_progress.c
     vdk/vk_meter.c
+    vdk/vk_graph.c
     vdk/vk_input.c
     vdk/vk_filedialog.c
     vdk/vk_menubar.c
