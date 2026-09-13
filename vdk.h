@@ -89,6 +89,19 @@ short           vdk_color_pair(short fg, short bg);
  * any stored caption. */
 #define VK_PROGRESS_VALUE_MAX       64
 
+/* graph type (bar only in v1) */
+#define VK_GRAPH_BAR                0
+
+/* bar-graph bar glyph styles: BLOCK = Unicode full block (U+2588) with a
+ * 1/8-cell sub-cell top; BRAILLE = 2x4 dots per cell (4x vertical
+ * resolution); ASCII = whole cells of '#'. */
+#define VK_GRAPH_BAR_BLOCK          0
+#define VK_GRAPH_BAR_BRAILLE        1
+#define VK_GRAPH_BAR_ASCII          2
+
+/* max bytes of a graph's unit label (reserved for axis labels) */
+#define VK_GRAPH_UNIT_MAX           16
+
 /* separator styles */
 #define VK_SEPARATOR_BLANK          1
 #define VK_SEPARATOR_SINGLE         2
@@ -196,6 +209,7 @@ typedef struct  _vk_input_s         vk_input_t;
 typedef struct  _vk_activity_s      vk_activity_t;
 typedef struct  _vk_progress_s      vk_progress_t;
 typedef struct  _vk_meter_s         vk_meter_t;
+typedef struct  _vk_graph_s         vk_graph_t;
 typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 typedef struct  _vk_calendar_s      vk_calendar_t;
@@ -264,6 +278,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_ACTIVITY(x)          ((vk_activity_t *)x)
 #define VK_PROGRESS(x)          ((vk_progress_t *)x)
 #define VK_METER(x)             ((vk_meter_t *)x)
+#define VK_GRAPH(x)             ((vk_graph_t *)x)
 #define VK_MENUBAR(x)           ((vk_menubar_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 #define VK_CALENDAR(x)          ((vk_calendar_t *)x)
@@ -551,6 +566,21 @@ int             vk_meter_add_threshold(vk_meter_t *meter, double at,
                     short fg, short bg);
 int             vk_meter_clear_thresholds(vk_meter_t *meter);
 void            vk_meter_destroy(vk_meter_t *meter);
+
+/* vk_graph -- bar graph; base widget.  vk_histogram will derive from it. */
+vk_graph_t*     vk_graph_create(int width, int height);
+int             vk_graph_set_type(vk_graph_t *graph, int type);
+int             vk_graph_set_bar_style(vk_graph_t *graph, int bar_style);
+int             vk_graph_set_x_range(vk_graph_t *graph, double min, double max);
+int             vk_graph_set_y_range(vk_graph_t *graph, double min, double max);
+int             vk_graph_set_unit_scale(vk_graph_t *graph, double scale);
+int             vk_graph_set_unit_label(vk_graph_t *graph, const char *label);
+int             vk_graph_set_data(vk_graph_t *graph, const double *values,
+                    int count);
+int             vk_graph_set_colors(vk_graph_t *graph, short fg, short bg);
+int             vk_graph_set_attrs(vk_graph_t *graph, attr_t attrs);
+int             vk_graph_update(vk_graph_t *graph);
+void            vk_graph_destroy(vk_graph_t *graph);
 
 int             vk_widget_attach_scroller(vk_widget_t *host,
                     vk_scroller_t *scroller);
