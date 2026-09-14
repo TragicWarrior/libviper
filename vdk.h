@@ -210,6 +210,7 @@ typedef struct  _vk_activity_s      vk_activity_t;
 typedef struct  _vk_progress_s      vk_progress_t;
 typedef struct  _vk_meter_s         vk_meter_t;
 typedef struct  _vk_graph_s         vk_graph_t;
+typedef struct  _vk_histogram_s     vk_histogram_t;
 typedef struct  _vk_menubar_s       vk_menubar_t;
 typedef struct  _vk_filedialog_s    vk_filedialog_t;
 typedef struct  _vk_calendar_s      vk_calendar_t;
@@ -279,6 +280,7 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_PROGRESS(x)          ((vk_progress_t *)x)
 #define VK_METER(x)             ((vk_meter_t *)x)
 #define VK_GRAPH(x)             ((vk_graph_t *)x)
+#define VK_HISTOGRAM(x)         ((vk_histogram_t *)x)
 #define VK_MENUBAR(x)           ((vk_menubar_t *)x)
 #define VK_FILEDIALOG(x)        ((vk_filedialog_t *)x)
 #define VK_CALENDAR(x)          ((vk_calendar_t *)x)
@@ -581,6 +583,17 @@ int             vk_graph_set_colors(vk_graph_t *graph, short fg, short bg);
 int             vk_graph_set_attrs(vk_graph_t *graph, attr_t attrs);
 int             vk_graph_update(vk_graph_t *graph);
 void            vk_graph_destroy(vk_graph_t *graph);
+
+/* vk_histogram -- derives from vk_graph; bins raw samples into frequency
+ * bars.  Use vk_graph_* via VK_GRAPH() for bar style, colours, x window. */
+vk_histogram_t* vk_histogram_create(int width, int height);
+int             vk_histogram_set_samples(vk_histogram_t *hist,
+                    const double *values, int count);
+int             vk_histogram_set_bins(vk_histogram_t *hist, int nbins);
+int             vk_histogram_set_range(vk_histogram_t *hist,
+                    double min, double max);
+int             vk_histogram_update(vk_histogram_t *hist);
+void            vk_histogram_destroy(vk_histogram_t *hist);
 
 int             vk_widget_attach_scroller(vk_widget_t *host,
                     vk_scroller_t *scroller);

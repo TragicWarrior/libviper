@@ -47,6 +47,14 @@ vk_object_t
    │
    ├─ vk_activity_t
    │
+   ├─ vk_progress_t
+   │  │
+   │  └─ vk_meter_t
+   │
+   ├─ vk_graph_t
+   │  │
+   │  └─ vk_histogram_t
+   │
    ├─ vk_menubar_t
    │
    ├─ vk_calendar_t
@@ -101,6 +109,10 @@ Cast macros are defined in `vdk.h`:
 | `VK_FILEDIALOG(x)` | `vk_filedialog_t *` |
 | `VK_CALENDAR(x)` | `vk_calendar_t *` |
 | `VK_POPUP(x)` | `vk_popup_t *` |
+| `VK_PROGRESS(x)` | `vk_progress_t *` |
+| `VK_METER(x)` | `vk_meter_t *` |
+| `VK_GRAPH(x)` | `vk_graph_t *` |
+| `VK_HISTOGRAM(x)` | `vk_histogram_t *` |
 
 ## Klass Templates
 
@@ -118,7 +130,8 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_SELECTBOX_KLASS`, `VK_DROPDOWN_KLASS`, `VK_TEXTBOX_KLASS`, `VK_DECK_KLASS`,
 `VK_BUTTON_KLASS`, `VK_INPUT_KLASS`, `VK_FILLER_KLASS`,
 `VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`,
-`VK_POPUP_KLASS`, `VK_VIEWPORT_KLASS`.
+`VK_POPUP_KLASS`, `VK_VIEWPORT_KLASS`, `VK_PROGRESS_KLASS`,
+`VK_METER_KLASS`, `VK_GRAPH_KLASS`, `VK_HISTOGRAM_KLASS`.
 The template carries the type's size, name, constructor, and destructor.
 It serves as both the type descriptor and the vtable seed.
 
@@ -192,6 +205,10 @@ _vk_menubar_ctor    -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_calendar_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_filedialog_ctor -> VK_BOX_KLASS->ctor(object, argp)
 _vk_popup_ctor      -> VK_WINDOW_KLASS->ctor(object, argp)
+_vk_progress_ctor   -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_meter_ctor      -> VK_PROGRESS_KLASS->ctor(object, argp)
+_vk_graph_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
+_vk_histogram_ctor  -> VK_GRAPH_KLASS->ctor(object, argp)
 ```
 
 The `(argp == NULL)` check in each ctor distinguishes "called directly" from
@@ -286,6 +303,10 @@ dispatch. Public APIs call through these pointers.
 | `vk_calendar_t` | `ctor`, `dtor`, `_update` |
 | `vk_filedialog_t` | `ctor`, `dtor` |
 | `vk_popup_t` | `ctor`, `dtor` |
+| `vk_progress_t` | `ctor`, `dtor`, `_update` |
+| `vk_meter_t` | `ctor`, `dtor`, `_fill_color` (overrides progress's `_fill_color`) |
+| `vk_graph_t` | `ctor`, `dtor`, `_bar_count`, `_bar_value` |
+| `vk_histogram_t` | `ctor`, `dtor`, `_bar_count`, `_bar_value` (overrides graph's `_bar_*` virtuals) |
 
 ## Public API Convention
 
@@ -1541,3 +1562,110 @@ throughout:
 - `vk_deck_t.widget_list` -- z-ordered widget stack (head->next = top)
 - `vk_listbox_t.item_list` -- items in a listbox/menu (`vk_item_t` nodes)
 - `vk_menubar_t.item_list` -- items in a menubar (`vk_item_t` nodes)
+
+## Graphs
+
+`vk_graph_t` is a bar graph widget derived from `vk_widget_t`. It plots a
+single series of y-values as vertical bars. Bars are laid out across the
+widget width with a configurable gap between them.
+
+Three bar styles are supported:
+
+| Style | Constant | Render |
+|-------|----------|--------|
+| Block | `VK_GRAPH_BAR_BLOCK` | U+2588 FULL BLOCK + U+2580..U+2587 partial blocks (1/8-cell sub-cell top) |
+| Braille | `VK_GRAPH_BAR_BRAILLE` | 2x4 braille dots per cell (4x vertical resolution) |
+| ASCII | `VK_GRAPH_BAR_ASCII` | `#` character with 1/8-cell rounding |
+
+Data is provided via `vk_graph_set_data()` which stores a copy of a
+y-value series. The visible index window is controlled by `x_range`
+(`vk_graph_set_x_range`): when `x_max <= x_min` all bars are shown.
+The value axis is controlled by `y_range` (`vk_graph_set_y_range`).
+
+Bar colours and attributes are set via `vk_graph_set_colors()` and
+`vk_graph_set_attrs()`.
+
+### Virtual Method Overrides
+
+The base `_bar_count` returns `data_count` and `_bar_value` returns
+`data[index]`. A derived class (e.g. `vk_histogram_t`) overrides these
+to expose bars computed from its own dataset while reusing all geometry,
+rendering, and range logic.
+
+| API | Description |
+|-----|-------------|
+| `vk_graph_create(width, height)` | Create a bar graph widget |
+| `vk_graph_set_type(graph, type)` | Set graph type (`VK_GRAPH_BAR`) |
+| `vk_graph_set_bar_style(graph, style)` | `VK_GRAPH_BAR_BLOCK`, `_BRAILLE`, or `_ASCII` |
+| `vk_graph_set_x_range(graph, min, max)` | Visible index window (max <= min = all) |
+| `vk_graph_set_y_range(graph, min, max)` | Value axis range |
+| `vk_graph_set_unit_scale(graph, scale)` | Display multiplier (reserved for labels) |
+| `vk_graph_set_unit_label(graph, label)` | Unit label string |
+| `vk_graph_set_data(graph, values, count)` | Replace plotted series (owned copy) |
+| `vk_graph_set_colors(graph, fg, bg)` | Bar foreground/background colour pair |
+| `vk_graph_set_attrs(graph, attrs)` | Bar ncurses attributes |
+| `vk_graph_update(graph)` | Render current state into the canvas |
+| `vk_graph_destroy(graph)` | Destroy the graph |
+
+## Histograms
+
+`vk_histogram_t` derives from `vk_graph_t` and implements a frequency
+histogram. It stores a set of raw sample values, bins them into
+`nbins` frequency buckets over `[bin_min, bin_max]`, and plots the
+per-bin counts by overriding `vk_graph`'s `_bar_count` / `_bar_value`
+virtuals. All geometry, bar style, colour, and x-range logic is
+inherited from `vk_graph`.
+
+### Binning
+
+Samples are distributed into bins using the formula:
+
+```
+bin = (sample - bin_min) / (bin_max - bin_min) * nbins
+```
+
+Samples outside `[bin_min, bin_max]` are dropped; a sample exactly at
+`bin_max` lands in the last bin.
+
+### Auto-scaling
+
+`vk_histogram_update()` recomputes the bin counts, finds the tallest
+bin, and calls `vk_graph_set_y_range()` with `[0, max_count]` before
+rendering. This means the y-axis auto-scales to the data.
+
+### Usage Pattern
+
+```c
+vk_histogram_t *hist = vk_histogram_create(74, 12);
+vk_histogram_set_bins(hist, 10);
+vk_histogram_set_range(hist, 0.0, 100.0);
+vk_histogram_set_samples(hist, values, count);
+vk_graph_set_bar_style(VK_GRAPH(hist), VK_GRAPH_BAR_BLOCK);
+vk_graph_set_colors(VK_GRAPH(hist), COLOR_GREEN, COLOR_BLACK);
+vk_histogram_update(hist);
+```
+
+### API
+
+| API | Description |
+|-----|-------------|
+| `vk_histogram_create(width, height)` | Create a histogram widget |
+| `vk_histogram_set_samples(hist, values, count)` | Replace raw sample set (owned copy) |
+| `vk_histogram_set_bins(hist, nbins)` | Set number of frequency bins (min 1, default 10) |
+| `vk_histogram_set_range(hist, min, max)` | Set value domain `[min, max]` (default 0..100) |
+| `vk_histogram_update(hist)` | Rebin, auto-scale y-axis, and render |
+| `vk_histogram_destroy(hist)` | Destroy the histogram |
+
+Parent APIs (via `VK_GRAPH(hist)`) for bar style, colours, and x-range:
+
+| API | Description |
+|-----|-------------|
+| `vk_graph_set_bar_style(VK_GRAPH(hist), style)` | `VK_GRAPH_BAR_BLOCK`, `_BRAILLE`, or `_ASCII` |
+| `vk_graph_set_colors(VK_GRAPH(hist), fg, bg)` | Bar colour pair |
+| `vk_graph_set_x_range(VK_GRAPH(hist), min, max)` | Visible bin window |
+
+> **Derivation note:** `vk_histogram_t` overrides only the data-access
+> virtuals (`_bar_count` returning `nbins`, `_bar_value` returning
+> `bin_counts[index]`). Rendering, layout, and colour handling all
+> flow through the `vk_graph` implementation, mirroring how
+> `vk_meter_t` overrides only `vk_progress`'s `_fill_color`.
