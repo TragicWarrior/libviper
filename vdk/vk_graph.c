@@ -148,11 +148,17 @@ _vk_graph_render(vk_widget_t *widget)
     int         j, index;
     double      span;
     short       bar_pair;
+    short       color_pair;
 
     if(widget == NULL || widget->canvas == NULL) return -1;
 
     graph  = VK_GRAPH(widget);
     canvas = widget->canvas;
+
+    /* Apply widget fg/bg so werase is not default black (vk_widget_set_colors
+       does not wbkgd). Match vk_frame. */
+    color_pair = vdk_color_pair(widget->fg, widget->bg);
+    wbkgd(canvas, COLOR_PAIR(color_pair));
 
     werase(canvas);
 
