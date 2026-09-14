@@ -1579,25 +1579,26 @@ Three bar styles are supported:
 
 ### Layout
 
-When the widget is at least 5 columns wide and 3 rows tall, the graph
-reserves a **Y-axis gutter** (4 columns on the left) for tick text and a
-**bottom row** for X-axis tick labels. Bars are drawn in the remaining
-inner rectangle. Widgets smaller than this are rendered as before
-(full-width bars, no axis labels).
+When the widget is wide and tall enough for formatted `y_max` plus a
+spine column and a bottom row, the graph reserves a **Y gutter** (left)
+and an **X row** (bottom). Bars occupy the inner rectangle. Smaller
+widgets skip axes and plot full-width bars.
 
 ### Y-axis
 
-At least three ticks are drawn at y_max, the midpoint, and y_min,
-right-aligned in the gutter. Each tick shows `value * unit_scale` (using
-`%.0f` rounding) followed by a space and `unit_label` if set. Tick text
-uses the widget's fg/bg colours, not the bar colours.
+Always labels **y_max** (top) and **y_min** (bottom), right-aligned,
+as `value * unit_scale` (`%.0f`) plus `unit_label` if set. Extra ticks
+are added equally spaced only when consecutive labels have at least one
+blank row between them. The gutter spine is `|`; a `-` tick is drawn
+into the plot at each labeled row. Axis text uses widget fg/bg.
 
 ### X-axis
 
-Custom labels are set via `vk_graph_set_x_labels(graph, labels, count)`
-which stores an owned copy of the pointer array. The labels are drawn
-centered under their corresponding bar slots. If count is 0 or labels
-is NULL, the graph shows bar indices (first, midpoint, last) instead.
+Always labels the **first** and **last** visible bars. Custom strings
+come from `vk_graph_set_x_labels`; otherwise the bar index is shown.
+Extra labels are equally spaced and omitted if they would overlap.
+The axis line is `-`; `|` marks each labeled column. Labels are not
+drawn under every bar.
 
 Data is provided via `vk_graph_set_data()` which stores a copy of a
 y-value series. The visible index window is controlled by `x_range`

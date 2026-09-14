@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdarg.h>
 #include <wchar.h>
 
@@ -138,6 +139,28 @@ _vk_graph_default_bar_value(vk_graph_t *graph, int index)
     return graph->data[index];
 }
 
+static void
+_vk_graph_fmt_y(const vk_graph_t *graph, double yv, char *buf, size_t cap)
+{
+    double v = yv * graph->unit_scale;
+
+    if(graph->unit_label[0] != '\0')
+        snprintf(buf, cap, "%.0f %s", v, graph->unit_label);
+    else
+        snprintf(buf, cap, "%.0f", v);
+}
+
+static const char *
+_vk_graph_x_text(const vk_graph_t *graph, int idx, char *buf, size_t cap)
+{
+    if(graph->x_labels != NULL && idx >= 0 && idx < graph->x_label_count &&
+       graph->x_labels[idx] != NULL && graph->x_labels[idx][0] != '\0')
+        return graph->x_labels[idx];
+
+    snprintf(buf, cap, "%d", idx);
+    return buf;
+}
+
 static int
 _vk_graph_render(vk_widget_t *widget)
 {
@@ -149,6 +172,7 @@ _vk_graph_render(vk_widget_t *widget)
     WINDOW      *canvas;
     int         pw, ph;                 /* widget width / height in cells    */
     int         inner_pw, inner_ph;     /* plot area dimensions              */
+    int         plot_x, use_axes;
     int         nbars, first, last, vis;
     int         slot, gap, bw;
     int         j, index;
@@ -192,29 +216,36 @@ _vk_graph_render(vk_widget_t *widget)
     vis = last - first + 1;
     if(vis < 1) return 0;
 
-    /* Reserve a 4-col Y-axis gutter and a 1-row X-axis gutter.  If there is
-       not enough room for both, fall back to the original full-width bars.
-       The Y gutter holds right-aligned tick text (e.g. "1234 W").
-       The X gutter holds tick labels centered under each bar slot.        */
-    if(pw >= 5 && ph >= 3)
+    /* Y gutter width from formatted extremes; last gutter col is '|'. */
     {
-        inner_pw = pw - 4;
-        if(inner_pw < 1) inner_pw = 1;
-    }
-    else
-    {
-        inner_pw = pw;
-    }
+        char ymax_s[32], ymin_s[32];
+        int  gw;
 
-    if(pw >= 5 && ph >= 3)
-    {
-        inner_ph = ph - 1;
-        if(inner_ph < 1) inner_ph = 1;
+        _vk_graph_fmt_y(graph, graph->y_max, ymax_s, sizeof(ymax_s));
+        _vk_graph_fmt_y(graph, graph->y_min, ymin_s, sizeof(ymin_s));
+        gw = (int)strlen(ymax_s);
+        if((int)strlen(ymin_s) > gw)
+            gw = (int)strlen(ymin_s);
+        if(gw < 1) gw = 1;
+        gw += 1;                            /* spine '|'                    */
+
+        if(pw >= gw + 2 && ph >= 3)
+        {
+            plot_x   = gw;
+            inner_pw = pw - plot_x;
+            inner_ph = ph - 1;
+            use_axes = 1;
+        }
+        else
+        {
+            plot_x   = 0;
+            inner_pw = pw;
+            inner_ph = ph;
+            use_axes = 0;
+        }
     }
-    else
-    {
-        inner_ph = ph;
-    }
+    if(inner_pw < 1) inner_pw = 1;
+    if(inner_ph < 1) inner_ph = 1;
 
     /* one slot per visible bar across the inner plot area; leave a 1-col
        gap when a slot has room */
@@ -234,8 +265,8 @@ _vk_graph_render(vk_widget_t *widget)
         cchar_t     cc_full, cc_part;
         wchar_t     wbuf[2];
 
-        col0 = j * slot;
-        if(col0 + bw > inner_pw) break;
+        col0 = plot_x + j * slot;
+        if(col0 + bw > plot_x + inner_pw) break;
         index = first + j;
 
         value = graph->_bar_value(graph, index);
@@ -256,7 +287,7 @@ _vk_graph_render(vk_widget_t *widget)
             setcchar(&cc_full, wbuf, graph->bar_attrs, bar_pair, NULL);
 
             for(k = 0; k < bfull; k++)
-                for(c = 0; c < bw && col0 + c < inner_pw; c++)
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
                     mvwadd_wch(canvas, inner_ph - 1 - k, col0 + c, &cc_full);
 
             if(bpart > 0 && bfull < inner_ph)
@@ -264,7 +295,7 @@ _vk_graph_render(vk_widget_t *widget)
                 wbuf[0] = (wchar_t)(0x2800 + braille_fill[bpart]);
                 wbuf[1] = L'\0';
                 setcchar(&cc_part, wbuf, graph->bar_attrs, bar_pair, NULL);
-                for(c = 0; c < bw && col0 + c < inner_pw; c++)
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
                     mvwadd_wch(canvas, inner_ph - 1 - bfull, col0 + c, &cc_part);
             }
         }
@@ -281,7 +312,7 @@ _vk_graph_render(vk_widget_t *widget)
             setcchar(&cc_full, wbuf, graph->bar_attrs, bar_pair, NULL);
 
             for(k = 0; k < cells; k++)
-                for(c = 0; c < bw && col0 + c < inner_pw; c++)
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
                     mvwadd_wch(canvas, inner_ph - 1 - k, col0 + c, &cc_full);
         }
         else /* VK_GRAPH_BAR_BLOCK */
@@ -297,7 +328,7 @@ _vk_graph_render(vk_widget_t *widget)
             setcchar(&cc_full, wbuf, graph->bar_attrs, bar_pair, NULL);
 
             for(k = 0; k < full; k++)
-                for(c = 0; c < bw && col0 + c < inner_pw; c++)
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
                     mvwadd_wch(canvas, inner_ph - 1 - k, col0 + c, &cc_full);
 
             if(partial > 0 && full < inner_ph)
@@ -305,107 +336,165 @@ _vk_graph_render(vk_widget_t *widget)
                 wbuf[0] = (wchar_t)(0x2580 + partial);  /* U+2581..U+2587      */
                 wbuf[1] = L'\0';
                 setcchar(&cc_part, wbuf, graph->bar_attrs, bar_pair, NULL);
-                for(c = 0; c < bw && col0 + c < inner_pw; c++)
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
                     mvwadd_wch(canvas, inner_ph - 1 - full, col0 + c, &cc_part);
             }
         }
     }
 
-    /* ---- Y-axis ticks: right-aligned in the gutter column at row 0 ------- */
-    if(pw >= 5 && ph >= 3)
+    if(use_axes)
     {
-        double      yv;
-        int         yrow;
-        int         len;
-        static const double ytick_pos[3] =
-                        { 1.0, 0.5, 0.0 };    /* y_max, mid, y_min  */
+        int         ax_pair = vdk_color_pair(widget->fg, widget->bg);
+        int         yrows[16];
+        int         ny = 0;
+        int         n, i, r, c, ok;
+        int         xrow = inner_ph;
+        int         plot_r = plot_x + inner_pw;
 
-        for(j = 0; j < 3; j++)
+        wattron(canvas, ax_pair);
+
+        /* Y spine */
+        for(r = 0; r < inner_ph; r++)
+            mvwaddch(canvas, r, plot_x - 1, '|');
+
+        /* Equally spaced Y ticks: always min+max; add more while gap >= 2. */
+        yrows[ny++] = 0;
+        yrows[ny++] = inner_ph - 1;
+        for(n = 3; n < 16 && n <= inner_ph; n++)
         {
-            yv = graph->y_min + ytick_pos[j] * span;
+            int cand[16];
 
-            if(graph->unit_scale != 1.0)
-                snprintf(ybuf, sizeof(ybuf), "%.0f %s",
-                         yv * graph->unit_scale, graph->unit_label);
-            else if(graph->unit_label[0] != '\0')
-                snprintf(ybuf, sizeof(ybuf), "%.0f %s",
-                         yv, graph->unit_label);
-            else
-                snprintf(ybuf, sizeof(ybuf), "%.0f", yv);
+            ok = 1;
+            for(i = 0; i < n; i++)
+                cand[i] = i * (inner_ph - 1) / (n - 1);
+            for(i = 1; i < n; i++)
+            {
+                if(cand[i] - cand[i - 1] < 2)
+                {
+                    ok = 0;
+                    break;
+                }
+            }
+            if(!ok)
+                break;
+            ny = n;
+            for(i = 0; i < n; i++)
+                yrows[i] = cand[i];
+        }
+        for(i = 0; i < ny; i++)
+        {
+            double yv;
+            int    len, col;
 
+            r = yrows[i];
+            yv = graph->y_max - ((double)r / (double)(inner_ph - 1)) * span;
+            if(inner_ph <= 1)
+                yv = graph->y_max;
+            _vk_graph_fmt_y(graph, yv, ybuf, sizeof(ybuf));
             len = (int)strlen(ybuf);
-            yrow = (int)(ytick_pos[j] * (double)inner_ph);
-            if(yrow < 0) yrow = 0;
-            if(yrow > inner_ph - 1) yrow = inner_ph - 1;
-
-            wattron(canvas, vdk_color_pair(widget->fg, widget->bg));
-            mvwaddnstr(canvas, yrow, 0, ybuf + (len > 1 ? len - 1 : 0), 1);
-            wattroff(canvas, vdk_color_pair(widget->fg, widget->bg));
+            col = plot_x - 1 - len;
+            if(col < 0)
+            {
+                col = 0;
+                mvwaddnstr(canvas, r, 0, ybuf, plot_x - 1);
+            }
+            else
+                mvwaddstr(canvas, r, col, ybuf);
+            if(plot_x < pw)
+                mvwaddch(canvas, r, plot_x, '-');
         }
-    }
 
-    /* ---- X-axis labels: centered under each bar slot, row inner_ph ------- */
-    if(pw >= 5 && ph >= 3 && graph->x_label_count > 0)
-    {
-        const char *label;
-        int         llen;
-        int         center, left, right, label_col;
-        int         i, idx;
+        /* X spine */
+        for(c = plot_x; c < plot_r && c < pw; c++)
+            mvwaddch(canvas, xrow, c, '-');
 
-        for(i = 0; i < vis && i < graph->x_label_count; i++)
+        /* Equally spaced X labels: always first+last visible; more if no overlap. */
         {
-            idx = first + i;
-            if(idx >= graph->x_label_count) break;
+            int         xvis[16];
+            int         nx = 0;
+            char        ibuf[16];
+            const char *txt;
+            int         llen, left, right;
 
-            label      = graph->x_labels[idx];
-            if(label == NULL) continue;
-            llen       = (int)strlen(label);
+            xvis[nx++] = 0;
+            xvis[nx++] = vis - 1;
+            for(n = 3; n < 16 && n <= vis; n++)
+            {
+                int cand[16];
 
-            center = i * slot + slot / 2;
-            left   = center - llen / 2;
-            right  = left + llen - 1;
+                ok = 1;
+                for(i = 0; i < n; i++)
+                    cand[i] = i * (vis - 1) / (n - 1);
+                for(i = 0; i < n; i++)
+                {
+                    int j2, L, R, llen2;
 
-            /* Skip if label doesn't fit within the inner plot area */
-            if(left < 0 || right >= inner_pw) continue;
+                    txt = _vk_graph_x_text(graph, first + cand[i], ibuf,
+                                           sizeof(ibuf));
+                    llen2 = (int)strlen(txt);
+                    if(cand[i] == 0)
+                        L = plot_x;
+                    else if(cand[i] == vis - 1)
+                        L = plot_r - llen2;
+                    else
+                        L = plot_x + cand[i] * slot + slot / 2 - llen2 / 2;
+                    R = L + llen2 - 1;
+                    for(j2 = 0; j2 < i; j2++)
+                    {
+                        const char *t2;
+                        char        b2[16];
+                        int         L2, R2, llen3;
 
-            /* Clamp left edge so label does not overlap the Y-axis gutter */
-            if(left < 0) left = 0;
-            label_col = left;
+                        t2 = _vk_graph_x_text(graph, first + cand[j2], b2,
+                                              sizeof(b2));
+                        llen3 = (int)strlen(t2);
+                        if(cand[j2] == 0)
+                            L2 = plot_x;
+                        else if(cand[j2] == vis - 1)
+                            L2 = plot_r - llen3;
+                        else
+                            L2 = plot_x + cand[j2] * slot + slot / 2 - llen3 / 2;
+                        R2 = L2 + llen3 - 1;
+                        if(!(R < L2 - 1 || L > R2 + 1))
+                        {
+                            ok = 0;
+                            break;
+                        }
+                    }
+                    if(!ok)
+                        break;
+                }
+                if(!ok)
+                    break;
+                nx = n;
+                for(i = 0; i < n; i++)
+                    xvis[i] = cand[i];
+            }
+            for(i = 0; i < nx; i++)
+            {
+                int vj = xvis[i];
+                int tick_col = plot_x + vj * slot + slot / 2;
 
-            mvwaddstr(canvas, inner_ph, label_col, label);
+                txt = _vk_graph_x_text(graph, first + vj, ibuf, sizeof(ibuf));
+                llen = (int)strlen(txt);
+                if(vj == 0)
+                    left = plot_x;
+                else if(vj == vis - 1)
+                    left = plot_r - llen;
+                else
+                    left = tick_col - llen / 2;
+                if(left < plot_x) left = plot_x;
+                if(left + llen > plot_r) left = plot_r - llen;
+                if(left < 0) left = 0;
+                right = left + llen - 1;
+                (void)right;
+                if(tick_col >= plot_x && tick_col < pw)
+                    mvwaddch(canvas, xrow, tick_col, '|');
+                mvwaddnstr(canvas, xrow, left, txt, pw - left);
+            }
         }
-    }
-    else if(pw >= 5 && ph >= 3)
-    {
-        /* No custom labels -- show first/mid/last bar indices */
-        char    idxbuf[16];
-        int     mid = (first + last) / 2;
-        int     indices[3];
-        int     nidx = 0;
-        int     k, idx, label_col, center;
-        int     len;
 
-        indices[nidx++] = first;
-        if(mid != first && mid != last)
-            indices[nidx++] = mid;
-        indices[nidx++] = last;
-
-        for(k = 0; k < nidx; k++)
-        {
-            idx = indices[k];
-            j = idx - first;
-            center = j * slot + slot / 2;
-            label_col = center;
-
-            if(label_col < 0 || label_col >= inner_pw) continue;
-
-            snprintf(idxbuf, sizeof(idxbuf), "%d", idx);
-            len = (int)strlen(idxbuf);
-            if(len > 0 && label_col < len)
-                label_col = len;           /* nudge right of Y gutter  */
-
-            mvwaddstr(canvas, inner_ph, label_col, idxbuf);
-        }
+        wattroff(canvas, ax_pair);
     }
 
     return 0;
