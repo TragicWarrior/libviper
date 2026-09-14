@@ -15,8 +15,10 @@
     dots per cell -- 4x vertical resolution) and ASCII ('#').
 
     Data is one y-value series with an implicit integer x index.  x_range
-    selects the visible index window; y_range is the value axis; unit_scale
-    is a display multiplier reserved for axis labels (bars-only in v1).
+    selects the visible index window; y_range is the value axis.  unit_scale
+    is a display multiplier applied to tick values (e.g. 0.001 for mW);
+    unit_label is appended after a space (e.g. "W").  x_labels provide
+    custom strings for the X-axis; when absent, bar indices are shown.
 
     Future-proofing: vk_histogram will derive from vk_graph and override the
     _bar_count / _bar_value virtuals to plot binned frequencies -- all
@@ -40,8 +42,11 @@ struct _vk_graph_s
     double              y_min;          /* value axis (y range)                */
     double              y_max;
 
-    double              unit_scale;     /* display multiplier (labels, later)  */
+    double              unit_scale;     /* display multiplier for tick values  */
     char                unit_label[VK_GRAPH_UNIT_MAX];
+
+    const char        **x_labels;       /* owned array of x-axis label strings */
+    int                 x_label_count;
 
     short               bar_fg;
     short               bar_bg;

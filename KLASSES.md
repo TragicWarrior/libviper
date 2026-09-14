@@ -1577,6 +1577,28 @@ Three bar styles are supported:
 | Braille | `VK_GRAPH_BAR_BRAILLE` | 2x4 braille dots per cell (4x vertical resolution) |
 | ASCII | `VK_GRAPH_BAR_ASCII` | `#` character with 1/8-cell rounding |
 
+### Layout
+
+When the widget is at least 5 columns wide and 3 rows tall, the graph
+reserves a **Y-axis gutter** (4 columns on the left) for tick text and a
+**bottom row** for X-axis tick labels. Bars are drawn in the remaining
+inner rectangle. Widgets smaller than this are rendered as before
+(full-width bars, no axis labels).
+
+### Y-axis
+
+At least three ticks are drawn at y_max, the midpoint, and y_min,
+right-aligned in the gutter. Each tick shows `value * unit_scale` (using
+`%.0f` rounding) followed by a space and `unit_label` if set. Tick text
+uses the widget's fg/bg colours, not the bar colours.
+
+### X-axis
+
+Custom labels are set via `vk_graph_set_x_labels(graph, labels, count)`
+which stores an owned copy of the pointer array. The labels are drawn
+centered under their corresponding bar slots. If count is 0 or labels
+is NULL, the graph shows bar indices (first, midpoint, last) instead.
+
 Data is provided via `vk_graph_set_data()` which stores a copy of a
 y-value series. The visible index window is controlled by `x_range`
 (`vk_graph_set_x_range`): when `x_max <= x_min` all bars are shown.
@@ -1599,8 +1621,9 @@ rendering, and range logic.
 | `vk_graph_set_bar_style(graph, style)` | `VK_GRAPH_BAR_BLOCK`, `_BRAILLE`, or `_ASCII` |
 | `vk_graph_set_x_range(graph, min, max)` | Visible index window (max <= min = all) |
 | `vk_graph_set_y_range(graph, min, max)` | Value axis range |
-| `vk_graph_set_unit_scale(graph, scale)` | Display multiplier (reserved for labels) |
-| `vk_graph_set_unit_label(graph, label)` | Unit label string |
+| `vk_graph_set_unit_scale(graph, scale)` | Display multiplier applied to tick values |
+| `vk_graph_set_unit_label(graph, label)` | Unit label appended to tick values |
+| `vk_graph_set_x_labels(graph, labels, count)` | Custom X-axis label strings (0/NULL = indices) |
 | `vk_graph_set_data(graph, values, count)` | Replace plotted series (owned copy) |
 | `vk_graph_set_colors(graph, fg, bg)` | Bar foreground/background colour pair |
 | `vk_graph_set_attrs(graph, attrs)` | Bar ncurses attributes |
@@ -1613,8 +1636,12 @@ rendering, and range logic.
 histogram. It stores a set of raw sample values, bins them into
 `nbins` frequency buckets over `[bin_min, bin_max]`, and plots the
 per-bin counts by overriding `vk_graph`'s `_bar_count` / `_bar_value`
-virtuals. All geometry, bar style, colour, and x-range logic is
-inherited from `vk_graph`.
+virtuals. All geometry, bar style, colour, axis labels, and x-range
+logic is inherited from `vk_graph`.
+
+> `vk_histogram` inherits `unit_scale`, `unit_label`, and `x_labels` from
+> `vk_graph` via `VK_GRAPH(hist)`. Moon-flare can pass time strings via
+> `vk_graph_set_x_labels()` on the histogram's graph parent.
 
 ### Binning
 

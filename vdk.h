@@ -99,7 +99,7 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_GRAPH_BAR_BRAILLE        1
 #define VK_GRAPH_BAR_ASCII          2
 
-/* max bytes of a graph's unit label (reserved for axis labels) */
+/* max bytes of a graph's unit label (appended to tick values) */
 #define VK_GRAPH_UNIT_MAX           16
 
 /* separator styles */
@@ -577,6 +577,8 @@ int             vk_graph_set_x_range(vk_graph_t *graph, double min, double max);
 int             vk_graph_set_y_range(vk_graph_t *graph, double min, double max);
 int             vk_graph_set_unit_scale(vk_graph_t *graph, double scale);
 int             vk_graph_set_unit_label(vk_graph_t *graph, const char *label);
+int             vk_graph_set_x_labels(vk_graph_t *graph,
+                    const char * const *labels, int count);
 int             vk_graph_set_data(vk_graph_t *graph, const double *values,
                     int count);
 int             vk_graph_set_colors(vk_graph_t *graph, short fg, short bg);

@@ -15,6 +15,12 @@ main(void)
         50, 51, 52, 53, 54, 55, 56, 58, 60, 63, 66, 69, 72, 75, 82, 95
     };
 
+    const char *bin_labels[10] =
+    {
+        "0-10", "10-20", "20-30", "30-40", "40-50",
+        "50-60", "60-70", "70-80", "80-90", "90-100"
+    };
+
     screen = vk_screen_create();
     if(screen == NULL)
     {
@@ -30,6 +36,8 @@ main(void)
     vk_histogram_set_samples(hist, samples, 32);
     vk_graph_set_bar_style(VK_GRAPH(hist), VK_GRAPH_BAR_BLOCK);
     vk_graph_set_colors(VK_GRAPH(hist), COLOR_MAGENTA, COLOR_BLACK);
+    vk_graph_set_unit_label(VK_GRAPH(hist), "items");
+    vk_graph_set_x_labels(VK_GRAPH(hist), bin_labels, 10);
     vk_histogram_update(hist);
 
     lab = vk_label_create(44);
