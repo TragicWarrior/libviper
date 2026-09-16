@@ -573,6 +573,7 @@ void            vk_meter_destroy(vk_meter_t *meter);
 vk_graph_t*     vk_graph_create(int width, int height);
 int             vk_graph_set_type(vk_graph_t *graph, int type);
 int             vk_graph_set_bar_style(vk_graph_t *graph, int bar_style);
+int             vk_graph_set_bar_width(vk_graph_t *graph, int cells);
 int             vk_graph_set_x_range(vk_graph_t *graph, double min, double max);
 int             vk_graph_set_y_range(vk_graph_t *graph, double min, double max);
 int             vk_graph_set_unit_scale(vk_graph_t *graph, double scale);

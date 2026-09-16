@@ -1566,8 +1566,10 @@ throughout:
 ## Graphs
 
 `vk_graph_t` is a bar graph widget derived from `vk_widget_t`. It plots a
-single series of y-values as vertical bars. Bars are laid out across the
-widget width with a configurable gap between them.
+single series of y-values as vertical bars. `vk_graph_set_bar_width()`
+sets a fixed cell width per bar (default 1). Bars pack from the **right**
+(newest / last index flush right) and work left; oldest bars clip if they
+do not fit. Leftover width stays on the left.
 
 Three bar styles are supported:
 

@@ -31,6 +31,7 @@ struct _vk_graph_s
 
     int                 graph_type;     /* VK_GRAPH_BAR                        */
     int                 bar_style;      /* VK_GRAPH_BAR_BLOCK|_BRAILLE|_ASCII  */
+    int                 bar_cell_w;     /* cells per bar; pack from the right  */
     int                 orientation;    /* reserved; vertical bars only in v1  */
 
     double              *data;          /* y-value series (owned copy)         */
