@@ -15,6 +15,12 @@ main(void)
         98, 92, 83, 70, 58, 45, 33, 22, 13, 6
     };
 
+    const char *xlabels[20] =
+    {
+        "0h", "1h", "2h", "3h", "4h", "5h", "6h", "7h", "8h", "9h",
+        "10h", "11h", "12h", "13h", "14h", "15h", "16h", "17h", "18h", "19h"
+    };
+
     screen = vk_screen_create();
     if(screen == NULL)
     {
@@ -29,6 +35,8 @@ main(void)
     vk_graph_set_data(graph1, data, 20);
     vk_graph_set_bar_style(graph1, VK_GRAPH_BAR_BLOCK);
     vk_graph_set_colors(graph1, COLOR_GREEN, COLOR_BLACK);
+    vk_graph_set_unit_label(graph1, "W");
+    vk_graph_set_x_labels(graph1, xlabels, 20);
     vk_graph_update(graph1);
 
     graph2 = vk_graph_create(74, 6);
@@ -36,6 +44,8 @@ main(void)
     vk_graph_set_data(graph2, data, 20);
     vk_graph_set_bar_style(graph2, VK_GRAPH_BAR_BRAILLE);
     vk_graph_set_colors(graph2, COLOR_CYAN, COLOR_BLACK);
+    vk_graph_set_unit_label(graph2, "W");
+    vk_graph_set_x_labels(graph2, xlabels, 20);
     vk_graph_update(graph2);
 
     graph3 = vk_graph_create(74, 6);
@@ -43,6 +53,8 @@ main(void)
     vk_graph_set_data(graph3, data, 20);
     vk_graph_set_bar_style(graph3, VK_GRAPH_BAR_ASCII);
     vk_graph_set_colors(graph3, COLOR_YELLOW, COLOR_BLACK);
+    vk_graph_set_unit_label(graph3, "W");
+    vk_graph_set_x_labels(graph3, xlabels, 20);
     vk_graph_update(graph3);
 
     label1 = vk_label_create(34);

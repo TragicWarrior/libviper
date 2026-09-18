@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdarg.h>
 #include <wchar.h>
 
@@ -65,6 +66,7 @@ _vk_graph_ctor(vk_object_t *object, va_list *argp, ...)
 
     graph->graph_type    = VK_GRAPH_BAR;
     graph->bar_style     = VK_GRAPH_BAR_BLOCK;
+    graph->bar_cell_w    = 1;
     graph->orientation   = VK_PROGRESS_VERTICAL;
 
     graph->data          = NULL;
@@ -111,6 +113,11 @@ _vk_graph_dtor(vk_object_t *object)
         free(graph->data);
         graph->data = NULL;
     }
+    if(graph->x_labels != NULL)
+    {
+        free(graph->x_labels);
+        graph->x_labels = NULL;
+    }
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
@@ -133,6 +140,46 @@ _vk_graph_default_bar_value(vk_graph_t *graph, int index)
     return graph->data[index];
 }
 
+static void
+_vk_graph_fmt_y(const vk_graph_t *graph, double yv, char *buf, size_t cap)
+{
+    double v = yv * graph->unit_scale;
+
+    if(graph->unit_label[0] != '\0')
+        snprintf(buf, cap, "%.0f %s", v, graph->unit_label);
+    else
+        snprintf(buf, cap, "%.0f", v);
+}
+
+static const char *
+_vk_graph_x_text(const vk_graph_t *graph, int idx, char *buf, size_t cap)
+{
+    if(idx < 0)
+    {
+        if(cap > 0)
+            buf[0] = '\0';
+        return buf;
+    }
+    if(graph->x_labels != NULL && idx < graph->x_label_count &&
+       graph->x_labels[idx] != NULL && graph->x_labels[idx][0] != '\0')
+        return graph->x_labels[idx];
+
+    snprintf(buf, cap, "%d", idx);
+    return buf;
+}
+
+/* Fixed-width bars packed from the right: bar vis-1 ends at
+   plot_x+inner_pw; work left. j=0 is the leftmost visible bar. */
+static int
+_vk_graph_bar_col0(int plot_x, int inner_pw, int vis, int cell_w, int j)
+{
+    if(vis < 1)
+        vis = 1;
+    if(cell_w < 1)
+        cell_w = 1;
+    return plot_x + inner_pw - (vis - j) * cell_w;
+}
+
 static int
 _vk_graph_render(vk_widget_t *widget)
 {
@@ -142,17 +189,26 @@ _vk_graph_render(vk_widget_t *widget)
 
     vk_graph_t  *graph;
     WINDOW      *canvas;
-    int         pw, ph;                 /* plot width / height in cells        */
+    int         pw, ph;                 /* widget width / height in cells    */
+    int         inner_pw, inner_ph;     /* plot area dimensions              */
+    int         plot_x, use_axes;
     int         nbars, first, last, vis;
-    int         slot, gap, bw;
+    int         bw, cell_w;
     int         j, index;
     double      span;
     short       bar_pair;
+    short       color_pair;
+    char        ybuf[32];               /* formatted tick value + unit       */
 
     if(widget == NULL || widget->canvas == NULL) return -1;
 
     graph  = VK_GRAPH(widget);
     canvas = widget->canvas;
+
+    /* Apply widget fg/bg so werase is not default black (vk_widget_set_colors
+       does not wbkgd). Match vk_frame. */
+    color_pair = vdk_color_pair(widget->fg, widget->bg);
+    wbkgd(canvas, COLOR_PAIR(color_pair));
 
     werase(canvas);
 
@@ -179,15 +235,61 @@ _vk_graph_render(vk_widget_t *widget)
     vis = last - first + 1;
     if(vis < 1) return 0;
 
-    /* one slot per visible bar; leave a 1-col gap when a slot has room */
-    slot = pw / vis;
-    if(slot < 1) slot = 1;
-    gap  = (slot >= 2) ? 1 : 0;
-    bw   = slot - gap;
-    if(bw < 1) bw = 1;
+    /* Y gutter width from formatted extremes; last gutter col is '|'. */
+    {
+        char ymax_s[32], ymin_s[32];
+        int  gw;
+
+        _vk_graph_fmt_y(graph, graph->y_max, ymax_s, sizeof(ymax_s));
+        _vk_graph_fmt_y(graph, graph->y_min, ymin_s, sizeof(ymin_s));
+        gw = (int)strlen(ymax_s);
+        if((int)strlen(ymin_s) > gw)
+            gw = (int)strlen(ymin_s);
+        if(gw < 1) gw = 1;
+        gw += 1;                            /* spine '|'                    */
+
+        if(pw >= gw + 2 && ph >= 4)
+        {
+            plot_x   = gw;
+            inner_pw = pw - plot_x;
+            inner_ph = ph - 2;              /* spine row + label row below */
+            use_axes = 1;
+        }
+        else
+        {
+            plot_x   = 0;
+            inner_pw = pw;
+            inner_ph = ph;
+            use_axes = 0;
+        }
+    }
+    if(inner_pw < 1) inner_pw = 1;
+    if(inner_ph < 1) inner_ph = 1;
 
     bar_pair = vdk_color_pair(graph->bar_fg, graph->bar_bg);
     span     = graph->y_max - graph->y_min;
+
+    cell_w = graph->bar_cell_w;
+    if(cell_w < 1)
+        cell_w = 1;
+    {
+        int n_fit = inner_pw / cell_w;
+
+        if(n_fit < 1)
+            n_fit = 1;
+        if(n_fit < vis)
+        {
+            first = last - n_fit + 1;
+            vis = n_fit;
+        }
+        else if(n_fit > vis)
+        {
+            /* Pad empty slots on the left so bars meet the Y spine. */
+            first = first - (n_fit - vis);
+            vis = n_fit;
+        }
+    }
+    bw = cell_w;
 
     for(j = 0; j < vis; j++)
     {
@@ -196,8 +298,9 @@ _vk_graph_render(vk_widget_t *widget)
         cchar_t     cc_full, cc_part;
         wchar_t     wbuf[2];
 
-        col0 = j * slot;
-        if(col0 >= pw) break;
+        col0 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, j);
+        if(col0 + bw > plot_x + inner_pw)
+            break;
         index = first + j;
 
         value = graph->_bar_value(graph, index);
@@ -207,70 +310,223 @@ _vk_graph_render(vk_widget_t *widget)
 
         if(graph->bar_style == VK_GRAPH_BAR_BRAILLE)
         {
-            int dots  = (int)(frac * (double)ph * 4.0);
+            int dots  = (int)(frac * (double)inner_ph * 4.0);
             int bfull = dots / 4;
             int bpart = dots % 4;
 
-            if(bfull > ph) { bfull = ph; bpart = 0; }
+            if(bfull > inner_ph) { bfull = inner_ph; bpart = 0; }
 
             wbuf[0] = (wchar_t)0x28FF;                  /* full braille cell   */
             wbuf[1] = L'\0';
             setcchar(&cc_full, wbuf, graph->bar_attrs, bar_pair, NULL);
 
             for(k = 0; k < bfull; k++)
-                for(c = 0; c < bw && col0 + c < pw; c++)
-                    mvwadd_wch(canvas, ph - 1 - k, col0 + c, &cc_full);
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
+                    mvwadd_wch(canvas, inner_ph - 1 - k, col0 + c, &cc_full);
 
-            if(bpart > 0 && bfull < ph)
+            if(bpart > 0 && bfull < inner_ph)
             {
                 wbuf[0] = (wchar_t)(0x2800 + braille_fill[bpart]);
                 wbuf[1] = L'\0';
                 setcchar(&cc_part, wbuf, graph->bar_attrs, bar_pair, NULL);
-                for(c = 0; c < bw && col0 + c < pw; c++)
-                    mvwadd_wch(canvas, ph - 1 - bfull, col0 + c, &cc_part);
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
+                    mvwadd_wch(canvas, inner_ph - 1 - bfull, col0 + c, &cc_part);
             }
         }
         else if(graph->bar_style == VK_GRAPH_BAR_ASCII)
         {
-            int eighths = (int)(frac * (double)ph * 8.0);
+            int eighths = (int)(frac * (double)inner_ph * 8.0);
             int cells   = eighths / 8;
 
-            if((eighths % 8) >= 4 && cells < ph) cells++;   /* round to cell   */
-            if(cells > ph) cells = ph;
+            if((eighths % 8) >= 4 && cells < inner_ph) cells++;  /* round  */
+            if(cells > inner_ph) cells = inner_ph;
 
             wbuf[0] = L'#';
             wbuf[1] = L'\0';
             setcchar(&cc_full, wbuf, graph->bar_attrs, bar_pair, NULL);
 
             for(k = 0; k < cells; k++)
-                for(c = 0; c < bw && col0 + c < pw; c++)
-                    mvwadd_wch(canvas, ph - 1 - k, col0 + c, &cc_full);
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
+                    mvwadd_wch(canvas, inner_ph - 1 - k, col0 + c, &cc_full);
         }
         else /* VK_GRAPH_BAR_BLOCK */
         {
-            int eighths = (int)(frac * (double)ph * 8.0);
+            int eighths = (int)(frac * (double)inner_ph * 8.0);
             int full    = eighths / 8;
             int partial = eighths % 8;
 
-            if(full > ph) { full = ph; partial = 0; }
+            if(full > inner_ph) { full = inner_ph; partial = 0; }
 
             wbuf[0] = (wchar_t)0x2588;                  /* U+2588 FULL BLOCK   */
             wbuf[1] = L'\0';
             setcchar(&cc_full, wbuf, graph->bar_attrs, bar_pair, NULL);
 
             for(k = 0; k < full; k++)
-                for(c = 0; c < bw && col0 + c < pw; c++)
-                    mvwadd_wch(canvas, ph - 1 - k, col0 + c, &cc_full);
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
+                    mvwadd_wch(canvas, inner_ph - 1 - k, col0 + c, &cc_full);
 
-            if(partial > 0 && full < ph)
+            if(partial > 0 && full < inner_ph)
             {
                 wbuf[0] = (wchar_t)(0x2580 + partial);  /* U+2581..U+2587      */
                 wbuf[1] = L'\0';
                 setcchar(&cc_part, wbuf, graph->bar_attrs, bar_pair, NULL);
-                for(c = 0; c < bw && col0 + c < pw; c++)
-                    mvwadd_wch(canvas, ph - 1 - full, col0 + c, &cc_part);
+                for(c = 0; c < bw && col0 + c < plot_x + inner_pw; c++)
+                    mvwadd_wch(canvas, inner_ph - 1 - full, col0 + c, &cc_part);
             }
         }
+    }
+
+    if(use_axes)
+    {
+        int         ax_pair = vdk_color_pair(widget->fg, widget->bg);
+        int         yrows[16];
+        int         ny = 0;
+        int         n, i, r, c, ok;
+        int         xrow = inner_ph;
+        int         xlab_row = inner_ph + 1;
+        int         plot_r = plot_x + inner_pw;
+
+        wattron(canvas, ax_pair);
+
+        /* Y spine: tick faces the labels (ACS_RTEE ┤), not into the plot. */
+        for(r = 0; r < inner_ph; r++)
+            mvwadd_wch(canvas, r, plot_x - 1, WACS_VLINE);
+
+        /* Equally spaced Y ticks: always min+max; add more while gap >= 2. */
+        yrows[ny++] = 0;
+        yrows[ny++] = inner_ph - 1;
+        for(n = 3; n < 16 && n <= inner_ph; n++)
+        {
+            int cand[16];
+
+            ok = 1;
+            for(i = 0; i < n; i++)
+                cand[i] = i * (inner_ph - 1) / (n - 1);
+            for(i = 1; i < n; i++)
+            {
+                if(cand[i] - cand[i - 1] < 2)
+                {
+                    ok = 0;
+                    break;
+                }
+            }
+            if(!ok)
+                break;
+            ny = n;
+            for(i = 0; i < n; i++)
+                yrows[i] = cand[i];
+        }
+        for(i = 0; i < ny; i++)
+        {
+            double yv;
+            int    len, col;
+
+            r = yrows[i];
+            yv = graph->y_max - ((double)r / (double)(inner_ph - 1)) * span;
+            if(inner_ph <= 1)
+                yv = graph->y_max;
+            _vk_graph_fmt_y(graph, yv, ybuf, sizeof(ybuf));
+            len = (int)strlen(ybuf);
+            col = plot_x - 1 - len;
+            if(col < 0)
+            {
+                col = 0;
+                mvwaddnstr(canvas, r, 0, ybuf, plot_x - 1);
+            }
+            else
+                mvwaddstr(canvas, r, col, ybuf);
+            mvwadd_wch(canvas, r, plot_x - 1, WACS_RTEE);
+        }
+
+        /* X spine on its own row; times go on xlab_row so they do not
+           clobber the line. Ticks face the plot (ACS_TTEE ┬). */
+        for(c = plot_x; c < plot_r && c < pw; c++)
+            mvwadd_wch(canvas, xrow, c, WACS_HLINE);
+        if(plot_x > 0)
+            mvwadd_wch(canvas, xrow, plot_x - 1, WACS_LLCORNER);
+
+        /* X labels at equal column intervals across the plot (not bar
+           index + clamp, which clustered times and left big dash gaps). */
+        {
+            char        ibuf[16];
+            const char *txt;
+            int         labw = 1;
+            int         nfit, ii, jj;
+
+            for(jj = 0; jj < vis; jj++)
+            {
+                int L = (int)strlen(_vk_graph_x_text(graph, first + jj, ibuf,
+                                                     sizeof(ibuf)));
+                if(L > labw)
+                    labw = L;
+            }
+            if(labw < 1)
+                labw = 1;
+            if(labw > inner_pw)
+                labw = inner_pw;
+
+            nfit = inner_pw / (labw + 1);
+            if(nfit < 2)
+                nfit = 2;
+            if(nfit > vis)
+                nfit = vis;
+            if(nfit > 16)
+                nfit = 16;
+
+            /* Constant bar step so gaps are all 60 min or all 90 min,
+               never mixed (i*(vis-1)/(nfit-1) caused 07:00→08:30). */
+            {
+                int step = 1;
+
+                while(step < vis - 1 &&
+                      1 + (vis - 1) / step > nfit)
+                    step++;
+                while(step < vis - 1)
+                {
+                    int c0 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, 0) +
+                             cell_w / 2;
+                    int c1 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, step) +
+                             cell_w / 2;
+                    if(c1 - c0 >= labw + 1)
+                        break;
+                    step++;
+                }
+                if(step < 1)
+                    step = 1;
+
+                for(ii = 0; ii * step <= vis - 1; ii++)
+                {
+                    int vj, tick_col, llen, tleft, tw, t0;
+
+                    vj = ii * step;
+                    tw = cell_w;
+                    t0 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, vj);
+                    tick_col = t0 + tw / 2;
+                    if(tick_col < plot_x)
+                        tick_col = plot_x;
+                    if(tick_col >= plot_r)
+                        tick_col = plot_r - 1;
+                    if(tick_col >= 0 && tick_col < pw)
+                        mvwadd_wch(canvas, xrow, tick_col, WACS_TTEE);
+
+                    txt = _vk_graph_x_text(graph, first + vj, ibuf,
+                                           sizeof(ibuf));
+                    llen = (int)strlen(txt);
+                    tleft = tick_col - llen / 2;
+                    if(tleft < plot_x)
+                        tleft = plot_x;
+                    if(tleft + llen > plot_r)
+                        tleft = plot_r - llen;
+                    if(tleft < plot_x)
+                        tleft = plot_x;
+                    if(xlab_row < ph)
+                        mvwaddnstr(canvas, xlab_row, tleft, txt,
+                                   pw - tleft);
+                }
+            }
+        }
+
+        wattroff(canvas, ax_pair);
     }
 
     return 0;
@@ -300,6 +556,16 @@ vk_graph_set_bar_style(vk_graph_t *graph, int bar_style)
     if(graph == NULL) return -1;
 
     graph->bar_style = bar_style;
+
+    return 0;
+}
+
+int
+vk_graph_set_bar_width(vk_graph_t *graph, int cells)
+{
+    if(graph == NULL) return -1;
+
+    graph->bar_cell_w = cells < 1 ? 1 : cells;
 
     return 0;
 }
@@ -392,6 +658,39 @@ vk_graph_set_attrs(vk_graph_t *graph, attr_t attrs)
     if(graph == NULL) return -1;
 
     graph->bar_attrs = attrs;
+
+    return 0;
+}
+
+/*
+    Replace the X-axis label set with a copy of the pointer array.  The
+    caller retains ownership of the individual strings (which must remain
+    valid for the lifetime of the widget).  count == 0 or labels == NULL
+    clears any previous labels.
+*/
+int
+vk_graph_set_x_labels(vk_graph_t *graph, const char * const *labels, int count)
+{
+    if(graph == NULL) return -1;
+
+    if(graph->x_labels != NULL)
+    {
+        free(graph->x_labels);
+        graph->x_labels = NULL;
+    }
+
+    if(labels != NULL && count > 0)
+    {
+        const char **copy = (const char **)malloc((size_t)count * sizeof(char *));
+        if(copy == NULL) return -1;
+        memcpy(copy, labels, (size_t)count * sizeof(char *));
+        graph->x_labels  = copy;
+        graph->x_label_count = count;
+    }
+    else
+    {
+        graph->x_label_count = 0;
+    }
 
     return 0;
 }
