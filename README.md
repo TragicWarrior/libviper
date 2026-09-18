@@ -30,9 +30,9 @@ Widgets
                       vk_textbox, vk_dropdown, vk_menubar, vk_calendar,
                       vk_activity, vk_color
   Meters/graphs       vk_progress, vk_meter (value-coloured thresholds),
-                      vk_graph (bar graph: block / braille / ASCII bar
-                      styles, x/y ranges), vk_histogram (bins raw samples
-                      into frequency bars; derives from vk_graph)
+                      vk_graph (bar graph: block / braille / ASCII,
+                      axes, vk_graph_set_bar_width), vk_histogram
+                      (frequency bars; derives from vk_graph)
   Composites          vk_filedialog, vk_popup, vk_viewport
   Attachment          vk_scroller
 

@@ -15,6 +15,8 @@ Makefile
 *.so.*
 demo/vk_demo
 demo/vk_viewport_demo
+demo/vk_graph_demo
+demo/vk_histogram_demo
 
 # editor backups / swap
 *.save

@@ -1,3 +1,20 @@
+Version 7.5.0
+
+vk_histogram and vk_graph axes
+* [Bryan Christ] vk_histogram_t derives from vk_graph_t and bins raw
+  samples into frequency bars (_bar_count / _bar_value override).
+* [Bryan Christ] vk_graph draws Y/X axes: unit_label/unit_scale ticks,
+  vk_graph_set_x_labels(), ACS tees (RTEE on Y, TTEE on X with labels
+  on the row below the spine).
+* [Bryan Christ] vk_graph_set_bar_width() packs fixed-width bars from
+  the right (current slot). X labels use a constant bar step.
+
+Version 7.4.0
+
+vk_graph
+* [Bryan Christ] vk_graph_t bar graph (block / braille / ASCII) with
+  x/y ranges.  Histogram derives from this in 7.5.
+
 Version 7.2.0
 
 Host bracketed paste

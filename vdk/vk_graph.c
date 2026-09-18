@@ -181,12 +181,6 @@ _vk_graph_bar_col0(int plot_x, int inner_pw, int vis, int cell_w, int j)
 }
 
 static int
-_vk_graph_bar_w(int cell_w)
-{
-    return cell_w < 1 ? 1 : cell_w;
-}
-
-static int
 _vk_graph_render(vk_widget_t *widget)
 {
     /* braille dot masks: fill k rows (0..4) from the cell bottom, both cols */
@@ -199,7 +193,7 @@ _vk_graph_render(vk_widget_t *widget)
     int         inner_pw, inner_ph;     /* plot area dimensions              */
     int         plot_x, use_axes;
     int         nbars, first, last, vis;
-    int         gap, bw, cell_w;
+    int         bw, cell_w;
     int         j, index;
     double      span;
     short       bar_pair;
@@ -296,8 +290,6 @@ _vk_graph_render(vk_widget_t *widget)
         }
     }
     bw = cell_w;
-    gap = 0;
-    (void)gap;
 
     for(j = 0; j < vis; j++)
     {
@@ -492,9 +484,9 @@ _vk_graph_render(vk_widget_t *widget)
                 while(step < vis - 1)
                 {
                     int c0 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, 0) +
-                             _vk_graph_bar_w(cell_w) / 2;
+                             cell_w / 2;
                     int c1 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, step) +
-                             _vk_graph_bar_w(cell_w) / 2;
+                             cell_w / 2;
                     if(c1 - c0 >= labw + 1)
                         break;
                     step++;
@@ -507,7 +499,7 @@ _vk_graph_render(vk_widget_t *widget)
                     int vj, tick_col, llen, tleft, tw, t0;
 
                     vj = ii * step;
-                    tw = _vk_graph_bar_w(cell_w);
+                    tw = cell_w;
                     t0 = _vk_graph_bar_col0(plot_x, inner_pw, vis, cell_w, vj);
                     tick_col = t0 + tw / 2;
                     if(tick_col < plot_x)
