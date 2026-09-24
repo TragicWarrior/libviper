@@ -34,7 +34,7 @@ if (!GPM_FOUND)
 add_definitions("-D_NO_GPM")
 endif()
 
-set(PROJECT_VERSION 7.6.2)
+set(PROJECT_VERSION 7.6.3)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 

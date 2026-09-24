@@ -58,6 +58,16 @@ void    vdk_draw_relief(vk_widget_t *widget, int relief, short bg,
             attr_t extra);
 
 /*
+    draw `text` at (y, x) in exactly `cols` screen columns: stop before a
+    character that would not fit (never mid-character), then pad with
+    spaces.  UTF-8 aware via wcwidth(); printf's "%-*.*s" counts bytes, so
+    multi-byte text came out short or was cut inside a character.  Uses
+    the window's current attributes/pair.  Returns the columns of text.
+*/
+int     vdk_put_text_cols(WINDOW *win, int y, int x, const char *text,
+            int cols);
+
+/*
     Edge-scrollbar wiring, shared by every widget that hosts a vscroller /
     hscroller (vk_frame, vk_listbox, vk_textbox, vk_selectbox).  The vertical
     bar runs down the right column, the horizontal bar along the bottom row; a

@@ -1,3 +1,13 @@
+Version 7.6.3
+
+vk_listbox, vk_dropdown, vk_selectbox, vk_textbox
+* [Bryan Christ] Row text is laid out by screen columns, not bytes. The
+  rows were drawn with printf's "%-*.*s", which counts bytes, so multi-byte
+  UTF-8 text (bullets, symbols, emoji) came out short of the row width and
+  could be cut in the middle of a character. A new internal helper,
+  vdk_put_text_cols(), stops before a character that would not fit and
+  pads with spaces to the exact width, using wcwidth().
+
 Version 7.6.2
 
 vk_progress, vk_meter, vk_graph, vk_histogram

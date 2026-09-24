@@ -328,9 +328,8 @@ _vk_selectbox_update(vk_listbox_t *listbox)
             ind = _vk_selectbox_glyph(selectbox, checked, &ind_width);
 
             mvwprintw(widget->canvas, y, 0, "%s", ind);
-            mvwprintw(widget->canvas, y, ind_width, "%-*.*s",
-                name_width, name_width,
-                item->name);
+            vdk_put_text_cols(widget->canvas, y, ind_width, item->name,
+                name_width);
         }
 
         if(idx == listbox->curr_item)

@@ -957,10 +957,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
         }
         else
         {
-            mvwprintw(widget->canvas, y, x, "%-*.*s",
-                paint_width,
-                paint_width,
-                item->name);
+            vdk_put_text_cols(widget->canvas, y, x, item->name, paint_width);
         }
 
         if(idx == listbox->curr_item)

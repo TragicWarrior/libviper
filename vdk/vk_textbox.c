@@ -373,8 +373,8 @@ _vk_textbox_update(vk_textbox_t *textbox)
 
     for(i = textbox->scroll_top; i < textbox->line_count && y < paint_height; i++)
     {
-        mvwprintw(widget->canvas, y, 0, "%-*.*s",
-            paint_width, paint_width, textbox->lines[i]);
+        vdk_put_text_cols(widget->canvas, y, 0, textbox->lines[i],
+            paint_width);
         y++;
     }
 
