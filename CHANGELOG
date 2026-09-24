@@ -1,3 +1,13 @@
+Version 7.7.0
+
+vk_listbox, vk_selectbox
+* [Bryan Christ] vk_listbox_set_item_colors() gives one row its own
+  foreground, background and attributes, e.g. a dimmed read-only setting
+  in a settings list. A color of -1 keeps the widget's own, and the
+  selection highlight still wins on the current row. Passing -1, -1 and
+  A_NORMAL puts the row back on the widget's colors. Additive: rows
+  without their own colors draw exactly as before.
+
 Version 7.6.3
 
 vk_listbox, vk_dropdown, vk_selectbox, vk_textbox

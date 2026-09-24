@@ -396,6 +396,9 @@ int             vk_listbox_set_highlight_attrs(vk_listbox_t *listbox,
                     attr_t attrs);
 int             vk_listbox_add_item(vk_listbox_t *listbox,
                     char *item, VkWidgetFunc func, void *anything);
+/* one row's own fg/bg (-1 = the widget's) and attrs; highlight wins */
+int             vk_listbox_set_item_colors(vk_listbox_t *listbox, int idx,
+                    int fg, int bg, attr_t attrs);
 int             vk_listbox_set_item(vk_listbox_t *listbox, int idx,
                     char *item, VkWidgetFunc func, void *anything);
 int             vk_listbox_remove_item(vk_listbox_t *listbox, int idx);

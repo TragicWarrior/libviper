@@ -16,6 +16,13 @@ struct _vk_item_s
 
     VkWidgetFunc        func;               // run when item is activated
     void                *anything;          // passed in as argument for func()
+
+    /* per-item colors (vk_listbox_set_item_colors); has_colors == 0 means
+       the row uses the widget's own colors */
+    int                 has_colors;
+    int                 fg;
+    int                 bg;
+    attr_t              attrs;
 };
 
 typedef struct _vk_item_s   vk_item_t;
