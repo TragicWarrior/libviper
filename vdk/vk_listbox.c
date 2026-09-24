@@ -208,6 +208,36 @@ vk_listbox_set_highlight_attrs(vk_listbox_t *listbox, attr_t attrs)
     return 0;
 }
 
+/* Give one row its own colors and attributes, e.g. a dimmed read-only
+   setting.  fg or bg of -1 keeps the widget's color for that half.  The
+   selection highlight still wins on the current row.  Pass fg == -1,
+   bg == -1 and attrs == A_NORMAL to go back to the widget's colors. */
+int
+vk_listbox_set_item_colors(vk_listbox_t *listbox, int idx, int fg, int bg,
+    attr_t attrs)
+{
+    vk_item_t           *item;
+    struct list_head    *pos;
+    int                 i = 0;
+
+    if(listbox == NULL) return -1;
+    if(idx < 0 || idx >= listbox->item_count) return -1;
+
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx) break;
+        i++;
+    }
+
+    item = list_entry(pos, vk_item_t, list);
+    item->fg = fg;
+    item->bg = bg;
+    item->attrs = attrs;
+    item->has_colors = !(fg == -1 && bg == -1 && attrs == A_NORMAL);
+
+    return 0;
+}
+
 inline int
 vk_listbox_add_item(vk_listbox_t *listbox, char *name,
     VkWidgetFunc func, void *anything)
@@ -954,6 +984,16 @@ _vk_listbox_update(vk_listbox_t *listbox)
             {
                 mvwhline_set(widget->canvas, y, x, WACS_HLINE, paint_width);
             }
+        }
+        else if(item->has_colors)
+        {
+            short item_pair = vdk_color_pair(
+                item->fg == -1 ? widget->fg : item->fg,
+                item->bg == -1 ? widget->bg : item->bg);
+
+            wattr_set(widget->canvas, item->attrs, item_pair, NULL);
+            vdk_put_text_cols(widget->canvas, y, x, item->name, paint_width);
+            wattr_set(widget->canvas, widget->attrs, pair, NULL);
         }
         else
         {
