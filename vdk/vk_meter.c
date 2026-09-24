@@ -167,5 +167,12 @@ vk_meter_destroy(vk_meter_t *meter)
 {
     if(meter == NULL) return;
 
-    vk_object_destroy(VK_OBJECT(meter));
+    if(!vk_object_assert(meter, vk_meter_t)) return;
+
+    /*
+        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
+        in vk_widget_destroy(), which frees the object; vk_object_destroy()
+        here would free it a second time (double free / abort).
+    */
+    meter->dtor(VK_OBJECT(meter));
 }
