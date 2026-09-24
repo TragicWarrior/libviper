@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <wchar.h>
 
 #include "vk_object.h"
 #include "vk_widget.h"
@@ -204,6 +205,99 @@ vk_listbox_set_highlight_attrs(vk_listbox_t *listbox, attr_t attrs)
     if(listbox == NULL) return -1;
 
     listbox->highlight_attrs = attrs;
+
+    return 0;
+}
+
+static vk_item_t*
+_vk_listbox_item_at(vk_listbox_t *listbox, int idx)
+{
+    struct list_head    *pos;
+    int                 i = 0;
+
+    if(listbox == NULL) return NULL;
+    if(idx < 0 || idx >= listbox->item_count) return NULL;
+
+    list_for_each(pos, &listbox->item_list)
+    {
+        if(i == idx) return list_entry(pos, vk_item_t, list);
+        i++;
+    }
+
+    return NULL;
+}
+
+/* The marker a submenu row shows: the caller's (or the default "▸"),
+   or ">" when the marker is not plain ASCII and the terminal cannot show
+   UTF-8. */
+static const char*
+_vk_listbox_submenu_marker(vk_listbox_t *listbox)
+{
+    const char  *m = listbox->submenu_marker;
+    const char  *p;
+
+    if(m == NULL) m = "\xe2\x96\xb8";            /* U+25B8 ▸ */
+
+    for(p = m; *p != '\0'; p++)
+    {
+        if((unsigned char)*p >= 0x80)
+            return vdk_has_utf8() ? m : ">";
+    }
+
+    return m;
+}
+
+/* screen columns of a UTF-8 string (at least 1 per character) */
+static int
+_vk_text_cols(const char *s)
+{
+    mbstate_t   st;
+    wchar_t     wc;
+    size_t      n;
+    int         cols = 0;
+    int         w;
+
+    memset(&st, 0, sizeof(st));
+    while(*s != '\0')
+    {
+        n = mbrtowc(&wc, s, MB_CUR_MAX, &st);
+        if(n == (size_t)-1 || n == (size_t)-2 || n == 0) { cols++; s++; continue; }
+        w = wcwidth(wc);
+        cols += (w > 0) ? w : 1;
+        s += n;
+    }
+
+    return cols;
+}
+
+int
+vk_listbox_set_item_submenu(vk_listbox_t *listbox, int idx, bool submenu)
+{
+    vk_item_t   *item = _vk_listbox_item_at(listbox, idx);
+
+    if(item == NULL) return -1;
+
+    item->submenu = submenu ? 1 : 0;
+
+    return 0;
+}
+
+bool
+vk_listbox_item_has_submenu(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t   *item = _vk_listbox_item_at(listbox, idx);
+
+    return item != NULL && item->submenu != 0;
+}
+
+int
+vk_listbox_set_submenu_marker(vk_listbox_t *listbox, const char *marker)
+{
+    if(listbox == NULL) return -1;
+
+    if(listbox->submenu_marker != NULL) free(listbox->submenu_marker);
+    listbox->submenu_marker = (marker != NULL && marker[0] != '\0')
+        ? strdup(marker) : NULL;
 
     return 0;
 }
@@ -510,12 +604,14 @@ vk_listbox_get_metrics(vk_listbox_t *listbox, int *width, int *height)
             if(item->name != NULL)
             {
                 len = strlen(item->name);
+                /* room for " " + the submenu marker */
+                if(item->submenu) len += 2;
                 if(len > max_len) max_len = len;
             }
         }
-    }
 
-    *width = max_len;
+        *width = max_len;
+    }
 
     return 0;
 }
@@ -625,6 +721,12 @@ _vk_listbox_dtor(vk_object_t *object)
 
     // destroy all the list items
     VK_LISTBOX(object)->_reset(VK_LISTBOX(object));
+
+    if(VK_LISTBOX(object)->submenu_marker != NULL)
+    {
+        free(VK_LISTBOX(object)->submenu_marker);
+        VK_LISTBOX(object)->submenu_marker = NULL;
+    }
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
@@ -985,19 +1087,41 @@ _vk_listbox_update(vk_listbox_t *listbox)
                 mvwhline_set(widget->canvas, y, x, WACS_HLINE, paint_width);
             }
         }
-        else if(item->has_colors)
-        {
-            short item_pair = vdk_color_pair(
-                item->fg == -1 ? widget->fg : item->fg,
-                item->bg == -1 ? widget->bg : item->bg);
-
-            wattr_set(widget->canvas, item->attrs, item_pair, NULL);
-            vdk_put_text_cols(widget->canvas, y, x, item->name, paint_width);
-            wattr_set(widget->canvas, widget->attrs, pair, NULL);
-        }
         else
         {
-            vdk_put_text_cols(widget->canvas, y, x, item->name, paint_width);
+            const char  *marker = NULL;
+            int         text_w = paint_width;
+            int         mw = 0;
+
+            /* a submenu row keeps its last columns for the marker */
+            if(item->submenu)
+            {
+                marker = _vk_listbox_submenu_marker(listbox);
+                mw = _vk_text_cols(marker);
+                if(mw + 1 < paint_width) text_w = paint_width - mw - 1;
+                else marker = NULL;
+            }
+
+            if(item->has_colors)
+            {
+                short item_pair = vdk_color_pair(
+                    item->fg == -1 ? widget->fg : item->fg,
+                    item->bg == -1 ? widget->bg : item->bg);
+
+                wattr_set(widget->canvas, item->attrs, item_pair, NULL);
+            }
+
+            vdk_put_text_cols(widget->canvas, y, x, item->name, text_w);
+
+            if(marker != NULL)
+            {
+                mvwaddch(widget->canvas, y, x + text_w, ' ');
+                vdk_put_text_cols(widget->canvas, y, x + text_w + 1,
+                    marker, mw);
+            }
+
+            if(item->has_colors)
+                wattr_set(widget->canvas, widget->attrs, pair, NULL);
         }
 
         if(idx == listbox->curr_item)

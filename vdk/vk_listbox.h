@@ -42,6 +42,9 @@ struct _vk_listbox_s
     int                 blur_hl_bg;
     bool                is_focused;
 
+    /* marker drawn at the right edge of submenu rows; NULL = default */
+    char                *submenu_marker;
+
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 

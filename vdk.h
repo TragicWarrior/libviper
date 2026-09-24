@@ -399,6 +399,17 @@ int             vk_listbox_add_item(vk_listbox_t *listbox,
 /* one row's own fg/bg (-1 = the widget's) and attrs; highlight wins */
 int             vk_listbox_set_item_colors(vk_listbox_t *listbox, int idx,
                     int fg, int bg, attr_t attrs);
+/* mark a row as opening a submenu: the marker is drawn at its right edge */
+int             vk_listbox_set_item_submenu(vk_listbox_t *listbox, int idx,
+                    bool submenu);
+bool            vk_listbox_item_has_submenu(vk_listbox_t *listbox, int idx);
+/* the submenu marker, e.g. "\xe2\x96\xb8" (the default) or ">"; NULL
+   restores the default.  A non-ASCII marker falls back to ">" when
+   vdk_has_utf8() is false. */
+int             vk_listbox_set_submenu_marker(vk_listbox_t *listbox,
+                    const char *marker);
+/* true when the locale is UTF-8 and TERM is not the bare Linux console */
+bool            vdk_has_utf8(void);
 int             vk_listbox_set_item(vk_listbox_t *listbox, int idx,
                     char *item, VkWidgetFunc func, void *anything);
 int             vk_listbox_remove_item(vk_listbox_t *listbox, int idx);
