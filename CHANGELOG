@@ -1,3 +1,10 @@
+Version 7.5.1
+
+vk_activity
+* [Bryan Christ] VK_ACTIVITY_MOON cycles the eight moon phases
+  U+1F311 through U+1F318. The widget widens to 2 columns for that
+  style so the emoji is not clipped.
+
 Version 7.5.0
 
 vk_histogram and vk_graph axes

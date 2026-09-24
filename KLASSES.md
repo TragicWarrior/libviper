@@ -1319,7 +1319,7 @@ their children (e.g. `vk_box_t`).
 ## Activity Indicators
 
 `vk_activity_t` is a 1x1 widget derived from `vk_widget_t` that animates
-a spinning/cycling indicator. It supports four animation styles:
+a spinning/cycling indicator. It supports five animation styles:
 
 | Style | Constant | Frames |
 |-------|----------|--------|
@@ -1327,6 +1327,7 @@ a spinning/cycling indicator. It supports four animation styles:
 | Dots | `VK_ACTIVITY_DOTS` | Braille characters U+280B series (10 frames) |
 | Circles | `VK_ACTIVITY_CIRCLES` | Quarter-circle U+25D0 series (4 frames) |
 | Bar | `VK_ACTIVITY_BAR` | Growing block U+2581 series (8 frames) |
+| Moon | `VK_ACTIVITY_MOON` | Moon phases U+1F311–U+1F318 (8 frames, widget widens to 2) |
 
 The widget uses a caller-driven tick model like `vk_marquee_t`: the
 application calls `vk_activity_run()` each iteration of the event loop.

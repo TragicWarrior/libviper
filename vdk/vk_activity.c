@@ -50,6 +50,14 @@ static const wchar_t bar_frames[] =
 };
 static const int bar_count = 8;
 
+/* New through waning crescent. Emoji width is 2 columns. */
+static const wchar_t moon_frames[] =
+{
+    0x1F311, 0x1F312, 0x1F313, 0x1F314,
+    0x1F315, 0x1F316, 0x1F317, 0x1F318,
+};
+static const int moon_count = 8;
+
 inline vk_activity_t*
 vk_activity_create(void)
 {
@@ -66,12 +74,15 @@ vk_activity_set_style(vk_activity_t *activity, int style)
     if(activity == NULL) return -1;
 
     if(style != VK_ACTIVITY_SPINNER && style != VK_ACTIVITY_DOTS
-        && style != VK_ACTIVITY_CIRCLES && style != VK_ACTIVITY_BAR)
+        && style != VK_ACTIVITY_CIRCLES && style != VK_ACTIVITY_BAR
+        && style != VK_ACTIVITY_MOON)
         return -1;
 
     activity->style = style;
     activity->frame = 0;
     activity->tick_count = 0;
+    vk_widget_resize(VK_WIDGET(activity),
+        style == VK_ACTIVITY_MOON ? 2 : 1, 1);
 
     return 0;
 }
@@ -162,6 +173,7 @@ vk_activity_run(vk_activity_t *activity)
             case VK_ACTIVITY_DOTS:      frame_count = dots_count;       break;
             case VK_ACTIVITY_CIRCLES:   frame_count = circles_count;    break;
             case VK_ACTIVITY_BAR:       frame_count = bar_count;        break;
+            case VK_ACTIVITY_MOON:      frame_count = moon_count;       break;
             default:                    frame_count = spinner_count;     break;
         }
 
@@ -186,6 +198,7 @@ vk_activity_run(vk_activity_t *activity)
             case VK_ACTIVITY_DOTS:      frames = dots_frames;       break;
             case VK_ACTIVITY_CIRCLES:   frames = circles_frames;    break;
             case VK_ACTIVITY_BAR:       frames = bar_frames;        break;
+            case VK_ACTIVITY_MOON:      frames = moon_frames;       break;
             default:                    frames = dots_frames;        break;
         }
 

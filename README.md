@@ -28,7 +28,8 @@ Widgets
                       vk_spinbutton, vk_filler
   Content             vk_listbox, vk_selectbox (checkbox / radio),
                       vk_textbox, vk_dropdown, vk_menubar, vk_calendar,
-                      vk_activity, vk_color
+                      vk_activity (spinner, dots, circles, bar, moon),
+                      vk_color
   Meters/graphs       vk_progress, vk_meter (value-coloured thresholds),
                       vk_graph (bar graph: block / braille / ASCII,
                       axes, vk_graph_set_bar_width), vk_histogram

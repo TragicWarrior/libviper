@@ -62,6 +62,7 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_ACTIVITY_DOTS            1
 #define VK_ACTIVITY_CIRCLES         2
 #define VK_ACTIVITY_BAR             3
+#define VK_ACTIVITY_MOON            4
 
 /* progress / meter orientation */
 #define VK_PROGRESS_HORIZONTAL      0
