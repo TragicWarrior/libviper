@@ -23,6 +23,10 @@ struct _vk_item_s
     int                 fg;
     int                 bg;
     attr_t              attrs;
+
+    /* the row opens a submenu: the listbox draws its submenu marker at
+       the row's right edge (vk_listbox_set_item_submenu) */
+    int                 submenu;
 };
 
 typedef struct _vk_item_s   vk_item_t;

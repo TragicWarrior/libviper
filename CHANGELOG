@@ -1,3 +1,23 @@
+Version 7.8.0
+
+vk_listbox
+* [Bryan Christ] Submenu rows. vk_listbox_set_item_submenu() marks a row
+  as opening a submenu, and the listbox draws a marker at the row's
+  right edge, keeping it there however wide the list is drawn;
+  vk_listbox_item_has_submenu() reads the flag back. The marker is "▸"
+  by default; vk_listbox_set_submenu_marker() sets another (NULL restores
+  the default). A marker that is not plain ASCII falls back to ">" when
+  the terminal cannot show UTF-8. vk_listbox_get_metrics() counts the
+  marker's room in the width. For cascading menus (vwm's Apps
+  categories).
+* [Bryan Christ] vk_listbox_get_metrics() no longer writes the width
+  when only the height was asked for (a NULL width pointer crashed).
+
+vdk
+* [Bryan Christ] vdk_has_utf8(): true when the locale's CODESET is UTF-8
+  and TERM is not the bare Linux console. Cached; call after
+  setlocale().
+
 Version 7.7.0
 
 vk_listbox, vk_selectbox
