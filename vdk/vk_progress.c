@@ -513,5 +513,12 @@ vk_progress_destroy(vk_progress_t *progress)
 {
     if(progress == NULL) return;
 
-    vk_object_destroy(VK_OBJECT(progress));
+    if(!vk_object_assert(progress, vk_progress_t)) return;
+
+    /*
+        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
+        in vk_widget_destroy(), which frees the object; vk_object_destroy()
+        here would free it a second time (double free / abort).
+    */
+    progress->dtor(VK_OBJECT(progress));
 }

@@ -1,3 +1,13 @@
+Version 7.6.2
+
+vk_progress, vk_meter, vk_graph, vk_histogram
+* [Bryan Christ] Fix a double free in vk_progress_destroy(),
+  vk_meter_destroy(), vk_graph_destroy() and vk_histogram_destroy(). They
+  called vk_object_destroy(), whose dtor chain already frees the object
+  through vk_widget_destroy(), so the object was freed twice and glibc
+  aborted. They now run the class dtor, as vk_label_destroy() does.
+  vk_widget_destroy() on these widgets was not affected.
+
 Version 7.6.1
 
 * [Bryan Christ] Version bump only; no code changes since 7.6.0.

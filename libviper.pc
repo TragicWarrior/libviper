@@ -1,6 +1,6 @@
 Name: libviper
 Description: A library for developing windowed apps on ncurses
-Version: 7.6.1
+Version: 7.6.2
 Requires: 
 prefix=/usr/local
 includedir=
