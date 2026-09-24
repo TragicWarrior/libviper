@@ -363,8 +363,7 @@ _vk_dropdown_update(vk_listbox_t *listbox)
 
         vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
         wattr_set(widget->canvas, widget->attrs, pair, NULL);
-        mvwprintw(widget->canvas, 0, 0, "%-*.*s",
-            name_width, name_width, text);
+        vdk_put_text_cols(widget->canvas, 0, 0, text, name_width);
         mvwaddstr(widget->canvas, 0, name_width, " \xe2\x96\xbc");
         wattr_set(widget->canvas, A_NORMAL, 0, NULL);
     }

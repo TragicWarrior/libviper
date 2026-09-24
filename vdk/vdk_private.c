@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdlib.h>
+#include <wchar.h>
 
 #include <ncursesw/ncurses.h>
 
@@ -165,4 +167,55 @@ vdk_widget_reset_canvas(vk_widget_t *widget)
     widget->state &= ~VK_STATE_FROZEN;
 
     return (widget->canvas == NULL) ? -1 : 0;
+}
+
+int
+vdk_put_text_cols(WINDOW *win, int y, int x, const char *text, int cols)
+{
+    mbstate_t   ps;
+    const char  *p = text;
+    size_t      left;
+    int         used = 0;
+
+    if(win == NULL || cols <= 0) return 0;
+
+    wmove(win, y, x);
+    memset(&ps, 0, sizeof(ps));
+    left = (text != NULL) ? strlen(text) : 0;
+
+    while(left > 0)
+    {
+        wchar_t wc;
+        wchar_t one[2];
+        size_t  n = mbrtowc(&wc, p, left, &ps);
+        int     w;
+
+        if(n == (size_t)-1 || n == (size_t)-2)
+        {
+            /* invalid / truncated sequence: show one '?' and resync */
+            memset(&ps, 0, sizeof(ps));
+            wc = L'?';
+            n = 1;
+        }
+        if(n == 0) break;
+
+        w = wcwidth(wc);
+        if(w < 0) w = 1;                    /* control char: one cell */
+        if(used + w > cols) break;          /* would overflow: stop here */
+
+        one[0] = wc;
+        one[1] = L'\0';
+        waddnwstr(win, one, 1);
+        used += w;
+        p += n;
+        left -= n;
+    }
+
+    while(used < cols)
+    {
+        waddch(win, ' ');
+        used++;
+    }
+
+    return used;
 }
