@@ -94,6 +94,7 @@ _vk_progress_ctor(vk_object_t *object, va_list *argp, ...)
 
     progress->trough_fg    = COLOR_WHITE;
     progress->trough_bg    = COLOR_BLACK;
+    progress->trough_attrs = A_NORMAL;
     progress->trough_ch    = 0x2591;            /* U+2591 LIGHT SHADE */
 
     progress->value_text[0] = '\0';             /* no centred read-out */
@@ -162,10 +163,14 @@ _vk_progress_render(vk_widget_t *widget)
         1/8 sub-cell fill: UNICODE full-block only, and only with a solid or
         absent trough.  A partial block's unfilled half is a solid rectangle,
         which blends against a solid trough (or blank) but not against a
-        stipple.  ASCII and UNDERBAR are whole-cell.
+        stipple.  ASCII and UNDERBAR are whole-cell.  That unfilled half is a
+        *background* colour, so trough attrs (A_BOLD brightens only the
+        foreground) cannot reach it: a bold trough is whole-cell too, or its
+        edge would show a plain-black sliver.
     */
     subcell  = (!ascii && !underbar
-                && progress->trough_style != VK_TROUGH_STIPPLE);
+                && progress->trough_style != VK_TROUGH_STIPPLE
+                && progress->trough_attrs == A_NORMAL);
 
     ox = oy = 0;
     iw = widget->width;
@@ -231,7 +236,7 @@ _vk_progress_render(vk_widget_t *widget)
         trough_pair = vdk_color_pair(progress->trough_fg, progress->trough_bg);
     }
     wbuf[1] = L'\0';
-    setcchar(&cc_trough, wbuf, A_NORMAL, trough_pair, NULL);
+    setcchar(&cc_trough, wbuf, progress->trough_attrs, trough_pair, NULL);
 
     /*
         partial fill cell (sub-cell mode only).  Its unfilled half must match
@@ -307,12 +312,17 @@ _vk_progress_render(vk_widget_t *widget)
             cchar_t glyph;
             wchar_t gb[2];
             int     cw = wcwidth(vtext[j]);
-            short   pr = ((col - ox) < full) ? fill_pair : trough_pair;
+            int     on_fill = ((col - ox) < full);
+            short   pr = on_fill ? fill_pair : trough_pair;
+            /* carry the cell's own attrs so the knockout keeps its colour
+               (e.g. a bold trough stays dark gray behind the text) */
+            attr_t  at = on_fill ? progress->fill_attrs
+                                 : progress->trough_attrs;
 
             if(cw < 1) cw = 1;
             gb[0] = vtext[j];
             gb[1] = L'\0';
-            setcchar(&glyph, gb, A_REVERSE, pr, NULL);
+            setcchar(&glyph, gb, A_REVERSE | at, pr, NULL);
             mvwadd_wch(canvas, crow, col, &glyph);
             col += cw;
         }
@@ -437,6 +447,16 @@ vk_progress_set_relief(vk_progress_t *progress, int relief)
     if(progress == NULL) return -1;
 
     progress->relief = relief;
+
+    return 0;
+}
+
+int
+vk_progress_set_trough_attrs(vk_progress_t *progress, attr_t attrs)
+{
+    if(progress == NULL) return -1;
+
+    progress->trough_attrs = attrs;
 
     return 0;
 }

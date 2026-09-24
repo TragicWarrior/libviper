@@ -557,6 +557,11 @@ int             vk_progress_set_attrs(vk_progress_t *progress, attr_t attrs);
 int             vk_progress_set_relief(vk_progress_t *progress, int relief);
 int             vk_progress_set_trough(vk_progress_t *progress,
                     int trough_style, short fg, short bg);
+/* attrs for the unfilled cells, e.g. A_BOLD to show a COLOR_BLACK trough as
+ * dark gray on 8-colour terminals.  Non-A_NORMAL attrs make the fill round
+ * to whole cells (a partial cell's empty half is a background colour). */
+int             vk_progress_set_trough_attrs(vk_progress_t *progress,
+                    attr_t attrs);
 int             vk_progress_set_thickness(vk_progress_t *progress,
                     int thickness);
 int             vk_progress_update(vk_progress_t *progress);
