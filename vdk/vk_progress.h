@@ -28,6 +28,7 @@ struct _vk_progress_s
 
     short               trough_fg;
     short               trough_bg;
+    attr_t              trough_attrs;   /* e.g. A_BOLD: black -> dark gray     */
     wchar_t             trough_ch;      /* glyph for VK_TROUGH_STIPPLE         */
 
     int                 (*ctor)         (vk_object_t *, va_list *, ...);

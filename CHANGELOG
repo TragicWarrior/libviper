@@ -1,3 +1,15 @@
+Version 7.6.0
+
+vk_progress
+* [Bryan Christ] vk_progress_set_trough_attrs() sets attributes for the
+  unfilled cells. With A_BOLD a COLOR_BLACK trough shows as dark gray on
+  8-colour terminals, where there is no gray index. A bar with trough
+  attributes fills in whole cells, because the empty half of a partial cell
+  is a background colour that bold cannot brighten.
+* [Bryan Christ] The value read-out inside a bar now keeps the attributes of
+  the cell it covers (fill attrs over the fill, trough attrs over the
+  trough), so it no longer loses a bold or bright background.
+
 Version 7.5.1
 
 vk_activity
