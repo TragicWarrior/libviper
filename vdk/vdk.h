@@ -1,1 +1,1 @@
-/home/bryanc/devel/repos-git/libviper/vdk.h
+../vdk.h

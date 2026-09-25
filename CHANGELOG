@@ -1,3 +1,16 @@
+Version 7.8.1
+
+build
+* [Bryan Christ] vdk/vdk.h and vkmio/vkmio.h are relative symlinks
+  (../vdk.h, ../vkmio.h).  They pointed into one machine's checkout,
+  so every other clone had two dangling links, and programs built
+  against a libviper checkout (moon-flare, xd-battery) quietly compiled
+  against whatever vdk.h was installed in /usr/local instead.
+* [Bryan Christ] libgpm is optional, as documented: without gpm.h the
+  build defines _NO_GPM and leaves out GPM mouse support.  The check
+  read "if (!GPM_FOUND)", which CMake never takes, so gpm.h was
+  required.
+
 Version 7.8.0
 
 vk_listbox

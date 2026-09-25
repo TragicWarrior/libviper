@@ -30,11 +30,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(GPM)
 
-if (!GPM_FOUND)
+if (NOT GPM_FOUND)
 add_definitions("-D_NO_GPM")
 endif()
 
-set(PROJECT_VERSION 7.8.0)
+set(PROJECT_VERSION 7.8.1)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
