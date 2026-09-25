@@ -1,3 +1,13 @@
+Version 7.8.2
+
+build
+* [Bryan Christ] libviper.pc is no longer tracked; it is generated at
+  configure time (from pkg-config.pc.cmake) and ignored.  Every build in
+  the checkout rewrote it, so the next "git pull" stopped on local
+  changes, and a make that followed rebuilt the old version.  To pull
+  this release over such a checkout, run "git checkout -- libviper.pc"
+  first; later pulls are not blocked.
+
 Version 7.8.1
 
 build

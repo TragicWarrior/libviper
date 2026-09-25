@@ -26,3 +26,6 @@ demo/vk_histogram_demo
 
 # local agent plans and machine-local config
 .claude/
+
+# generated at configure time (pkg-config.pc.cmake)
+libviper.pc
