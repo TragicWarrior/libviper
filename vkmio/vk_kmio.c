@@ -526,6 +526,7 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     extern int          gpm_fd;
     struct pollfd       mio_poll;
     static int          mio_fd = -1;
+    static bool         mio_dropped = false;
     Gpm_Connect         gpm_connect;
     Gpm_Event           g_event;
     int                 array_sz;
@@ -536,10 +537,13 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     {
         if(mio_fd > 0) Gpm_Close();
         mio_fd = -1;
+        mio_dropped = false;
         return 0;
     }
 
     if(mouse_event == NULL) return -1;
+
+    if(mio_dropped) return -1;
 
     if(gpm_fd == -2 || (gpm_fd == -1 && gpm_tried == TRUE)) return -1;
 
@@ -563,14 +567,40 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
         }
     }
 
-    if(mio_fd == -1) return -1;
+    if(mio_fd < 0)
+    {
+        mio_fd = -1;
+        return -1;
+    }
 
     memset(&mio_poll, 0, sizeof(mio_poll));
     mio_poll.events = POLLIN;
     mio_poll.fd = mio_fd;
 
     if(poll(&mio_poll, 1, (cmd == VK_GPM_CMD_DRAIN) ? 0 : 1) < 1) return -1;
-    if(Gpm_GetEvent(&g_event) < 1) return -1;
+
+    if(mio_poll.revents & POLLNVAL)
+    {
+        mio_fd = -1;
+        mio_dropped = true;
+        return -1;
+    }
+
+    if(Gpm_GetEvent(&g_event) < 1)
+    {
+        /* the daemon dropped us (it refuses a client that does not own
+           the VC, e.g. under dtach): libgpm has closed the socket, so
+           forget the descriptor rather than poll a dead -- or since
+           reused -- fd on every fetch.  Gpm_Close clears gpm_tried, so
+           latch the drop here or every fetch would reconnect; a
+           shutdown (VK_GPM_CMD_CLOSE) clears it. */
+        if(gpm_fd < 0)
+        {
+            mio_fd = -1;
+            mio_dropped = true;
+        }
+        return -1;
+    }
 
     memset(mouse_event, 0, sizeof(MEVENT));
     mouse_event->bstate = g_event.modifiers;
