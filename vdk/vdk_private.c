@@ -224,20 +224,20 @@ vdk_put_text_cols(WINDOW *win, int y, int x, const char *text, int cols)
 /*
     Can the terminal show UTF-8?  The locale's CODESET must be UTF-8, and
     the bare Linux console (TERM=linux) is treated as unable even then: its
-    font lacks most symbols.  Cached; the locale must be set (setlocale)
+    font lacks most symbols.  Asked afresh every time, not cached: after a
+    vk_screen_adopt the screen can be on a terminal of another type, and
+    the answer has to follow it.  The locale must be set (setlocale)
     before the first call.
 */
 bool
 vdk_has_utf8(void)
 {
-    static int  cached = -1;
     const char  *term;
 
-    if(cached >= 0) return cached != 0;
+    if(strcmp(nl_langinfo(CODESET), "UTF-8") != 0) return false;
 
-    cached = (strcmp(nl_langinfo(CODESET), "UTF-8") == 0) ? 1 : 0;
     term = getenv("TERM");
-    if(term != NULL && strcmp(term, "linux") == 0) cached = 0;
+    if(term != NULL && strcmp(term, "linux") == 0) return false;
 
-    return cached != 0;
+    return true;
 }

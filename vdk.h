@@ -413,7 +413,8 @@ bool            vk_listbox_item_has_submenu(vk_listbox_t *listbox, int idx);
    vdk_has_utf8() is false. */
 int             vk_listbox_set_submenu_marker(vk_listbox_t *listbox,
                     const char *marker);
-/* true when the locale is UTF-8 and TERM is not the bare Linux console */
+/* true when the locale is UTF-8 and TERM is not the bare Linux console.
+   evaluated on every call, so it follows the terminal after an adopt */
 bool            vdk_has_utf8(void);
 int             vk_listbox_set_item(vk_listbox_t *listbox, int idx,
                     char *item, VkWidgetFunc func, void *anything);

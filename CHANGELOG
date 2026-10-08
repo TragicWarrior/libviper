@@ -12,6 +12,9 @@ vdk
   type instead of once from the startup $TERM, so an adopted terminal
   of another type gets its own.
 
+* [Bryan Christ] vdk_has_utf8() is evaluated on every call instead of
+  cached from the first, so glyph choices follow the terminal after
+  vk_screen_adopt changes its type.
 * [Bryan Christ] List items can be inactive.
   vk_listbox_set_item_active(listbox, idx, false) leaves the row in
   the list, drawn in the inactive colors
