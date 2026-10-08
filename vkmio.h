@@ -41,6 +41,11 @@ const char *vk_kmio_get_paste(size_t *len);
    immediately available.  a no-op returning -1 when GPM is unavailable. */
 int         vk_kmio_mouse_drain(MEVENT *mouse_event);
 
+/* drop the GPM connection and forget why it was unavailable, so the
+   next fetch re-reads TERM and VK_GPM_VC and tries again.  call it after
+   the terminal behind the screen changed.  a no-op without GPM. */
+void        vk_kmio_gpm_reset(void);
+
 #if !defined(_NO_GPM) && defined(__linux)
 int         vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd);
 #endif

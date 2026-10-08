@@ -1,3 +1,50 @@
+Version 7.10.0
+
+vdk
+* [Bryan Christ] vk_screen_adopt(screen, pty, term) moves the screen
+  onto a terminal and drives it as a given terminal type.  A NULL pty
+  rebuilds the ncurses SCREEN in place, for when the terminal behind
+  the same fd changed type (a dtach session reattached from
+  elsewhere); a NULL term keeps the current type.
+  vk_screen_teleport(screen, pty) is now vk_screen_adopt(screen, pty,
+  NULL) and behaves as before.
+* [Bryan Christ] The no-scroll terminfo entry is built per terminal
+  type instead of once from the startup $TERM, so an adopted terminal
+  of another type gets its own.
+
+* [Bryan Christ] List items can be inactive.
+  vk_listbox_set_item_active(listbox, idx, false) leaves the row in
+  the list, drawn in the inactive colors
+  (vk_listbox_set_inactive_colors; default the widget's colors with
+  A_DIM), and takes it out of reach: next/prev step over it like a
+  separator, set_curr refuses it and exec_curr will not run it.
+  vk_listbox_item_is_active reports the state.  The flag
+  (VK_ITEM_INACTIVE) lives on the shared item record and the handling
+  in vk_listbox, so vk_dropdown and vk_selectbox, which are built on
+  it, get it too.
+
+vkmio
+* [Bryan Christ] vk_kmio_gpm_reset() drops the GPM connection and
+  clears the "unavailable" state, so the next fetch re-reads TERM and
+  VK_GPM_VC.  Call it after the terminal changed.
+* [Bryan Christ] On an xterm-type terminal vkmio no longer calls
+  Gpm_Open at all.  libgpm's xterm mode wrote mouse-enable escapes to
+  stdout, which after an adopt is not the terminal the screen is on.
+  vkmio already sends its own mouse escapes to the screen's fd.
+* [Bryan Christ] A lone ESC followed at once by a mouse report (easy
+  with hover tracking: press ESC while the pointer is moving) is
+  delivered as ESC again.  The ESC look-ahead used to swallow the
+  report's KEY_MOUSE, so the key arrived as something other than ESC
+  and the report's body was read as typed characters.  Any key code met
+  during the look-ahead is now pushed back for the next fetch.
+* [Bryan Christ] vk_kmio_init only asks the terminal for xterm mouse
+  reports when the current terminal type's kmous is the SGR introducer
+  (\E[<, the xterm family).  For any other type ncurses cannot turn a
+  report into KEY_MOUSE and every report arrived as loose keystrokes.
+  On a Linux console nothing changes: it never answered those escapes.
+  Types with kmous=\E[M (screen, tmux, rxvt) no longer get mouse
+  reporting switched on; they could not parse the reports before.
+
 Version 7.9.0
 
 vkmio

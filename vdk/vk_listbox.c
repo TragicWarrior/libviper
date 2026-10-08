@@ -302,6 +302,65 @@ vk_listbox_set_submenu_marker(vk_listbox_t *listbox, const char *marker)
     return 0;
 }
 
+/* can the selection never rest on this row?  separators and inactive
+   items are both stepped over by next/prev. */
+static bool
+_vk_listbox_item_skipped(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t   *item = _vk_listbox_item_at(listbox, idx);
+
+    if(item == NULL) return false;
+
+    return item->separator_style > 0 || (item->flags & VK_ITEM_INACTIVE);
+}
+
+/* see vdk.h.  Deactivating the current item moves the selection off it,
+   to the next selectable row or else the previous one. */
+int
+vk_listbox_set_item_active(vk_listbox_t *listbox, int idx, bool active)
+{
+    vk_item_t   *item = _vk_listbox_item_at(listbox, idx);
+
+    if(item == NULL) return -1;
+
+    if(active)
+    {
+        item->flags &= ~VK_ITEM_INACTIVE;
+        return 0;
+    }
+
+    item->flags |= VK_ITEM_INACTIVE;
+
+    if(idx == listbox->curr_item)
+    {
+        vk_listbox_set_next(listbox);
+        if(idx == listbox->curr_item) vk_listbox_set_prev(listbox);
+    }
+
+    return 0;
+}
+
+bool
+vk_listbox_item_is_active(vk_listbox_t *listbox, int idx)
+{
+    vk_item_t   *item = _vk_listbox_item_at(listbox, idx);
+
+    return item != NULL && !(item->flags & VK_ITEM_INACTIVE);
+}
+
+int
+vk_listbox_set_inactive_colors(vk_listbox_t *listbox, int fg, int bg,
+    attr_t attrs)
+{
+    if(listbox == NULL) return -1;
+
+    listbox->inactive_fg = fg;
+    listbox->inactive_bg = bg;
+    listbox->inactive_attrs = attrs;
+
+    return 0;
+}
+
 /* Give one row its own colors and attributes, e.g. a dimmed read-only
    setting.  fg or bg of -1 keeps the widget's color for that half.  The
    selection highlight still wins on the current row.  Pass fg == -1,
@@ -467,6 +526,9 @@ vk_listbox_set_curr(vk_listbox_t *listbox, int idx)
     if(listbox == NULL) return -1;
     if(idx < 0 || idx >= listbox->item_count) return -1;
 
+    /* an inactive item cannot hold the selection */
+    if(!vk_listbox_item_is_active(listbox, idx)) return -1;
+
     listbox->curr_item = idx;
     _vk_listbox_ensure_visible(listbox);
 
@@ -479,6 +541,12 @@ inline int
 vk_listbox_exec_curr(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return -1;
+
+    /* the selection can only be on an inactive item if it was made
+       inactive with nowhere else to go; it still must not run */
+    if(listbox->item_count > 0
+        && !vk_listbox_item_is_active(listbox, listbox->curr_item))
+        return -1;
 
     vk_object_emit(VK_OBJECT(listbox), VK_EVENT_ON_ACTIVATE);
 
@@ -509,7 +577,7 @@ vk_listbox_set_next(vk_listbox_t *listbox)
 
         if(idx == listbox->curr_item) return 0;
     }
-    while(vk_listbox_item_is_separator(listbox, idx));
+    while(_vk_listbox_item_skipped(listbox, idx));
 
     listbox->curr_item = idx;
     _vk_listbox_ensure_visible(listbox);
@@ -543,7 +611,7 @@ vk_listbox_set_prev(vk_listbox_t *listbox)
 
         if(idx == listbox->curr_item) return 0;
     }
-    while(vk_listbox_item_is_separator(listbox, idx));
+    while(_vk_listbox_item_skipped(listbox, idx));
 
     listbox->curr_item = idx;
     _vk_listbox_ensure_visible(listbox);
@@ -687,6 +755,10 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
     listbox->blur_hl_fg  = -1;
     listbox->blur_hl_bg  = -1;
     listbox->is_focused  = true;        /* default: behave as focused */
+
+    listbox->inactive_fg = -1;
+    listbox->inactive_bg = -1;
+    listbox->inactive_attrs = A_DIM;
 
     listbox->ctor = _vk_listbox_ctor;
     listbox->dtor = _vk_listbox_dtor;
@@ -1102,13 +1174,30 @@ _vk_listbox_update(vk_listbox_t *listbox)
                 else marker = NULL;
             }
 
-            if(item->has_colors)
+            bool        own_colors = false;
+
+            /* inactive wins over the row's own colors: the point is to
+               look unavailable */
+            if(item->flags & VK_ITEM_INACTIVE)
+            {
+                short item_pair = vdk_color_pair(
+                    listbox->inactive_fg == -1
+                        ? widget->fg : listbox->inactive_fg,
+                    listbox->inactive_bg == -1
+                        ? widget->bg : listbox->inactive_bg);
+
+                wattr_set(widget->canvas, listbox->inactive_attrs,
+                    item_pair, NULL);
+                own_colors = true;
+            }
+            else if(item->has_colors)
             {
                 short item_pair = vdk_color_pair(
                     item->fg == -1 ? widget->fg : item->fg,
                     item->bg == -1 ? widget->bg : item->bg);
 
                 wattr_set(widget->canvas, item->attrs, item_pair, NULL);
+                own_colors = true;
             }
 
             vdk_put_text_cols(widget->canvas, y, x, item->name, text_w);
@@ -1120,7 +1209,7 @@ _vk_listbox_update(vk_listbox_t *listbox)
                     marker, mw);
             }
 
-            if(item->has_colors)
+            if(own_colors)
                 wattr_set(widget->canvas, widget->attrs, pair, NULL);
         }
 

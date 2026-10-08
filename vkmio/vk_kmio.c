@@ -187,6 +187,8 @@ vk_kmio_init(int fd, uint32_t flags)
 
     if(flags & VK_KMIO_MOUSE)
     {
+        const char  *kmous = tigetstr("kmous");
+
         /* mask 0 on purpose: we decode SGR mouse reports ourselves off
            the bytes ncurses leaks (see vk_kmio_fetch).  With a non-zero
            mask ncurses instead cooks the report, and its decoder masks
@@ -197,10 +199,23 @@ vk_kmio_init(int fd, uint32_t flags)
            every motion event, 1000h reports button events only. */
         mousemask(0, NULL);
 
-        if(flags & VK_KMIO_MOUSE_HOVER)
-            _vk_kmio_write(fd, "\033[?1003h\033[?1006h");
-        else
-            _vk_kmio_write(fd, "\033[?1000h\033[?1006h");
+        /* only ask for reports the current terminal type can hand back:
+           fetch relies on ncurses turning the SGR introducer into
+           KEY_MOUSE, which it does only when the type's kmous is
+           exactly \033[< (the xterm family).  Any other type -- "linux"
+           and screen/tmux/rxvt have kmous=\033[M -- would pass every
+           report through as loose keystrokes, and with hover tracking
+           that is a flood on each mouse move.  That mismatch is real
+           after an adopt: a screen driven as "linux" can be sitting on
+           an xterm.  No reports beats garbage. */
+        if(kmous != NULL && kmous != (char *)-1
+            && strcmp(kmous, "\033[<") == 0)
+        {
+            if(flags & VK_KMIO_MOUSE_HOVER)
+                _vk_kmio_write(fd, "\033[?1003h\033[?1006h");
+            else
+                _vk_kmio_write(fd, "\033[?1000h\033[?1006h");
+        }
     }
 
     return 0;
@@ -430,6 +445,19 @@ vk_kmio_fetch(MEVENT *mouse_event)
                     match = 0;
                     break;
                 }
+                /* a key code (KEY_MOUSE, KEY_RESIZE, an arrow...) is
+                   the start of the NEXT event, not more of this ESC:
+                   with hover tracking a mouse report can land right
+                   behind a lone ESC.  Hand it back so the next fetch
+                   sees it whole; swallowing it here left the report's
+                   body in the queue to be read as typed characters,
+                   and turned the ESC into something else. */
+                if(c > 255)
+                {
+                    ungetch(c);
+                    match = 0;
+                    break;
+                }
                 tmp[n++] = c;
                 if(c != (unsigned char)start[i])
                 {
@@ -482,6 +510,12 @@ vk_kmio_fetch(MEVENT *mouse_event)
             shift_op = shift_op << 1;
             key_code = getch();
             if(key_code == -1) break;
+            /* same as above: a key code belongs to the next event */
+            if(key_code > 255)
+            {
+                ungetch(key_code);
+                break;
+            }
             keystroke |= (key_code << shift_op);
         }
         while(shift_op < 24);
@@ -515,6 +549,15 @@ vk_kmio_mouse_drain(MEVENT *mouse_event)
 #else
     (void)mouse_event;
     return -1;
+#endif
+}
+
+/* see vkmio.h -- forget the GPM connection and why it was unavailable. */
+void
+vk_kmio_gpm_reset(void)
+{
+#if !defined(_NO_GPM) && defined(__linux)
+    vk_kmio_gpm(NULL, VK_GPM_CMD_CLOSE);
 #endif
 }
 
@@ -567,6 +610,21 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     if(mouse_event == NULL) return -1;
 
     if(mio_dropped) return -1;
+
+    /* an xterm-type terminal has no GPM.  Decide that here rather than
+       let Gpm_Open do it: in its xterm mode libgpm writes mouse-enable
+       escapes to stdout, which after an adopt is no longer the terminal
+       the screen is on.  Latched like a drop; VK_GPM_CMD_CLOSE clears
+       it, so a later adopt onto a console is retried. */
+    {
+        const char *term = getenv("TERM");
+
+        if(term != NULL && strncmp(term, "xterm", 5) == 0)
+        {
+            mio_dropped = true;
+            return -1;
+        }
+    }
 
     if(gpm_fd == -2 || (gpm_fd == -1 && gpm_tried == TRUE)) return -1;
 

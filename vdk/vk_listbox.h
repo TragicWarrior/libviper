@@ -45,6 +45,11 @@ struct _vk_listbox_s
     /* marker drawn at the right edge of submenu rows; NULL = default */
     char                *submenu_marker;
 
+    /* how inactive items (VK_ITEM_INACTIVE) are drawn; -1 = widget's */
+    int                 inactive_fg;
+    int                 inactive_bg;
+    attr_t              inactive_attrs;
+
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
