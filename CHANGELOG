@@ -1,3 +1,13 @@
+Version 7.8.3
+
+vkmio
+* [Bryan Christ] A GPM connection that the daemon drops is forgotten.
+  gpm closes a client that does not own the virtual console it asked
+  for (a program under dtach or screen asks for VC 0); libgpm then
+  closes the socket, but vkmio kept its own copy of the descriptor and
+  polled it on every fetch -- a closed fd, or whatever later reused
+  that number.  The mouse is not retried.
+
 Version 7.8.2
 
 build
