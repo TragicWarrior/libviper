@@ -50,24 +50,45 @@ vk_screen_noscroll_cleanup(void)
     if(system(cmd) != 0) return;                        /* best effort */
 }
 
+/*
+    The no-scroll variant of terminal type `base` (NULL: $TERM), built
+    on first use and cached per type -- an adopt can move the screen to
+    a terminal of a different type, so one cached name is not enough.
+    Returns NULL when the entry cannot be built; callers fall back to
+    the plain type.
+*/
 static const char *
-vk_screen_noscroll_term(void)
+vk_screen_noscroll_term(const char *base)
 {
     static char     name[128];
+    static char     built_for[96];
     static int      state = 0;              /* 0 untried, 1 ready, -1 failed */
-    const char      *base;
+    static bool     have_dir = false;
     char            src[192];
     char            cmd[512];
     FILE            *f;
 
-    if(state != 0) return (state == 1) ? name : NULL;
-    state = -1;                             /* pessimistic until it works */
-
-    base = getenv("TERM");
+    if(base == NULL) base = getenv("TERM");
     if(base == NULL || base[0] == '\0') return NULL;
+    if(strlen(base) >= sizeof(built_for)) return NULL;
 
-    if(mkdtemp(vk_noscroll_dir) == NULL) return NULL;
-    atexit(vk_screen_noscroll_cleanup);
+    if(state != 0 && strcmp(base, built_for) == 0)
+        return (state == 1) ? name : NULL;
+
+    state = -1;                             /* pessimistic until it works */
+    snprintf(built_for, sizeof(built_for), "%s", base);
+
+    /* only [A-Za-z0-9+._-]: the name goes into a shell command below */
+    if(base[strspn(base, "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+._-")] != '\0')
+        return NULL;
+
+    if(!have_dir)
+    {
+        if(mkdtemp(vk_noscroll_dir) == NULL) return NULL;
+        atexit(vk_screen_noscroll_cleanup);
+        have_dir = true;
+    }
 
     snprintf(name, sizeof(name), "%s-vknoscroll", base);
     snprintf(src, sizeof(src), "%s/entry.src", vk_noscroll_dir);
@@ -81,10 +102,12 @@ vk_screen_noscroll_term(void)
         name, base);
     fclose(f);
 
-    /* tic resolves use=$TERM from the system db (TERMINFO not set yet), then
-       we point ncurses at the private dir for the self-contained result */
+    /* tic resolves use=<base> from the system db -- run it without our
+       TERMINFO so a second type still resolves there -- then we point
+       ncurses at the private dir for the self-contained result */
     snprintf(cmd, sizeof(cmd),
-        "tic -x -o '%s' '%s' >/dev/null 2>&1", vk_noscroll_dir, src);
+        "env -u TERMINFO tic -x -o '%s' '%s' >/dev/null 2>&1",
+        vk_noscroll_dir, src);
     if(system(cmd) != 0) return NULL;
 
     setenv("TERMINFO", vk_noscroll_dir, 1);
@@ -527,6 +550,27 @@ vk_screen_refresh(vk_screen_t *screen)
 inline int
 vk_screen_teleport(vk_screen_t *screen, const char *pty)
 {
+    if(pty == NULL) return -1;
+
+    return vk_screen_adopt(screen, pty, NULL);
+}
+
+/*
+    Move the screen onto terminal `pty`, driven as terminal type `term`.
+
+    pty  == NULL: stay on the current terminal and only rebuild the
+                  ncurses SCREEN (the terminal behind it changed type,
+                  e.g. a dtach session reattached from elsewhere).
+    term == NULL: keep the current type ($TERM).
+
+    The caller owns the environment: set TERM first when other code
+    (libgpm, widgets) should see the new type too.  Emits
+    VK_EVENT_ON_TELEPORT on success, like vk_screen_teleport.
+*/
+inline int
+vk_screen_adopt(vk_screen_t *screen, const char *pty, const char *term)
+{
+    bool            in_place = (pty == NULL);
     SCREEN          *new_term;
     SCREEN          *old_term;
     FILE            *new_out;
@@ -537,45 +581,71 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     int             i;
     int             j;
 
-    if(screen == NULL || pty == NULL) return -1;
+    if(screen == NULL) return -1;
 
-    if(screen->evicted_pid > 0)
+    if(in_place)
     {
-        if(screen->has_saved_termios && screen->fd_out != NULL)
-            tcsetattr(fileno(screen->fd_out), TCSANOW,
-                &screen->saved_termios);
+        /* same terminal, same FILEs.  Leave curses mode on the old
+           SCREEN first: its endwin() and the new SCREEN's init strings
+           go to the same fd, and the old one has to finish before the
+           new one starts or its rmcup would undo the new smcup. */
+        new_out = screen->fd_out;
+        new_in = screen->fd_in;
+        if(new_out == NULL || new_in == NULL) return -1;
 
-        kill(screen->evicted_pid, SIGCONT);
-        kill(screen->evicted_pid, SIGINT);
+        set_term(screen->term);
+        endwin();
     }
-
-    screen->evicted_pid = _vk_screen_evict_pty(pty);
-
-    new_out = fopen(pty, "w");
-    if(new_out == NULL) return -1;
-
-    new_in = fopen(pty, "r");
-    if(new_in == NULL)
-    {
-        fclose(new_out);
-        return -1;
-    }
-
-    if(tcgetattr(fileno(new_out), &screen->saved_termios) == 0)
-        screen->has_saved_termios = true;
     else
-        screen->has_saved_termios = false;
+    {
+        if(screen->evicted_pid > 0)
+        {
+            if(screen->has_saved_termios && screen->fd_out != NULL)
+                tcsetattr(fileno(screen->fd_out), TCSANOW,
+                    &screen->saved_termios);
+
+            kill(screen->evicted_pid, SIGCONT);
+            kill(screen->evicted_pid, SIGINT);
+        }
+
+        screen->evicted_pid = _vk_screen_evict_pty(pty);
+
+        new_out = fopen(pty, "w");
+        if(new_out == NULL) return -1;
+
+        new_in = fopen(pty, "r");
+        if(new_in == NULL)
+        {
+            fclose(new_out);
+            return -1;
+        }
+
+        if(tcgetattr(fileno(new_out), &screen->saved_termios) == 0)
+            screen->has_saved_termios = true;
+        else
+            screen->has_saved_termios = false;
+    }
 
     {
-        const char *nst = vk_screen_noscroll_term();
+        const char *nst = vk_screen_noscroll_term(term);
         new_term = newterm((char *)nst, new_out, new_in);
         if(new_term == NULL && nst != NULL)     /* stripped entry didn't load */
-            new_term = newterm(NULL, new_out, new_in);
+            new_term = newterm((char *)term, new_out, new_in);
     }
     if(new_term == NULL)
     {
-        fclose(new_in);
-        fclose(new_out);
+        if(in_place)
+        {
+            /* still on the old SCREEN; a refresh resumes curses mode */
+            set_term(screen->term);
+            clearok(stdscr, TRUE);
+            wrefresh(stdscr);
+        }
+        else
+        {
+            fclose(new_in);
+            fclose(new_out);
+        }
         return -1;
     }
 
@@ -617,20 +687,23 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
        (\033[M... / \033[<...).  Clear the whole tracking family
        (1000/1002/1003 + 1006 SGR): ?1003l alone leaves button/wheel
        reporting armed on many terminals.  Mirrors vk_kmio_shutdown. */
-    if(old_out != NULL)
+    if(!in_place)
     {
-        fputs("\033[?1000l\033[?1002l\033[?1003l\033[?1006l", old_out);
-        fflush(old_out);
+        if(old_out != NULL)
+        {
+            fputs("\033[?1000l\033[?1002l\033[?1003l\033[?1006l", old_out);
+            fflush(old_out);
+        }
+
+        set_term(old_term);
+        endwin();
+
+        if(old_in != stdin && old_in != NULL)
+            fclose(old_in);
+
+        if(old_out != stdout && old_out != NULL)
+            fclose(old_out);
     }
-
-    set_term(old_term);
-    endwin();
-
-    if(old_in != stdin && old_in != NULL)
-        fclose(old_in);
-
-    if(old_out != stdout && old_out != NULL)
-        fclose(old_out);
 
     set_term(screen->term);
     clearok(stdscr, TRUE);
@@ -788,7 +861,7 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
     setlocale(LC_CTYPE, "");
 
     {
-        const char *nst = vk_screen_noscroll_term();
+        const char *nst = vk_screen_noscroll_term(NULL);
         screen->term = newterm((char *)nst, screen->fd_out, screen->fd_in);
         if(screen->term == NULL && nst != NULL) /* stripped entry didn't load */
             screen->term = newterm(NULL, screen->fd_out, screen->fd_in);

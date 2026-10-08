@@ -132,6 +132,9 @@ short           vdk_color_pair(short fg, short bg);
 #define VK_FLAG_ALLOW_WRAP          (1 << 1)
 #define VK_FLAG_FULL_WIDTH          (1 << 2)
 
+/* vk_item_t flags -- the item record shared by the list widgets */
+#define VK_ITEM_INACTIVE            (1 << 0)    /* shown, but not selectable */
+
 /* item flags */
 #define VK_ITEM_CHECKED             (1 << 0)
 
@@ -319,6 +322,8 @@ int             vk_screen_detach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_resize(vk_screen_t *screen);
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
+int             vk_screen_adopt(vk_screen_t *screen, const char *pty,
+                    const char *term);
 int             vk_screen_set_wallpaper(vk_screen_t *screen,
                     VkSurfaceBkgdFunc func);
 int             vk_screen_set_overlay(vk_screen_t *screen,
@@ -408,7 +413,8 @@ bool            vk_listbox_item_has_submenu(vk_listbox_t *listbox, int idx);
    vdk_has_utf8() is false. */
 int             vk_listbox_set_submenu_marker(vk_listbox_t *listbox,
                     const char *marker);
-/* true when the locale is UTF-8 and TERM is not the bare Linux console */
+/* true when the locale is UTF-8 and TERM is not the bare Linux console.
+   evaluated on every call, so it follows the terminal after an adopt */
 bool            vdk_has_utf8(void);
 int             vk_listbox_set_item(vk_listbox_t *listbox, int idx,
                     char *item, VkWidgetFunc func, void *anything);
@@ -428,6 +434,18 @@ int             vk_listbox_exec_curr(vk_listbox_t *listbox);
 int             vk_listbox_set_next(vk_listbox_t *listbox);
 int             vk_listbox_set_prev(vk_listbox_t *listbox);
 bool            vk_listbox_item_is_separator(vk_listbox_t *listbox, int idx);
+/* An inactive item is drawn in the inactive colors and cannot be
+   reached: next/prev step over it, set_curr refuses it and exec_curr
+   will not run it.  Check item_is_active before acting on a row picked
+   by position (a mouse click) -- a refused set_curr leaves the old
+   current item in place.  Items are active by default. */
+int             vk_listbox_set_item_active(vk_listbox_t *listbox, int idx,
+                    bool active);
+bool            vk_listbox_item_is_active(vk_listbox_t *listbox, int idx);
+/* colors for inactive items; fg or bg of -1 keeps the widget's color
+   for that half.  Default: the widget's colors with A_DIM. */
+int             vk_listbox_set_inactive_colors(vk_listbox_t *listbox,
+                    int fg, int bg, attr_t attrs);
 int             vk_listbox_get_metrics(vk_listbox_t *listbox,
                     int *width, int *height);
 int             vk_listbox_update(vk_listbox_t *listbox);
