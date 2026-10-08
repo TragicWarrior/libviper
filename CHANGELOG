@@ -1,3 +1,13 @@
+Version 7.9.0
+
+vkmio
+* [Bryan Christ] VK_GPM_VC names the virtual console to ask gpm for.
+  libgpm derives the console from the tty name, which fails on a pty:
+  a program under dtach or screen asks for VC 0 and the daemon drops
+  it.  A launcher that still sees the real console can export
+  VK_GPM_VC (1-63) and vkmio passes it to Gpm_Open.  Unset or invalid,
+  the console is derived from the tty name as before.
+
 Version 7.8.3
 
 vkmio

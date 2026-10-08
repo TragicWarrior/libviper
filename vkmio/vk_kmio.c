@@ -519,6 +519,29 @@ vk_kmio_mouse_drain(MEVENT *mouse_event)
 }
 
 #if !defined(_NO_GPM) && defined(__linux)
+/*
+    The virtual console to ask gpm for.  Gpm_Open(conn, 0) derives it
+    from the tty name, which only works on the console itself: under
+    dtach or screen the tty is a pty, the name parses as VC 0, and the
+    daemon drops a client that does not own /dev/tty0.  A launcher that
+    still sees the real console can export VK_GPM_VC (1-63) to name it.
+    Unset or invalid returns 0 -- let libgpm work it out, as before.
+*/
+static int
+_vk_kmio_gpm_vc(void)
+{
+    const char  *env = getenv("VK_GPM_VC");
+    char        *end;
+    long        vc;
+
+    if(env == NULL || *env == '\0') return 0;
+
+    vc = strtol(env, &end, 10);
+    if(*end != '\0' || vc < 1 || vc > 63) return 0;
+
+    return (int)vc;
+}
+
 int
 vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 {
@@ -557,7 +580,7 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
         gpm_connect.defaultMask = 0;
         gpm_connect.eventMask = GPM_MOVE | GPM_UP | GPM_DOWN | GPM_DRAG;
         gpm_connect.maxMod = ~0;
-        mio_fd = Gpm_Open(&gpm_connect, 0);
+        mio_fd = Gpm_Open(&gpm_connect, _vk_kmio_gpm_vc());
 
         if(mio_fd > 0 && (vk_kmio_flags & VK_KMIO_GPM_SIGIO))
         {
