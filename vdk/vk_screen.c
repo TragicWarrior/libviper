@@ -355,7 +355,18 @@ vk_screen_get_input_fd(vk_screen_t *screen)
 {
     if(screen == NULL || screen->fd_in == NULL) return -1;
 
+    /* detached: the "terminal" is the null device, which a poll()
+       reports as readable for ever.  Nothing can arrive on it. */
+    if(screen->detached) return -1;
+
     return fileno(screen->fd_in);
+}
+
+/* see vdk.h */
+inline bool
+vk_screen_is_detached(vk_screen_t *screen)
+{
+    return screen != NULL && screen->detached;
 }
 
 inline int
@@ -576,10 +587,45 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     (widgets asking vdk_has_utf8) should see the new type too.  Emits
     VK_EVENT_ON_TELEPORT on success, like vk_screen_teleport.
 */
+static int
+_vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
+    bool detach);
+
 inline int
 vk_screen_adopt(vk_screen_t *screen, const char *pty, const char *term)
 {
+    return _vk_screen_move(screen, pty, term, false);
+}
+
+/* see vdk.h */
+inline int
+vk_screen_detach(vk_screen_t *screen)
+{
+    if(screen == NULL || screen->detached) return -1;
+
+    /* the null device stands in for a terminal: writes vanish, reads
+       find nothing, and it cannot hang up */
+    return _vk_screen_move(screen, "/dev/null", NULL, true);
+}
+
+/*
+    The one routine behind vk_screen_adopt and vk_screen_detach: put the
+    screen on `pty` (NULL: rebuild it where it is), driven as `term`
+    (NULL: the current type).
+
+    detach: `pty` is not a terminal but the place a detached screen
+    draws to.  Nobody is moved out of the way for it, and the screen
+    keeps the size it had -- a null device has no size to give, and
+    falling back to a default would shrink the screen and push the
+    caller's windows around while nobody is looking.
+*/
+static int
+_vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
+    bool detach)
+{
     bool            in_place = (pty == NULL);
+    int             keep_h = 0;
+    int             keep_w = 0;
     SCREEN          *new_term;
     SCREEN          *old_term;
     FILE            *new_out;
@@ -591,6 +637,15 @@ vk_screen_adopt(vk_screen_t *screen, const char *pty, const char *term)
     int             j;
 
     if(screen == NULL) return -1;
+
+    /* there is nothing to rebuild in place when on no terminal */
+    if(in_place && screen->detached) return -1;
+
+    if(detach)
+    {
+        keep_h = screen->height;
+        keep_w = screen->width;
+    }
 
     if(in_place)
     {
@@ -617,7 +672,9 @@ vk_screen_adopt(vk_screen_t *screen, const char *pty, const char *term)
             kill(screen->evicted_pid, SIGINT);
         }
 
-        screen->evicted_pid = _vk_screen_evict_pty(pty);
+        /* take the new terminal from whoever has it -- unless this is a
+           detach, where there is nobody to take it from */
+        screen->evicted_pid = detach ? -1 : _vk_screen_evict_pty(pty);
 
         new_out = fopen(pty, "w");
         if(new_out == NULL) return -1;
@@ -660,6 +717,9 @@ vk_screen_adopt(vk_screen_t *screen, const char *pty, const char *term)
 
     set_term(new_term);
 
+    /* detached: carry the old size over (see above) */
+    if(detach && keep_h > 0 && keep_w > 0) resize_term(keep_h, keep_w);
+
     keypad(stdscr, TRUE);
     noecho();
     raw();
@@ -667,6 +727,8 @@ vk_screen_adopt(vk_screen_t *screen, const char *pty, const char *term)
     scrollok(stdscr, FALSE);
 
     getmaxyx(stdscr, screen->height, screen->width);
+
+    screen->detached = detach;
 
     old_term = screen->term;
     old_in = screen->fd_in;

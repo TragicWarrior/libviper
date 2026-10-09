@@ -318,8 +318,18 @@ WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_get_fd(vk_screen_t *screen);
 /* the descriptor the screen reads keys from, for an event loop to wait
    on.  It is not always vk_screen_get_fd(): after a teleport or adopt
-   the terminal is opened once for writing and once for reading. */
+   the terminal is opened once for writing and once for reading.
+   -1 while the screen is detached: there is nothing to wait for. */
 int             vk_screen_get_input_fd(vk_screen_t *screen);
+/* leave the terminal and keep running on none.  The terminal the screen
+   was on is let go completely -- its modes restored, its shell resumed,
+   this program's handles on it closed -- and the screen keeps its size
+   and everything on it, drawn to nowhere, until vk_screen_adopt() puts
+   it on a terminal again.  For a terminal that went away (hang-up) and
+   for detaching on purpose.  Emits VK_EVENT_ON_TELEPORT like an adopt.
+   Returns 0, or -1 (already detached, or the move failed). */
+int             vk_screen_detach(vk_screen_t *screen);
+bool            vk_screen_is_detached(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_detach_widget(vk_screen_t *screen,
