@@ -39,9 +39,13 @@ struct _vk_screen_s
     VkSurfaceBkgdFunc   wallpaper_func;
     VkSurfaceBkgdFunc   overlay_func;
 
-    pid_t               evicted_pid;
+    /* the modes of the terminal the screen moved onto, as they were
+       before it arrived; put back when it leaves */
     struct termios      saved_termios;
     bool                has_saved_termios;
+
+    /* true while the screen is on no terminal at all (vk_screen_detach) */
+    bool                detached;
 
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);

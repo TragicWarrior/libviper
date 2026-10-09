@@ -844,7 +844,7 @@ about_on_recreate(vk_object_t *object, int event, void *anything)
     mvwprintw(canvas, 7,  4, "d ........... switch surface");
     mvwprintw(canvas, 8,  4, "f ........... freeze marquee");
     mvwprintw(canvas, 9,  4, "h ........... toggle marquee");
-    mvwprintw(canvas, 10, 4, "t ........... teleport to PTY");
+    mvwprintw(canvas, 10, 4, "t ........... teleport to PTY (one running 'sleep 1d')");
     mvwprintw(canvas, 11, 4, "w ........... toggle deck overlay");
     mvwprintw(canvas, 12, 4, "q ........... quit");
 

@@ -306,6 +306,11 @@ int             vk_object_destroy(vk_object_t *object);
 
 /* vk_screen */
 vk_screen_t*    vk_screen_create(void);
+/* a screen that starts on no terminal: `width` x `height`, drawing to
+   nowhere, until vk_screen_adopt() puts it on one.  For a program that
+   runs in the background and is attached to a terminal later.  stdin
+   and stdout are not used.  Returns NULL if it cannot be created. */
+vk_screen_t*    vk_screen_create_detached(int width, int height);
 int             vk_screen_add_surface(vk_screen_t *screen);
 int             vk_screen_del_surface(vk_screen_t *screen, int id);
 int             vk_screen_set_surface(vk_screen_t *screen, int id);
@@ -318,13 +323,28 @@ WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_get_fd(vk_screen_t *screen);
 /* the descriptor the screen reads keys from, for an event loop to wait
    on.  It is not always vk_screen_get_fd(): after a teleport or adopt
-   the terminal is opened once for writing and once for reading. */
+   the terminal is opened once for writing and once for reading.
+   -1 while the screen is detached: there is nothing to wait for. */
 int             vk_screen_get_input_fd(vk_screen_t *screen);
+/* leave the terminal and keep running on none.  The terminal the screen
+   was on is let go completely -- its modes restored, this program's
+   handles on it closed -- and the screen keeps its size
+   and everything on it, drawn to nowhere, until vk_screen_adopt() puts
+   it on a terminal again.  For a terminal that went away (hang-up) and
+   for detaching on purpose.  Emits VK_EVENT_ON_TELEPORT like an adopt.
+   Returns 0, or -1 (already detached, or the move failed). */
+int             vk_screen_detach(vk_screen_t *screen);
+bool            vk_screen_is_detached(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_detach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_resize(vk_screen_t *screen);
+/* move the screen onto terminal `pty` (NULL: rebuild it where it is),
+   driven as type `term` (NULL: keep the type).  Nothing running on the
+   target is moved out of the way: the caller sees to it that whatever
+   was reading that terminal is waiting on something else.  teleport is
+   the older name for adopt with the type unchanged. */
 int             vk_screen_teleport(vk_screen_t *screen, const char *pty);
 int             vk_screen_adopt(vk_screen_t *screen, const char *pty,
                     const char *term);

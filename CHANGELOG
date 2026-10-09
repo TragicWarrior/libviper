@@ -1,3 +1,36 @@
+Version 9.0.0
+
+vdk
+* [Bryan Christ] A screen no longer needs a terminal, and no longer
+  takes one by force.
+
+  New:
+    - vk_screen_detach(screen): leave the terminal and keep running on
+      none.  The terminal gets its modes back and the library's
+      handles on it are closed; the screen keeps its size and
+      everything on it, drawn to the null device, until
+      vk_screen_adopt() puts it on a terminal again.
+    - vk_screen_create_detached(width, height): a screen that is on no
+      terminal from birth, for a program that runs in the background
+      and is attached later.
+    - vk_screen_is_detached(screen).  vk_screen_get_input_fd() returns
+      -1 while detached.
+
+  Changed (the reason for the major version):
+    - vk_screen_adopt() and vk_screen_teleport() no longer find the
+      session leader of the target terminal and SIGSTOP it, and no
+      longer SIGCONT/SIGINT it on leaving.  The caller sees to it that
+      whatever was reading that terminal is waiting on something else
+      -- typically a small foreground program that asked for the move
+      and stays until the screen leaves.  The utmpx and /proc lookups
+      that served this are gone.
+    - The terminal a screen leaves gets back the termios it had when
+      the screen arrived.
+    - Terminals are opened close-on-exec.
+
+  The shared library is now libvdk.so.9; programs built against 8.x
+  need a rebuild.
+
 Version 8.2.0
 
 vkmio
