@@ -316,6 +316,10 @@ int             vk_screen_set_surface_bkgd(vk_screen_t *screen,
 int             vk_screen_apply_stdscr_bkgd(vk_screen_t *screen);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
 int             vk_screen_get_fd(vk_screen_t *screen);
+/* the descriptor the screen reads keys from, for an event loop to wait
+   on.  It is not always vk_screen_get_fd(): after a teleport or adopt
+   the terminal is opened once for writing and once for reading. */
+int             vk_screen_get_input_fd(vk_screen_t *screen);
 int             vk_screen_attach_widget(vk_screen_t *screen,
                     int surface_id, vk_widget_t *widget);
 int             vk_screen_detach_widget(vk_screen_t *screen,

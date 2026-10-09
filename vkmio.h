@@ -13,6 +13,12 @@
 #define VK_KMIO_MOUSE_HOVER    (1 << 1)
 #define VK_KMIO_GPM_SIGIO      (1 << 2)
 #define VK_KMIO_BRACKET_PASTE  (1 << 3)
+/* the caller does the waiting.  Without this flag vk_kmio_fetch() may
+   pause briefly (1ms on the GPM socket) when nothing is pending, which
+   paces a caller that simply loops on it.  A caller with its own event
+   loop sets this flag, gets an immediate answer every time, and sleeps
+   on the descriptors itself: the terminal's, and vk_kmio_gpm_fd(). */
+#define VK_KMIO_NOWAIT         (1 << 4)
 
 /* vk_kmio_fetch() return when a host bracketed-paste payload is ready.
    retrieve it with vk_kmio_get_paste() before the next fetch. */
@@ -47,6 +53,13 @@ int         vk_kmio_mouse_drain(MEVENT *mouse_event);
    handed a different fd; call it when the terminal changed behind the
    same fd.  a no-op without GPM. */
 void        vk_kmio_gpm_reset(void);
+
+/* the gpm daemon socket, or -1 when there is no GPM connection.  For an
+   event loop to wait on (readable = a mouse event is pending); read it
+   only through vk_kmio_fetch().  The connection is made on the first
+   fetch and can come and go (console change, daemon restart), so ask
+   again after a fetch rather than keeping the value. */
+int         vk_kmio_gpm_fd(void);
 
 #if !defined(_NO_GPM) && defined(__linux)
 int         vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd);

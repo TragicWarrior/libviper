@@ -349,6 +349,15 @@ vk_screen_get_fd(vk_screen_t *screen)
     return fileno(screen->fd_out);
 }
 
+/* see vdk.h */
+inline int
+vk_screen_get_input_fd(vk_screen_t *screen)
+{
+    if(screen == NULL || screen->fd_in == NULL) return -1;
+
+    return fileno(screen->fd_in);
+}
+
 inline int
 vk_screen_attach_widget(vk_screen_t *screen, int surface_id,
     vk_widget_t *widget)
