@@ -25,22 +25,28 @@
 #define VK_GPM_SOCKET       "/dev/gpmctl"
 
 /* event.buttons */
-#define GPM_B_DOWN          32
-#define GPM_B_UP            16
-#define GPM_B_FOURTH        8
-#define GPM_B_LEFT          4
-#define GPM_B_MIDDLE        2
-#define GPM_B_RIGHT         1
+#define GPM_B_RIGHT         (1 << 0)    // 1
+#define GPM_B_MIDDLE        (1 << 1)    // 2
+#define GPM_B_LEFT          (1 << 2)    // 4
+#define GPM_B_FOURTH        (1 << 3)    // 8
+#define GPM_B_UP            (1 << 4)    // 16
+#define GPM_B_DOWN          (1 << 5)    // 32
 
 /* event.type, and the masks in the connect record */
-#define GPM_MOVE            1
-#define GPM_DRAG            2
-#define GPM_DOWN            4
-#define GPM_UP              8
-#define GPM_SINGLE          16
-#define GPM_DOUBLE          32
-#define GPM_TRIPLE          64
-#define GPM_MFLAG           128     /* motion during the click */
+#define GPM_MOVE            (1 << 0)    // 1
+#define GPM_DRAG            (1 << 1)    // 2
+#define GPM_DOWN            (1 << 2)    // 4
+#define GPM_UP              (1 << 3)    // 8
+/* (the daemon also sets single/double/triple-click bits 4/5/6 -- 16,
+   32, 64 -- and a "moved during the click" bit 7 -- 128.  they are not
+   read: a click is
+   reported as its press and its release, as an xterm reports it, and
+   double-clicks are a matter of timing for the caller -- vk_dblclick) */
+
+/* event.modifiers: the kernel's shift-state bits */
+#define VK_GPM_MOD_SHIFT    (1 << 0)    // 1
+#define VK_GPM_MOD_CTRL     (1 << 2)    // 4
+#define VK_GPM_MOD_ALT      (1 << 3)    // 8
 
 struct vk_gpm_connect_s
 {
@@ -71,37 +77,6 @@ _Static_assert(sizeof(struct vk_gpm_connect_s) == 16,
     "gpm connect record must be 16 bytes");
 _Static_assert(sizeof(struct vk_gpm_event_s) == 28,
     "gpm event record must be 28 bytes");
-
-#define X_GPM_RAW           0
-#define X_GPM_COOKED        1
-#define GPM_RAW_MASK        0x0f
-#define GPM_COOKED_BITS     (GPM_SINGLE | GPM_DOUBLE | GPM_TRIPLE)
-#define GPM_CLICK(x)        ((x & (GPM_COOKED_BITS)) && (x & GPM_UP))
-#define GPM_CLICK_STRICT(x) ((GPM_CLICK(x)) && !(x & GPM_MFLAG))
-
-#define  X_GPM(a,b,c,d)    a,
-static uint16_t x_gpm_mode[] = {
-#include "vk_gpm.def"
-};
-#undef   X_GPM
-
-#define  X_GPM(a,b,c,d)    b,
-static mmask_t x_ncurses_state[] = {
-#include "vk_gpm.def"
-};
-#undef   X_GPM
-
-#define  X_GPM(a,b,c,d)    c,
-static short x_gpm_button[] = {
-#include "vk_gpm.def"
-};
-#undef   X_GPM
-
-#define  X_GPM(a,b,c,d)    d,
-static unsigned short x_gpm_event[] = {
-#include "vk_gpm.def"
-};
-#undef   X_GPM
 
 #endif
 
@@ -270,7 +245,7 @@ vk_kmio_init(int fd, uint32_t flags)
         /* mask 0 on purpose: we decode SGR mouse reports ourselves off
            the bytes ncurses leaks (see vk_kmio_fetch).  With a non-zero
            mask ncurses instead cooks the report, and its decoder masks
-           the motion bit (0x20) off the button code -- surfacing SGR
+           the motion bit (bit 5) off the button code -- surfacing SGR
            motion as BUTTON1_RELEASED and SGR drag as BUTTON1_PRESSED,
            the misclassification that broke hover-highlight and drags
            over SSH.  1006h selects SGR encoding; 1003h (hover) reports
@@ -326,49 +301,77 @@ vk_kmio_shutdown(int fd)
     vk_kmio_flags = 0;
 }
 
-/* Decode an accumulated SGR mouse body into an MEVENT.  The body is
-   the "Cb;Cx;Cy" between the (already-stripped) \033[< introducer and
-   the terminator; the terminator ('M' = press/motion, 'm' = release)
-   is passed separately.
+/* the SGR button code ("Cb"): what one mouse event is.  the low two
+   bits pick the button unless a wheel or motion bit says otherwise. */
+#define VK_SGR_BUTTON_MASK  ((1 << 0) | (1 << 1))   // 3: 0, 1, 2 = button 1, 2, 3
+#define VK_SGR_NO_BUTTON    ((1 << 0) | (1 << 1))   // 3: motion with none held
+#define VK_SGR_WHEEL_DOWN   (1 << 0)                // 1: with VK_SGR_WHEEL: down, else up
+#define VK_SGR_SHIFT        (1 << 2)                // 4
+#define VK_SGR_ALT          (1 << 3)                // 8
+#define VK_SGR_CTRL         (1 << 4)                // 16
+#define VK_SGR_MOTION       (1 << 5)                // 32: hover or drag
+#define VK_SGR_WHEEL        (1 << 6)                // 64
 
-   In the Cb button byte: bit 6 (0x40) marks a wheel event, bit 5
-   (0x20) marks motion (hover or drag), the low two bits select the
-   button (0=1, 1=2, 2=3), and bits 2/3/4 are shift/meta/ctrl.  Because
-   the wire is self-describing -- motion is the 0x20 bit, release is the
-   'm' terminator -- there is nothing to infer: no held-state tracking,
-   no timestamps, no heuristics.  Cx/Cy are 1-based; MEVENT is 0-based.
+/*
+    THE mouse decoder: one mouse event, in xterm's SGR terms, into an
+    MEVENT.  Both sources end here -- an xterm's reports are parsed from
+    text by _vk_kmio_parse_sgr just below, the console's gpm records are
+    translated by _vk_kmio_gpm_translate -- so what a press, a release,
+    a drag or a wheel notch means to the caller is decided in exactly
+    one place, and the two cannot drift apart.
 
-   Returns true on a well-formed report. */
+    cb is the SGR button code (the VK_SGR_* bits above): bit 6 marks a
+    wheel event (bit 0 clear = up, set = down), bit 5 marks motion
+    (hover or drag alike), otherwise the low two bits select the button
+    (0 = 1, 1 = 2, 2 = 3) and `release` says which way it went.  Bits
+    2/3/4 are shift/alt/ctrl.  The event describes itself, so there is nothing
+    to infer: no held-button tracking, no timestamps, no click counting.
+    cx/cy are 1-based; MEVENT is 0-based.
+
+    Returns false for a code that is not a mouse event.
+*/
 static bool
-_vk_kmio_parse_sgr(const char *body, char term, MEVENT *m)
+_vk_kmio_decode_mouse(int cb, int cx, int cy, bool release, MEVENT *m)
 {
-    int     cb, cx, cy;
     mmask_t bstate;
 
     if(m == NULL) return false;
-    if(sscanf(body, "%d;%d;%d", &cb, &cx, &cy) != 3) return false;
 
-    if(cb & 0x40)                   /* wheel: 0x40|0 = up, 0x40|1 = down */
-        bstate = (cb & 0x01) ? BUTTON5_PRESSED : BUTTON4_PRESSED;
-    else if(cb & 0x20)              /* motion -- hover or drag alike */
+    if(cb & VK_SGR_WHEEL)           /* a wheel notch, up or down */
+        bstate = (cb & VK_SGR_WHEEL_DOWN) ? BUTTON5_PRESSED : BUTTON4_PRESSED;
+    else if(cb & VK_SGR_MOTION)     /* motion -- hover or drag alike */
         bstate = REPORT_MOUSE_POSITION;
-    else switch(cb & 0x03)          /* discrete press / release */
+    else switch(cb & VK_SGR_BUTTON_MASK)    /* discrete press / release */
     {
-        case 0:  bstate = (term == 'm') ? BUTTON1_RELEASED : BUTTON1_PRESSED; break;
-        case 1:  bstate = (term == 'm') ? BUTTON2_RELEASED : BUTTON2_PRESSED; break;
-        case 2:  bstate = (term == 'm') ? BUTTON3_RELEASED : BUTTON3_PRESSED; break;
-        default: return false;      /* low2 == 3 without the motion bit */
+        case 0:  bstate = release ? BUTTON1_RELEASED : BUTTON1_PRESSED; break;
+        case 1:  bstate = release ? BUTTON2_RELEASED : BUTTON2_PRESSED; break;
+        case 2:  bstate = release ? BUTTON3_RELEASED : BUTTON3_PRESSED; break;
+        default: return false;      /* "no button" without the motion bit */
     }
 
-    if(cb & 0x04) bstate |= BUTTON_SHIFT;
-    if(cb & 0x08) bstate |= BUTTON_ALT;
-    if(cb & 0x10) bstate |= BUTTON_CTRL;
+    if(cb & VK_SGR_SHIFT) bstate |= BUTTON_SHIFT;
+    if(cb & VK_SGR_ALT)   bstate |= BUTTON_ALT;
+    if(cb & VK_SGR_CTRL)  bstate |= BUTTON_CTRL;
 
     memset(m, 0, sizeof(*m));
     m->bstate = bstate;
     m->x = cx - 1;
     m->y = cy - 1;
     return true;
+}
+
+/* The xterm front end: an accumulated SGR report body, "Cb;Cx;Cy" (the
+   text between the already-stripped \033[< introducer and the
+   terminator), plus the terminator itself -- 'M' for press or motion,
+   'm' for release.  Returns true on a well-formed report. */
+static bool
+_vk_kmio_parse_sgr(const char *body, char term, MEVENT *m)
+{
+    int     cb, cx, cy;
+
+    if(sscanf(body, "%d;%d;%d", &cb, &cx, &cy) != 3) return false;
+
+    return _vk_kmio_decode_mouse(cb, cx, cy, term == 'm', m);
 }
 
 /* Accumulate the leaked SGR body bytes from the input queue into sgr_buf
@@ -747,6 +750,63 @@ _vk_kmio_gpm_connect(int vc)
 }
 
 /*
+    The console front end: one gpm event record, restated as the SGR
+    button code an xterm would have sent for the same thing, and handed
+    to _vk_kmio_decode_mouse.  Returns false for a record that is not a
+    mouse event we report (no button change, movement or wheel in it,
+    or a change of several buttons at once).
+
+    The order of the tests is the order of precedence: a wheel notch
+    first (some drivers deliver it together with a movement), then
+    movement, then a button going down or up.
+*/
+static bool
+_vk_kmio_gpm_translate(const struct vk_gpm_event_s *ev, MEVENT *m)
+{
+    int     cb;
+    bool    release = false;
+
+    if(ev->wdy > 0 || ev->buttons == GPM_B_UP || ev->buttons == GPM_B_FOURTH)
+    {
+        /* wheel up.  exps2/imps2 mice report scroll in wdy; the
+           GPM_B_UP/DOWN "buttons" are the legacy ms3 mechanism */
+        cb = VK_SGR_WHEEL;
+    }
+    else if(ev->wdy < 0 || ev->buttons == GPM_B_DOWN)
+    {
+        cb = VK_SGR_WHEEL | VK_SGR_WHEEL_DOWN;
+    }
+    else if(ev->type & (GPM_MOVE | GPM_DRAG))
+    {
+        /* motion; the decoder does not ask which button is held */
+        cb = VK_SGR_MOTION | VK_SGR_NO_BUTTON;
+    }
+    else if(ev->type & (GPM_DOWN | GPM_UP))
+    {
+        /* gpm names the one button that changed */
+        switch(ev->buttons)
+        {
+            case GPM_B_LEFT:    cb = 0; break;
+            case GPM_B_MIDDLE:  cb = 1; break;
+            case GPM_B_RIGHT:   cb = 2; break;
+            default:            return false;
+        }
+
+        release = (ev->type & GPM_UP) != 0;
+    }
+    else
+        return false;
+
+    /* modifier keys held at the time, into SGR's bits */
+    if(ev->modifiers & VK_GPM_MOD_SHIFT) cb |= VK_SGR_SHIFT;
+    if(ev->modifiers & VK_GPM_MOD_ALT)   cb |= VK_SGR_ALT;
+    if(ev->modifiers & VK_GPM_MOD_CTRL)  cb |= VK_SGR_CTRL;
+
+    /* gpm positions are 1-based, like SGR's */
+    return _vk_kmio_decode_mouse(cb, ev->x, ev->y, release, m);
+}
+
+/*
     The GPM half of the mouse input.  cmd 0 reads one event if there is
     one (waiting up to 1ms), VK_GPM_CMD_DRAIN reads one only if it is
     already queued, VK_GPM_CMD_CLOSE drops the connection.  Returns 0
@@ -758,9 +818,7 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     struct pollfd           mio_poll;
     struct vk_gpm_event_s   g_event;
     ssize_t                 got;
-    int                     array_sz;
     int                     vc;
-    int                     i;
 
     if(cmd == VK_GPM_CMD_CLOSE)
     {
@@ -814,56 +872,8 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
         return -1;
     }
 
-    memset(mouse_event, 0, sizeof(MEVENT));
-    mouse_event->bstate = g_event.modifiers;
-    mouse_event->x = g_event.x - 1;
-    mouse_event->y = g_event.y - 1;
-
-    array_sz = sizeof(x_ncurses_state) / sizeof(x_ncurses_state[0]);
-
-    if(!(GPM_CLICK_STRICT(g_event.type)))
-    {
-        for(i = 0; i < array_sz; i++)
-        {
-            if(x_gpm_mode[i] == X_GPM_COOKED) continue;
-            if(!(g_event.type & x_gpm_event[i])) continue;
-            if(g_event.buttons != x_gpm_button[i]) continue;
-
-            mouse_event->bstate |= x_ncurses_state[i];
-            break;
-        }
-    }
-
-    if(GPM_CLICK_STRICT(g_event.type))
-    {
-        for(i = 0; i < array_sz; i++)
-        {
-            if(x_gpm_mode[i] == X_GPM_RAW) continue;
-            if(!(g_event.type & x_gpm_event[i])) continue;
-            if(g_event.buttons != x_gpm_button[i]) continue;
-
-            mouse_event->bstate = x_ncurses_state[i];
-            break;
-        }
-    }
-
-    /* wheel: exps2/imps2 mice report scroll in wdy; the GPM_B_UP/DOWN
-       buttons are the legacy ms3 mechanism (kept as a fallback) */
-    if(g_event.wdy > 0 || g_event.buttons == GPM_B_UP ||
-        g_event.buttons == GPM_B_FOURTH)
-    {
-        mouse_event->bstate = BUTTON4_PRESSED;      /* wheel up   */
-    }
-    else if(g_event.wdy < 0 || g_event.buttons == GPM_B_DOWN)
-    {
-        mouse_event->bstate = BUTTON5_PRESSED;      /* wheel down */
-    }
-    else if((g_event.type & GPM_DRAG) || (g_event.type & GPM_MOVE))
-    {
-        mouse_event->bstate = REPORT_MOUSE_POSITION;
-    }
-
-    if(mouse_event->bstate == 0) return -1;
+    /* say what it was in the one vocabulary both sources share */
+    if(!_vk_kmio_gpm_translate(&g_event, mouse_event)) return -1;
 
     return 0;
 }
