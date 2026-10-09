@@ -42,8 +42,10 @@ const char *vk_kmio_get_paste(size_t *len);
 int         vk_kmio_mouse_drain(MEVENT *mouse_event);
 
 /* drop the GPM connection and forget why it was unavailable, so the
-   next fetch re-reads TERM and VK_GPM_VC and tries again.  call it after
-   the terminal behind the screen changed.  a no-op without GPM. */
+   next fetch works out the console again (VK_GPM_VC, else the tty given
+   to vk_kmio_init) and tries again.  vk_kmio_init does this itself when
+   handed a different fd; call it when the terminal changed behind the
+   same fd.  a no-op without GPM. */
 void        vk_kmio_gpm_reset(void);
 
 #if !defined(_NO_GPM) && defined(__linux)

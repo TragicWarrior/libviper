@@ -49,7 +49,8 @@ I/O
 
   - vkmio keyboard / mouse layer driven by write(2) on a
     caller-supplied fd (no stdio dependency)
-  - xterm 1003 any-event mouse tracking, GPM connection take-over,
+  - xterm 1003 any-event mouse tracking; Linux console mouse through
+    the gpm daemon, spoken to directly over its socket (no libgpm);
     GPM wheel handling, mouse zone / double-click / drag utilities,
     queued event coalescing
   - Widgets are I/O-agnostic; default handlers overridable via
@@ -73,7 +74,8 @@ REQUIREMENTS
 CMake
 ncursesw 5.4+
 
-Optional: libgpm (for system-console mouse support)
+Nothing extra is needed for the console mouse: it works when the gpm
+daemon is running, and is quietly absent when it is not.
 
 
 BUILDING

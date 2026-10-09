@@ -1,3 +1,43 @@
+Version 8.0.0
+
+Major version: the console mouse no longer goes through libgpm, and the
+library's dependencies and build change with it.  No function was
+removed or changed, but the shared library is now libvdk.so.8, as with
+earlier major versions, so programs built against libvdk.so.7 need a
+rebuild.  Programs that linked -lgpm only on libviper's behalf can drop
+it.
+
+vkmio
+* [Bryan Christ] libgpm is gone.  vkmio talks to the gpm daemon itself:
+  it connects to /dev/gpmctl, writes one connect record and reads
+  fixed-size event records.  The same step taken earlier for xterm
+  mouse reports, for the same reason -- the library in between made
+  assumptions that did not hold here.  With it go:
+    - the dependency: no gpm.h or libgpm at build time, no -lgpm; the
+      build no longer looks for GPM and cmake/FindGPM.cmake is removed
+      (define _NO_GPM to leave the support out);
+    - libgpm reading $TERM and writing escapes to stdout, and the
+      check that kept it from doing so on xterm-type terminals;
+    - libgpm's global state (gpm_fd, gpm_tried) and its SIGWINCH and
+      SIGTSTP handlers;
+    - the "Warning: closing connection" lines libgpm sent to syslog.
+* [Bryan Christ] The console is worked out by vkmio: VK_GPM_VC if set,
+  else the terminal passed to vk_kmio_init when that is /dev/ttyN.
+  With no console (an X terminal, SSH) no connection is attempted;
+  before, one was made and dropped by the daemon.
+* [Bryan Christ] vk_kmio_init restarts GPM when it is handed a
+  different fd, so a teleport or adopt picks up the new terminal's
+  console without the caller asking.
+* [Bryan Christ] The daemon socket is close-on-exec; child programs no
+  longer inherit it.
+
+vdk
+* [Bryan Christ] Teleporting or adopting back onto a terminal whose
+  session leader is the program itself no longer hangs.  The move
+  suspends the target terminal's session leader to take the terminal
+  over; when the program was started as the terminal's own command
+  that leader is the program, and it stopped itself.
+
 Version 7.10.0
 
 vdk
