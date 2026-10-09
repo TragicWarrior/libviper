@@ -32,7 +32,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
 # leave the support out.
 
-set(PROJECT_VERSION 8.0.0)
+set(PROJECT_VERSION 8.0.1)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
@@ -112,5 +112,39 @@ else()
     set(PKG_CONFIG_INSTALL_DIR "lib/pkgconfig")
 endif()
 install (FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION ${PKG_CONFIG_INSTALL_DIR})
+
+# Refresh the dynamic linker's cache after installing, so a new
+# libvdk.so.N is found straight away.  Without it a program linked
+# against a just-installed major version fails with "cannot open shared
+# object file" until someone runs ldconfig by hand.
+#
+# Skipped for a staged install (DESTDIR set: a packager installs into a
+# scratch root, and the package's own scripts run ldconfig on the real
+# system).  Never fatal: an install as a non-root user cannot write the
+# cache, and that is reported, not treated as a failed install.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(CODE [[
+        if(NOT "$ENV{DESTDIR}" STREQUAL "")
+            message(STATUS "DESTDIR is set: not running ldconfig")
+        else()
+            find_program(VDK_LDCONFIG ldconfig PATHS /sbin /usr/sbin)
+            if(NOT VDK_LDCONFIG)
+                message(STATUS "ldconfig not found: linker cache not refreshed")
+            else()
+                execute_process(COMMAND "${VDK_LDCONFIG}"
+                    RESULT_VARIABLE vdk_ldconfig_rc
+                    OUTPUT_QUIET ERROR_QUIET)
+                if(vdk_ldconfig_rc EQUAL 0)
+                    message(STATUS "Ran ldconfig")
+                else()
+                    message(WARNING
+                        "ldconfig could not refresh the linker cache "
+                        "(not root?).  Run 'sudo ldconfig' before using "
+                        "the newly installed library.")
+                endif()
+            endif()
+        endif()
+    ]])
+endif()
 
 add_subdirectory(demo)

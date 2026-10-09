@@ -87,7 +87,8 @@ sudo make install
 
 Installs libvdk.{a,so} to ${CMAKE_INSTALL_PREFIX}/lib, public headers
 vdk.h and vkmio.h to .../include, and a pkg-config file (libviper.pc)
-for downstream consumers.
+for downstream consumers.  On Linux the install then runs ldconfig, so
+the new library is found at once; a staged install (DESTDIR) skips it.
 
 
 DEMOS

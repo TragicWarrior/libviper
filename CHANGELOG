@@ -1,3 +1,12 @@
+Version 8.0.1
+
+build
+* [Bryan Christ] "make install" runs ldconfig on Linux.  A newly
+  installed libvdk.so.N was not in the dynamic linker's cache until
+  ldconfig was run by hand, so a program linked against it would not
+  start.  Skipped when DESTDIR is set (staged and package installs),
+  and a failure to write the cache is a warning, not a failed install.
+
 Version 8.0.0
 
 Major version: the console mouse no longer goes through libgpm, and the
