@@ -379,6 +379,9 @@ full-screen canvas (WINDOW) and an array of attached widgets.
 | `vk_screen_resize` | Handle terminal resize (updates all surface canvases) |
 | `vk_screen_poll_resize` | Poll actual terminal size via ioctl; calls resize if changed |
 | `vk_screen_teleport` | Migrate the entire UI to a different PTY |
+| `vk_screen_adopt` | The same, also naming the terminal type; NULL path rebuilds in place |
+| `vk_screen_detach` | Leave the terminal and keep running on none |
+| `vk_screen_create_detached` | Create a screen that starts on no terminal |
 | `vk_screen_set_wallpaper` | Register a wallpaper callback (`VkSurfaceBkgdFunc`) |
 | `vk_screen_set_overlay` | Register an overlay callback (same signature as wallpaper) |
 | `vk_screen_set_surface_bkgd` | Persist a `wbkgdset` value on a surface canvas; reapplied automatically after teleport |
@@ -475,26 +478,27 @@ support (e.g. GPM on the Linux console).
 ### Teleport
 
 `vk_screen_teleport(screen, pty_path)` migrates the UI to a different
-terminal. The sequence is:
+terminal.
 
-1. **Release previous PTY** -- if an earlier teleport evicted a shell,
-   restore that PTY's termios, SIGCONT the shell, and SIGINT it so
-   readline redraws a clean prompt.
-2. **Evict target PTY** -- find the session leader on the target PTY
-   and SIGSTOP it so our process can claim the terminal. Session leader
-   discovery uses utmpx (POSIX) with a `/proc` fallback for modern
-   terminal emulators that don't write utmpx entries.
-3. **Save termios** -- snapshot the target PTY's terminal attributes
+Nothing running on the target terminal is moved out of the way. The
+caller sees to it that whatever was reading that terminal (a shell) is
+waiting on something else, typically a small foreground program that
+asked for the move and stays until the screen leaves again. (Before
+9.0.0 the library found the terminal's session leader and suspended
+it.) The sequence is:
+
+1. **Open the target** -- for writing and for reading, close-on-exec.
+2. **Save termios** -- snapshot the target PTY's terminal attributes
    before ncurses changes them.
-4. **Create new SCREEN** -- open the PTY, call `newterm()`, initialize
+3. **Create new SCREEN** -- call `newterm()`, initialize
    colors/keypad/raw mode.
-5. **Recreate widgets** -- rebuild all surface canvases and widget trees
+4. **Recreate widgets** -- rebuild all surface canvases and widget trees
    on the new screen via `vk_widget_recreate()`.
-6. **Tear down old terminal** -- `endwin()` the old SCREEN, close old
-   file handles.
-7. **Drain input** -- flush stale terminal response bytes from the
+5. **Tear down old terminal** -- `endwin()` the old SCREEN, restore the
+   termios saved when the screen arrived there, close old file handles.
+6. **Drain input** -- flush stale terminal response bytes from the
    `newterm`/`keypad` initialization sequences.
-8. **Emit `VK_EVENT_ON_TELEPORT`** -- fires all handlers registered on
+7. **Emit `VK_EVENT_ON_TELEPORT`** -- fires all handlers registered on
    the screen object (e.g. to reinitialize colors via `vdk_color_init()`).
 
 Old ncurses WINDOWs are intentionally leaked during teleport because
@@ -503,8 +507,13 @@ state. The old SCREEN is shut down with `endwin()` but not `delscreen()`
 for the same reason. This is bounded: teleport is a rare operation and
 each invocation leaks only the previous set of canvases.
 
-On destroy, the screen performs the same PTY handoff: restore termios,
-SIGCONT, SIGINT.
+On destroy, the screen performs the same handoff: the terminal's
+termios are restored.
+
+`vk_screen_detach(screen)` is the same move with no target: the screen
+goes on drawing to the null device at the size it had.
+`vk_screen_create_detached(width, height)` starts a screen that way, for
+a program that runs in the background and is attached later.
 
 ### Post-Teleport Resize
 

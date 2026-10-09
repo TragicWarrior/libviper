@@ -4,10 +4,8 @@
 #include <unistd.h>
 #include <locale.h>
 #include <signal.h>
-#include <utmpx.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <dirent.h>
 
 #include "vdk.h"
 #include "vk_object.h"
@@ -128,9 +126,6 @@ _vk_surface_create(SCREEN *term, int width, int height);
 static void
 _vk_surface_destroy(vk_surface_t *surface);
 
-static pid_t
-_vk_screen_evict_pty(const char *pty);
-
 declare_klass(VK_SCREEN_KLASS)
 {
     .size = KLASS_SIZE(vk_screen_t),
@@ -139,12 +134,35 @@ declare_klass(VK_SCREEN_KLASS)
     .dtor = _vk_screen_dtor,
 };
 
+/* a screen on the terminal this program was started on (stdin/stdout) */
 inline vk_screen_t*
 vk_screen_create(void)
 {
     vk_screen_t *screen;
 
-    screen = (vk_screen_t *)vk_object_construct(VK_SCREEN_KLASS);
+    /* 0 x 0: not detached -- the terminal says how big it is */
+    screen = (vk_screen_t *)vk_object_construct(VK_SCREEN_KLASS, 0, 0);
+
+    return screen;
+}
+
+/* see vdk.h */
+inline vk_screen_t*
+vk_screen_create_detached(int width, int height)
+{
+    vk_screen_t *screen;
+
+    if(width < 1 || height < 1) return NULL;
+
+    screen = (vk_screen_t *)vk_object_construct(VK_SCREEN_KLASS,
+        width, height);
+
+    /* the constructor could not bring up curses: there is no screen */
+    if(screen != NULL && screen->term == NULL)
+    {
+        free(screen);
+        return NULL;
+    }
 
     return screen;
 }
@@ -567,6 +585,7 @@ vk_screen_refresh(vk_screen_t *screen)
     return 0;
 }
 
+/* the older name for vk_screen_adopt with the terminal type unchanged */
 inline int
 vk_screen_teleport(vk_screen_t *screen, const char *pty)
 {
@@ -586,6 +605,11 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     The caller owns the environment: set TERM first when other code
     (widgets asking vdk_has_utf8) should see the new type too.  Emits
     VK_EVENT_ON_TELEPORT on success, like vk_screen_teleport.
+
+    The caller also owns the terminal: nothing running there is moved
+    out of the way, so whatever was reading it (a shell) must already be
+    waiting on something else.  The terminal the screen leaves gets its
+    modes back and this program's handles on it are closed.
 */
 static int
 _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
@@ -614,16 +638,17 @@ vk_screen_detach(vk_screen_t *screen)
     (NULL: the current type).
 
     detach: `pty` is not a terminal but the place a detached screen
-    draws to.  Nobody is moved out of the way for it, and the screen
-    keeps the size it had -- a null device has no size to give, and
-    falling back to a default would shrink the screen and push the
-    caller's windows around while nobody is looking.
+    draws to.  The screen keeps the size it had -- a null device has no
+    size to give, and falling back to a default would shrink the screen
+    and push the caller's windows around while nobody is looking.
 */
 static int
 _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
     bool detach)
 {
     bool            in_place = (pty == NULL);
+    struct termios  new_termios;
+    bool            new_has_termios = false;
     int             keep_h = 0;
     int             keep_w = 0;
     SCREEN          *new_term;
@@ -662,34 +687,23 @@ _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
     }
     else
     {
-        if(screen->evicted_pid > 0)
-        {
-            if(screen->has_saved_termios && screen->fd_out != NULL)
-                tcsetattr(fileno(screen->fd_out), TCSANOW,
-                    &screen->saved_termios);
-
-            kill(screen->evicted_pid, SIGCONT);
-            kill(screen->evicted_pid, SIGINT);
-        }
-
-        /* take the new terminal from whoever has it -- unless this is a
-           detach, where there is nobody to take it from */
-        screen->evicted_pid = detach ? -1 : _vk_screen_evict_pty(pty);
-
-        new_out = fopen(pty, "w");
+        /* "e": close-on-exec, so a program started while the screen is
+           here does not carry a handle on this terminal away with it */
+        new_out = fopen(pty, "we");
         if(new_out == NULL) return -1;
 
-        new_in = fopen(pty, "r");
+        new_in = fopen(pty, "re");
         if(new_in == NULL)
         {
             fclose(new_out);
             return -1;
         }
 
-        if(tcgetattr(fileno(new_out), &screen->saved_termios) == 0)
-            screen->has_saved_termios = true;
-        else
-            screen->has_saved_termios = false;
+        /* how the new terminal is set up now, to put back on leaving
+           it.  Kept apart until the move is certain: the old terminal's
+           copy is still needed for the old terminal. */
+        new_has_termios =
+            (tcgetattr(fileno(new_out), &new_termios) == 0);
     }
 
     {
@@ -769,6 +783,15 @@ _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
         set_term(old_term);
         endwin();
 
+        /* endwin() put back what curses found; this puts back what was
+           there before the screen arrived, which is what the shell
+           waiting on that terminal expects */
+        if(screen->has_saved_termios && old_out != NULL)
+            tcsetattr(fileno(old_out), TCSANOW, &screen->saved_termios);
+
+        screen->saved_termios = new_termios;
+        screen->has_saved_termios = new_has_termios;
+
         if(old_in != stdin && old_in != NULL)
             fclose(old_in);
 
@@ -795,123 +818,6 @@ _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
     return 0;
 }
 
-static pid_t
-_vk_find_session_leader_utmpx(const char *line)
-{
-    struct utmpx    *entry;
-
-    setutxent();
-
-    while((entry = getutxent()) != NULL)
-    {
-        if(entry->ut_type != USER_PROCESS) continue;
-
-        if(strncmp(entry->ut_line, line, sizeof(entry->ut_line)) == 0)
-        {
-            pid_t pid = entry->ut_pid;
-            endutxent();
-            return pid;
-        }
-    }
-
-    endutxent();
-    return -1;
-}
-
-static pid_t
-_vk_find_session_leader_proc(const char *pty)
-{
-    struct stat     pty_stat;
-    DIR             *proc;
-    struct dirent   *entry;
-    char            path[280];
-    char            buf[512];
-    char            *cp;
-    FILE            *fp;
-    int             tty_nr;
-    int             session;
-    pid_t           pid;
-
-    if(stat(pty, &pty_stat) < 0) return -1;
-
-    proc = opendir("/proc");
-    if(proc == NULL) return -1;
-
-    while((entry = readdir(proc)) != NULL)
-    {
-        if(entry->d_name[0] < '0' || entry->d_name[0] > '9')
-            continue;
-
-        snprintf(path, sizeof(path), "/proc/%s/stat", entry->d_name);
-
-        fp = fopen(path, "r");
-        if(fp == NULL) continue;
-
-        if(fgets(buf, sizeof(buf), fp) == NULL)
-        {
-            fclose(fp);
-            continue;
-        }
-
-        fclose(fp);
-
-        cp = strrchr(buf, ')');
-        if(cp == NULL) continue;
-
-        if(sscanf(cp + 1, " %*c %*d %*d %d %d", &session, &tty_nr) != 2)
-            continue;
-
-        pid = (pid_t)atoi(entry->d_name);
-
-        if((dev_t)tty_nr == pty_stat.st_rdev && pid == (pid_t)session)
-        {
-            closedir(proc);
-            return pid;
-        }
-    }
-
-    closedir(proc);
-    return -1;
-}
-
-static pid_t
-_vk_find_session_leader(const char *pty)
-{
-    const char  *line;
-    pid_t       pid;
-
-    if(pty == NULL) return -1;
-
-    line = (strncmp(pty, "/dev/", 5) == 0) ? pty + 5 : pty;
-
-    pid = _vk_find_session_leader_utmpx(line);
-    if(pid > 0) return pid;
-
-    return _vk_find_session_leader_proc(pty);
-}
-
-static pid_t
-_vk_screen_evict_pty(const char *pty)
-{
-    pid_t   sid;
-
-    if(pty == NULL) return -1;
-
-    sid = _vk_find_session_leader(pty);
-    if(sid <= 1) return -1;
-
-    /* never ourselves.  When this process is the session leader of the
-       target -- it was started as the terminal's own command (xterm -e,
-       exec from the shell) and is now coming back to that terminal --
-       there is nobody to move out of the way, and stopping the leader
-       would stop us in the middle of the move. */
-    if(sid == getpid()) return -1;
-
-    if(kill(sid, SIGSTOP) < 0) return -1;
-
-    return sid;
-}
-
 inline void
 vk_screen_destroy(vk_screen_t *screen)
 {
@@ -926,15 +832,34 @@ static int
 _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_screen_t     *screen;
-
-    (void)argp;
+    int             width = 0;
+    int             height = 0;
+    bool            detached;
 
     if(object == NULL) return -1;
 
     screen = VK_SCREEN(object);
 
-    screen->fd_out = stdout;
-    screen->fd_in = stdin;
+    /* a size means "detached from birth" (vk_screen_create_detached):
+       the screen draws to the null device and is that big */
+    if(argp != NULL)
+    {
+        width = va_arg(*argp, int);
+        height = va_arg(*argp, int);
+    }
+    detached = (width > 0 && height > 0);
+
+    if(detached)
+    {
+        screen->fd_out = fopen("/dev/null", "we");
+        screen->fd_in = fopen("/dev/null", "re");
+        if(screen->fd_out == NULL || screen->fd_in == NULL) return -1;
+    }
+    else
+    {
+        screen->fd_out = stdout;
+        screen->fd_in = stdin;
+    }
 
     setlocale(LC_CTYPE, "");
 
@@ -948,6 +873,9 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
 
     set_term(screen->term);
 
+    /* the null device has no size; take the one that was asked for */
+    if(detached) resize_term(height, width);
+
     keypad(stdscr, TRUE);
     noecho();
     raw();
@@ -959,8 +887,8 @@ _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
     screen->surfaces = NULL;
     screen->surface_count = 0;
     screen->active_surface = 0;
-    screen->evicted_pid = -1;
     screen->has_saved_termios = false;
+    screen->detached = detached;
 
     screen->ctor = _vk_screen_ctor;
     screen->dtor = _vk_screen_dtor;
@@ -1005,12 +933,6 @@ _vk_screen_dtor(vk_object_t *object)
                 &screen->saved_termios);
 
         fclose(screen->fd_out);
-    }
-
-    if(screen->evicted_pid > 0)
-    {
-        kill(screen->evicted_pid, SIGCONT);
-        kill(screen->evicted_pid, SIGINT);
     }
 
     vk_object_demote(object, vk_object_t);

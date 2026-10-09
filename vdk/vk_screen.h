@@ -39,7 +39,8 @@ struct _vk_screen_s
     VkSurfaceBkgdFunc   wallpaper_func;
     VkSurfaceBkgdFunc   overlay_func;
 
-    pid_t               evicted_pid;
+    /* the modes of the terminal the screen moved onto, as they were
+       before it arrived; put back when it leaves */
     struct termios      saved_termios;
     bool                has_saved_termios;
 
