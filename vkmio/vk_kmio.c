@@ -107,6 +107,15 @@ static unsigned short x_gpm_event[] = {
 
 static uint32_t     vk_kmio_flags = 0;
 static int          vk_kmio_tty_fd = -1;    /* the fd given to vk_kmio_init */
+
+/* GPM connection state (used by vk_kmio_gpm and vk_kmio_gpm_fd below).
+   mio_fd is the daemon socket, or -1.  mio_off says "do not try": there
+   is no console, no daemon, or the daemon dropped us.  It keeps a
+   failure from being retried on every fetch -- this runs many times a
+   second -- and is cleared by VK_GPM_CMD_CLOSE, which is how a changed
+   terminal gets a fresh attempt. */
+static int          mio_fd = -1;
+static bool         mio_off = false;
 static MEVENT       *last_mouse_event = NULL;
 
 /* SGR mouse parser state.  Under mousemask(0) ncurses still returns
@@ -621,6 +630,17 @@ vk_kmio_mouse_drain(MEVENT *mouse_event)
 #endif
 }
 
+/* see vkmio.h -- the daemon socket for an event loop to wait on. */
+int
+vk_kmio_gpm_fd(void)
+{
+#if !defined(_NO_GPM) && defined(__linux)
+    return mio_fd;
+#else
+    return -1;
+#endif
+}
+
 /* see vkmio.h -- forget the GPM connection and why it was unavailable. */
 void
 vk_kmio_gpm_reset(void)
@@ -735,13 +755,6 @@ _vk_kmio_gpm_connect(int vc)
 int
 vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 {
-    /* mio_fd is the daemon socket, or -1.  mio_off says "do not try":
-       there is no console, no daemon, or the daemon dropped us.  It
-       keeps a failure from being retried on every fetch -- this runs
-       many times a second -- and is cleared by VK_GPM_CMD_CLOSE, which
-       is how a changed terminal gets a fresh attempt. */
-    static int              mio_fd = -1;
-    static bool             mio_off = false;
     struct pollfd           mio_poll;
     struct vk_gpm_event_s   g_event;
     ssize_t                 got;
@@ -777,7 +790,13 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
     mio_poll.events = POLLIN;
     mio_poll.fd = mio_fd;
 
-    if(poll(&mio_poll, 1, (cmd == VK_GPM_CMD_DRAIN) ? 0 : 1) < 1) return -1;
+    /* how long to wait for an event: not at all when draining or when
+       the caller has its own event loop (VK_KMIO_NOWAIT); otherwise 1ms,
+       which paces a caller that just loops on fetch */
+    if(poll(&mio_poll, 1,
+        (cmd == VK_GPM_CMD_DRAIN || (vk_kmio_flags & VK_KMIO_NOWAIT))
+            ? 0 : 1) < 1)
+        return -1;
 
     /* one event is one whole record.  The daemon writes each with a
        single write(), so anything else is the end of the conversation:

@@ -1,3 +1,20 @@
+Version 8.1.0
+
+For programs with their own event loop.
+
+vkmio
+* [Bryan Christ] VK_KMIO_NOWAIT (vk_kmio_init flag): vk_kmio_fetch never
+  pauses.  Without it a fetch with nothing pending waits 1ms on the GPM
+  socket, which paces a caller that simply loops; a caller that sleeps
+  in its own poll() does not want that on every call.
+* [Bryan Christ] vk_kmio_gpm_fd() returns the gpm daemon socket (or -1)
+  so such a loop can wait on it.
+
+vdk
+* [Bryan Christ] vk_screen_get_input_fd() returns the descriptor the
+  screen reads keys from.  After a teleport or adopt it is not the one
+  vk_screen_get_fd() returns.
+
 Version 8.0.1
 
 build
