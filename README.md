@@ -41,9 +41,12 @@ Screen
 
   - vk_screen_t with virtual surfaces (multi-desktop), wallpaper
     callback, per-surface background, and screen overlay
-  - Terminal migration (teleport) via vk_screen_teleport /
-    vk_screen_evict_pty; widgets auto-repaint through the
-    _on_recreate hook
+  - Terminal migration via vk_screen_adopt (move the UI to another
+    terminal, of another type if need be); widgets auto-repaint
+    through the _on_recreate hook
+  - Detached screens: vk_screen_detach leaves the terminal and keeps
+    running on none, vk_screen_create_detached starts that way -- for
+    programs that outlive the terminal they are shown on
 
 I/O
 
