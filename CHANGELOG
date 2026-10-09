@@ -1,4 +1,11 @@
-Version 7.11.0
+Version 8.0.0
+
+Major version: the console mouse no longer goes through libgpm, and the
+library's dependencies and build change with it.  No function was
+removed or changed, but the shared library is now libvdk.so.8, as with
+earlier major versions, so programs built against libvdk.so.7 need a
+rebuild.  Programs that linked -lgpm only on libviper's behalf can drop
+it.
 
 vkmio
 * [Bryan Christ] libgpm is gone.  vkmio talks to the gpm daemon itself:
