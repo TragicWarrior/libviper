@@ -564,7 +564,7 @@ vk_screen_teleport(vk_screen_t *screen, const char *pty)
     term == NULL: keep the current type ($TERM).
 
     The caller owns the environment: set TERM first when other code
-    (libgpm, widgets) should see the new type too.  Emits
+    (widgets asking vdk_has_utf8) should see the new type too.  Emits
     VK_EVENT_ON_TELEPORT on success, like vk_screen_teleport.
 */
 inline int
@@ -828,6 +828,13 @@ _vk_screen_evict_pty(const char *pty)
 
     sid = _vk_find_session_leader(pty);
     if(sid <= 1) return -1;
+
+    /* never ourselves.  When this process is the session leader of the
+       target -- it was started as the terminal's own command (xterm -e,
+       exec from the shell) and is now coming back to that terminal --
+       there is nobody to move out of the way, and stopping the leader
+       would stop us in the middle of the move. */
+    if(sid == getpid()) return -1;
 
     if(kill(sid, SIGSTOP) < 0) return -1;
 

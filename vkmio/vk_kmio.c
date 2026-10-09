@@ -11,7 +11,66 @@
 #include "vkmio.h"
 
 #if !defined(_NO_GPM) && defined(__linux)
-#include <gpm.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+/*
+    The gpm daemon's wire format.  vkmio talks to the daemon itself --
+    there is no libgpm here -- so these mirror <gpm.h> rather than
+    include it.  The protocol is two fixed-size records over a Unix
+    stream socket: the client writes one connect record, the daemon then
+    writes one event record per mouse event until either side closes.
+*/
+#define VK_GPM_SOCKET       "/dev/gpmctl"
+
+/* event.buttons */
+#define GPM_B_DOWN          32
+#define GPM_B_UP            16
+#define GPM_B_FOURTH        8
+#define GPM_B_LEFT          4
+#define GPM_B_MIDDLE        2
+#define GPM_B_RIGHT         1
+
+/* event.type, and the masks in the connect record */
+#define GPM_MOVE            1
+#define GPM_DRAG            2
+#define GPM_DOWN            4
+#define GPM_UP              8
+#define GPM_SINGLE          16
+#define GPM_DOUBLE          32
+#define GPM_TRIPLE          64
+#define GPM_MFLAG           128     /* motion during the click */
+
+struct vk_gpm_connect_s
+{
+    unsigned short  event_mask;     /* events we want delivered */
+    unsigned short  default_mask;   /* events the daemon keeps handling */
+    unsigned short  min_mod;        /* modifier range we take events for */
+    unsigned short  max_mod;
+    int             pid;
+    int             vc;             /* virtual console, 1-63 */
+};
+
+struct vk_gpm_event_s
+{
+    unsigned char   buttons;
+    unsigned char   modifiers;
+    unsigned short  vc;
+    short           dx, dy;         /* movement in this event */
+    short           x, y;           /* position, 1-based */
+    int             type;
+    int             clicks;
+    int             margin;
+    short           wdx, wdy;       /* wheel movement in this event */
+};
+
+/* both records are read and written whole: a layout that drifts from
+   the daemon's would garble every event */
+_Static_assert(sizeof(struct vk_gpm_connect_s) == 16,
+    "gpm connect record must be 16 bytes");
+_Static_assert(sizeof(struct vk_gpm_event_s) == 28,
+    "gpm event record must be 28 bytes");
 
 #define X_GPM_RAW           0
 #define X_GPM_COOKED        1
@@ -47,6 +106,7 @@ static unsigned short x_gpm_event[] = {
 #endif
 
 static uint32_t     vk_kmio_flags = 0;
+static int          vk_kmio_tty_fd = -1;    /* the fd given to vk_kmio_init */
 static MEVENT       *last_mouse_event = NULL;
 
 /* SGR mouse parser state.  Under mousemask(0) ncurses still returns
@@ -173,6 +233,15 @@ _vk_kmio_write(int fd, const char *esc)
 int
 vk_kmio_init(int fd, uint32_t flags)
 {
+    /* the GPM console is worked out from this terminal.  A different
+       one (teleport, adopt) means the old verdict -- connected, or not
+       available -- no longer holds: start over. */
+    if(fd != vk_kmio_tty_fd)
+    {
+        vk_kmio_tty_fd = fd;
+        vk_kmio_gpm_reset();
+    }
+
     vk_kmio_flags = flags;
 
     /* drop any half-read SGR body if init runs mid-session (teleport
@@ -563,95 +632,145 @@ vk_kmio_gpm_reset(void)
 
 #if !defined(_NO_GPM) && defined(__linux)
 /*
-    The virtual console to ask gpm for.  Gpm_Open(conn, 0) derives it
-    from the tty name, which only works on the console itself: under
-    dtach or screen the tty is a pty, the name parses as VC 0, and the
-    daemon drops a client that does not own /dev/tty0.  A launcher that
-    still sees the real console can export VK_GPM_VC (1-63) to name it.
-    Unset or invalid returns 0 -- let libgpm work it out, as before.
+    The virtual console to ask gpm for, or 0 when there is none.
+
+    VK_GPM_VC (1-63) wins: under dtach or screen the screen is on a pty,
+    and only a launcher that still sees the real console can name it.
+    Otherwise the console is the terminal the screen is on, if that is
+    /dev/ttyN.  Anything else -- an X terminal, an SSH login -- has no
+    console, and we do not connect at all: the daemon would only drop a
+    client that asks for a console it does not own.
 */
 static int
 _vk_kmio_gpm_vc(void)
 {
     const char  *env = getenv("VK_GPM_VC");
+    const char  *tty;
     char        *end;
     long        vc;
 
-    if(env == NULL || *env == '\0') return 0;
+    if(env != NULL && *env != '\0')
+    {
+        vc = strtol(env, &end, 10);
+        if(*end == '\0' && vc >= 1 && vc <= 63) return (int)vc;
+    }
 
-    vc = strtol(env, &end, 10);
+    tty = ttyname((vk_kmio_tty_fd >= 0) ? vk_kmio_tty_fd : STDIN_FILENO);
+    if(tty == NULL || strncmp(tty, "/dev/tty", 8) != 0) return 0;
+    if(tty[8] < '0' || tty[8] > '9') return 0;
+
+    vc = strtol(tty + 8, &end, 10);
     if(*end != '\0' || vc < 1 || vc > 63) return 0;
 
     return (int)vc;
 }
 
+/*
+    Connect to the gpm daemon as the client for console `vc`.  Returns
+    the socket, non-blocking, or -1.
+
+    The daemon accepts the connection first and judges it afterwards:
+    it reads the connect record, and if the caller does not own
+    /dev/tty<vc> it just closes the socket.  So success here is not yet
+    acceptance; a refusal shows up as end-of-file on the first read.
+*/
+static int
+_vk_kmio_gpm_connect(int vc)
+{
+    struct vk_gpm_connect_s conn;
+    struct sockaddr_un      addr;
+    int                     fd;
+    int                     fflags;
+
+    fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    if(fd < 0) return -1;
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, VK_GPM_SOCKET, sizeof(addr.sun_path) - 1);
+
+    if(connect(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0)
+    {
+        close(fd);              /* no daemon: gpm is not running */
+        return -1;
+    }
+
+    /* take movement, drags and button changes for every modifier
+       combination, and leave nothing for the daemon's own selection
+       handling on this console */
+    memset(&conn, 0, sizeof(conn));
+    conn.event_mask = GPM_MOVE | GPM_DRAG | GPM_DOWN | GPM_UP;
+    conn.default_mask = 0;
+    conn.min_mod = 0;
+    conn.max_mod = (unsigned short)~0;
+    conn.pid = (int)getpid();
+    conn.vc = vc;
+
+    if(write(fd, &conn, sizeof(conn)) != (ssize_t)sizeof(conn))
+    {
+        close(fd);
+        return -1;
+    }
+
+    fflags = fcntl(fd, F_GETFL);
+    fcntl(fd, F_SETFL, fflags | O_NONBLOCK);
+
+    /* optional: have the kernel raise SIGIO when an event is waiting */
+    if(vk_kmio_flags & VK_KMIO_GPM_SIGIO)
+    {
+        fcntl(fd, F_SETOWN, getpid());
+        fflags = fcntl(fd, F_GETFL);
+        fcntl(fd, F_SETFL, fflags | FASYNC);
+    }
+
+    return fd;
+}
+
+/*
+    The GPM half of the mouse input.  cmd 0 reads one event if there is
+    one (waiting up to 1ms), VK_GPM_CMD_DRAIN reads one only if it is
+    already queued, VK_GPM_CMD_CLOSE drops the connection.  Returns 0
+    with *mouse_event filled in, or -1.
+*/
 int
 vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 {
-    extern int          gpm_tried;
-    extern int          gpm_fd;
-    struct pollfd       mio_poll;
-    static int          mio_fd = -1;
-    static bool         mio_dropped = false;
-    Gpm_Connect         gpm_connect;
-    Gpm_Event           g_event;
-    int                 array_sz;
-    int                 i;
-    int                 fflags;
+    /* mio_fd is the daemon socket, or -1.  mio_off says "do not try":
+       there is no console, no daemon, or the daemon dropped us.  It
+       keeps a failure from being retried on every fetch -- this runs
+       many times a second -- and is cleared by VK_GPM_CMD_CLOSE, which
+       is how a changed terminal gets a fresh attempt. */
+    static int              mio_fd = -1;
+    static bool             mio_off = false;
+    struct pollfd           mio_poll;
+    struct vk_gpm_event_s   g_event;
+    ssize_t                 got;
+    int                     array_sz;
+    int                     vc;
+    int                     i;
 
     if(cmd == VK_GPM_CMD_CLOSE)
     {
-        if(mio_fd > 0) Gpm_Close();
+        if(mio_fd >= 0) close(mio_fd);
         mio_fd = -1;
-        mio_dropped = false;
+        mio_off = false;
         return 0;
     }
 
     if(mouse_event == NULL) return -1;
 
-    if(mio_dropped) return -1;
-
-    /* an xterm-type terminal has no GPM.  Decide that here rather than
-       let Gpm_Open do it: in its xterm mode libgpm writes mouse-enable
-       escapes to stdout, which after an adopt is no longer the terminal
-       the screen is on.  Latched like a drop; VK_GPM_CMD_CLOSE clears
-       it, so a later adopt onto a console is retried. */
-    {
-        const char *term = getenv("TERM");
-
-        if(term != NULL && strncmp(term, "xterm", 5) == 0)
-        {
-            mio_dropped = true;
-            return -1;
-        }
-    }
-
-    if(gpm_fd == -2 || (gpm_fd == -1 && gpm_tried == TRUE)) return -1;
-
-    memset(&g_event, 0, sizeof(g_event));
+    if(mio_off) return -1;
 
     if(mio_fd == -1)
     {
-        if(gpm_fd >= 0) Gpm_Close();
+        vc = _vk_kmio_gpm_vc();
+        if(vc > 0) mio_fd = _vk_kmio_gpm_connect(vc);
 
-        memset(&gpm_connect, 0, sizeof(gpm_connect));
-        gpm_connect.defaultMask = 0;
-        gpm_connect.eventMask = GPM_MOVE | GPM_UP | GPM_DOWN | GPM_DRAG;
-        gpm_connect.maxMod = ~0;
-        mio_fd = Gpm_Open(&gpm_connect, _vk_kmio_gpm_vc());
-
-        if(mio_fd > 0 && (vk_kmio_flags & VK_KMIO_GPM_SIGIO))
+        if(mio_fd == -1)
         {
-            fcntl(mio_fd, F_SETOWN, getpid());
-            fflags = fcntl(mio_fd, F_GETFL);
-            fcntl(mio_fd, F_SETFL, fflags | FASYNC);
+            mio_off = true;
+            return -1;
         }
-    }
-
-    if(mio_fd < 0)
-    {
-        mio_fd = -1;
-        return -1;
     }
 
     memset(&mio_poll, 0, sizeof(mio_poll));
@@ -660,26 +779,19 @@ vk_kmio_gpm(MEVENT *mouse_event, uint16_t cmd)
 
     if(poll(&mio_poll, 1, (cmd == VK_GPM_CMD_DRAIN) ? 0 : 1) < 1) return -1;
 
-    if(mio_poll.revents & POLLNVAL)
-    {
-        mio_fd = -1;
-        mio_dropped = true;
-        return -1;
-    }
+    /* one event is one whole record.  The daemon writes each with a
+       single write(), so anything else is the end of the conversation:
+       0 is the daemon closing (it refused us, or it is shutting down),
+       a short or failed read is a connection we cannot trust. */
+    got = read(mio_fd, &g_event, sizeof(g_event));
 
-    if(Gpm_GetEvent(&g_event) < 1)
+    if(got != (ssize_t)sizeof(g_event))
     {
-        /* the daemon dropped us (it refuses a client that does not own
-           the VC, e.g. under dtach): libgpm has closed the socket, so
-           forget the descriptor rather than poll a dead -- or since
-           reused -- fd on every fetch.  Gpm_Close clears gpm_tried, so
-           latch the drop here or every fetch would reconnect; a
-           shutdown (VK_GPM_CMD_CLOSE) clears it. */
-        if(gpm_fd < 0)
-        {
-            mio_fd = -1;
-            mio_dropped = true;
-        }
+        if(got < 0 && (errno == EAGAIN || errno == EINTR)) return -1;
+
+        close(mio_fd);
+        mio_fd = -1;
+        mio_off = true;
         return -1;
     }
 

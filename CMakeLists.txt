@@ -28,13 +28,11 @@ find_package(Curses)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-find_package(GPM)
+# GPM (console mouse) needs no library: vkmio speaks the gpm daemon's
+# socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
+# leave the support out.
 
-if (NOT GPM_FOUND)
-add_definitions("-D_NO_GPM")
-endif()
-
-set(PROJECT_VERSION 7.10.0)
+set(PROJECT_VERSION 7.11.0)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
@@ -90,11 +88,7 @@ add_library(vdk.o OBJECT ${VDK_SOURCES} ${VKMIO_SOURCES})
 add_library(vdk-static STATIC $<TARGET_OBJECTS:vdk.o>)
 add_library(vdk-shared SHARED $<TARGET_OBJECTS:vdk.o>)
 
-if (GPM_FOUND)
-target_link_libraries(vdk-shared ${CURSES_LIBRARIES} ${GPM_LIBRARIES})
-else()
 target_link_libraries(vdk-shared ${CURSES_LIBRARIES})
-endif()
 
 SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
 SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION 7)
