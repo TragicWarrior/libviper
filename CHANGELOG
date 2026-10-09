@@ -1,3 +1,24 @@
+Version 8.2.0
+
+vkmio
+* [Bryan Christ] One mouse decoder.  The console (gpm) and the xterm
+  (SGR) paths each built the event the caller sees, separately, and
+  had drifted.  A gpm record is now restated as the SGR button code an
+  xterm would send and goes through the same decoder
+  (_vk_kmio_decode_mouse); vk_gpm.def and its lookup tables are gone.
+
+  The console therefore now reports what an xterm reports:
+    - a click is its press and its release.  BUTTON1_CLICKED and the
+      double/triple-click states are no longer produced; a handler
+      that accepted "clicked or pressed" used to run twice per click
+      on the console, and the second release of a quick double-click,
+      which arrived as BUTTON1_DOUBLE_CLICKED alone, was easy to miss.
+    - shift, alt and ctrl arrive as BUTTON_SHIFT / BUTTON_ALT /
+      BUTTON_CTRL.  gpm's modifier bits used to be copied in raw, where
+      they landed on the button-1 state bits.
+  A caller that tests only for BUTTON1_CLICKED must also accept
+  BUTTON1_PRESSED or BUTTON1_RELEASED, as it already had to for xterm.
+
 Version 8.1.0
 
 For programs with their own event loop.
