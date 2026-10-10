@@ -471,32 +471,12 @@ static int
 _vk_filedialog_dtor(vk_object_t *object)
 {
     vk_filedialog_t *dialog;
-    vk_box_t        *box;
-    vk_container_t  *container;
-    vk_input_t      *path_input;
-    vk_listbox_t    *file_list;
-    vk_scroller_t   *scroller;
-    vk_box_t        *button_bar;
-    vk_button_t     *btn_ok;
-    vk_button_t     *btn_cancel;
-    bool            multiselect;
-    int             i;
 
     if(object == NULL) return -1;
 
     if(!vk_object_assert(object, vk_filedialog_t)) return -1;
 
     dialog = VK_FILEDIALOG(object);
-    box = VK_BOX(object);
-    container = VK_CONTAINER(object);
-
-    path_input = dialog->path_input;
-    file_list = dialog->file_list;
-    scroller = dialog->scroller;
-    button_bar = dialog->button_bar;
-    btn_ok = dialog->btn_ok;
-    btn_cancel = dialog->btn_cancel;
-    multiselect = dialog->multiselect;
 
     if(dialog->path != NULL)
         free(dialog->path);
@@ -504,33 +484,12 @@ _vk_filedialog_dtor(vk_object_t *object)
     if(dialog->exts != NULL)
         free(dialog->exts);
 
-    for(i = 0; i < box->slots; i++)
-    {
-        if(box->slot_widgets[i] != NULL)
-            container->remove_widget(container, box->slot_widgets[i]);
-        box->slot_widgets[i] = NULL;
-    }
-
+    /* the dialog is a box, and all of its parts sit in the box's slots:
+       the path input, the frame around the file list, the button bar
+       with its two buttons.  Destroying the box destroys them (see
+       _vk_container_on_destroy), and the list takes its scroller with it. */
     vk_object_demote(object, vk_box_t);
     vk_box_destroy(VK_BOX(object));
-
-    vk_scroller_destroy(scroller);
-
-    vk_box_destroy(button_bar);
-    vk_button_destroy(btn_ok);
-    vk_button_destroy(btn_cancel);
-
-    /* destroy the frame first: it removes file_list from its container
-       but does not free file_list; we free file_list explicitly next. */
-    if(dialog->list_frame != NULL)
-        vk_frame_destroy(dialog->list_frame);
-
-    if(multiselect)
-        vk_selectbox_destroy(VK_SELECTBOX(file_list));
-    else
-        vk_listbox_destroy(file_list);
-
-    vk_input_destroy(path_input);
 
     return 0;
 }

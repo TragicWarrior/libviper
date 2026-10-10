@@ -479,34 +479,23 @@ static int
 _vk_grid_dtor(vk_object_t *object)
 {
     vk_grid_t       *grid;
-    vk_container_t  *container;
-    int             total;
-    int             i;
 
     if(object == NULL) return -1;
     if(!vk_object_assert(object, vk_grid_t)) return -1;
 
     grid = VK_GRID(object);
-    container = VK_CONTAINER(object);
 
-    total = grid->cols * grid->rows;
-    for(i = 0; i < total; i++)
-    {
-        if(grid->slot_widgets[i] != NULL)
-        {
-            container->remove_widget(container, grid->slot_widgets[i]);
-            grid->slot_widgets[i] = NULL;
-        }
-    }
-
+    /* the cells are only the grid's view of its children; the children
+       themselves are on the container's list and are destroyed with it
+       (see _vk_container_on_destroy) */
     free(grid->slot_widgets);    grid->slot_widgets = NULL;
     free(grid->col_widths);      grid->col_widths   = NULL;
     free(grid->row_heights);     grid->row_heights  = NULL;
     free(grid->col_expand);      grid->col_expand   = NULL;
     free(grid->row_expand);      grid->row_expand   = NULL;
 
-    vk_object_demote(object, vk_widget_t);
-    vk_widget_destroy(VK_WIDGET(object));
+    vk_object_demote(object, vk_container_t);
+    vk_container_destroy(VK_CONTAINER(object));
 
     return 0;
 }

@@ -389,67 +389,33 @@ static int
 _vk_popup_dtor(vk_object_t *object)
 {
     vk_popup_t      *popup;
-    vk_container_t  *container;
-    vk_box_t        *layout;
-    vk_box_t        *button_bar;
-    vk_filler_t     *default_client;
-    vk_button_t     *buttons[VK_POPUP_MAX_BUTTONS];
-    int             btn_count;
-    int             i;
 
     if(object == NULL) return -1;
 
     if(!vk_object_assert(object, vk_popup_t)) return -1;
 
     popup = VK_POPUP(object);
-    container = VK_CONTAINER(object);
 
-    layout = popup->layout;
-    button_bar = popup->button_bar;
-    default_client = popup->default_client;
-    btn_count = popup->button_count;
-    memcpy(buttons, popup->buttons, sizeof(popup->buttons));
+    /* everything a popup shows is inside its layout box -- the client
+       and the button bar with its buttons -- and the layout is the
+       window's child, so destroying the window below destroys all of
+       it (see _vk_container_on_destroy).  That includes a client the caller
+       set: one that should outlive the popup has to be taken out first
+       with vk_popup_set_client(popup, NULL).
 
-    if(button_bar != NULL)
-    {
-        for(i = 0; i < btn_count; i++)
-        {
-            VK_CONTAINER(button_bar)->remove_widget(
-                VK_CONTAINER(button_bar), VK_WIDGET(buttons[i]));
-            button_bar->slot_widgets[i] = NULL;
-        }
-    }
+       The one piece that can be outside the layout is the default
+       filler, which is set aside while a caller's client is in its
+       place. */
+    if(popup->client != NULL && popup->default_client != NULL)
+        vk_filler_destroy(popup->default_client);
 
-    {
-        vk_container_t *lc = VK_CONTAINER(layout);
-        int j;
-
-        for(j = 0; j < layout->slots; j++)
-        {
-            if(layout->slot_widgets[j] != NULL)
-            {
-                lc->remove_widget(lc, layout->slot_widgets[j]);
-                layout->slot_widgets[j] = NULL;
-            }
-        }
-    }
-
-    VK_FRAME(object)->child = NULL;
-    container->remove_widget(container, VK_WIDGET(layout));
+    popup->layout = NULL;
+    popup->button_bar = NULL;
+    popup->default_client = NULL;
+    popup->client = NULL;
 
     vk_object_demote(object, vk_window_t);
     vk_window_destroy(VK_WINDOW(object));
-
-    for(i = 0; i < btn_count; i++)
-        vk_button_destroy(buttons[i]);
-
-    if(button_bar != NULL)
-        vk_box_destroy(button_bar);
-
-    if(default_client != NULL)
-        vk_filler_destroy(default_client);
-
-    vk_box_destroy(layout);
 
     return 0;
 }

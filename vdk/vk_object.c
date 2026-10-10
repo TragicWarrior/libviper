@@ -166,3 +166,39 @@ vk_object_destroy(vk_object_t *object)
     return 0;
 }
 
+/*
+    The name of the object's type, as written in the code: "vk_box_t",
+    "vk_window_t".  It is the most derived type for as long as the
+    object is alive (destructors step it down through the parent types
+    as they run).  The string belongs to the library.  NULL for a NULL
+    object.
+*/
+inline const char*
+vk_object_get_klass_name(vk_object_t *object)
+{
+    if(object == NULL) return NULL;
+
+    return object->name;
+}
+
+/*
+    Destroy an object of any type, through the destructor of the type
+    it actually is.  The typed calls (vk_button_destroy and the rest)
+    each refuse an object that is not exactly their type; this is the
+    one to use when all that is known is that the pointer is an object
+    -- a container destroying its children, for one.  NULL is a no-op.
+*/
+inline void
+vk_object_dispose(vk_object_t *object)
+{
+    if(object == NULL) return;
+
+    /* a plain object has no destructor of its own to run first */
+    if(vk_object_assert(object, vk_object_t))
+    {
+        vk_object_destroy(object);
+        return;
+    }
+
+    object->dtor(object);
+}

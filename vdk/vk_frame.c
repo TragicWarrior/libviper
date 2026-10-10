@@ -201,23 +201,19 @@ static int
 _vk_frame_dtor(vk_object_t *object)
 {
     vk_frame_t      *frame;
-    vk_container_t  *container;
 
     if(object == NULL) return -1;
 
     if(!vk_object_assert(object, vk_frame_t)) return -1;
 
     frame = VK_FRAME(object);
-    container = VK_CONTAINER(object);
 
-    if(frame->child != NULL)
-    {
-        container->remove_widget(container, frame->child);
-        frame->child = NULL;
-    }
+    /* the child is on the container's list and is destroyed with it
+       (see _vk_container_on_destroy) */
+    frame->child = NULL;
 
-    vk_object_demote(object, vk_widget_t);
-    vk_widget_destroy(VK_WIDGET(object));
+    vk_object_demote(object, vk_container_t);
+    vk_container_destroy(VK_CONTAINER(object));
 
     return 0;
 }

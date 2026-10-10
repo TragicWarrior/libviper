@@ -37,6 +37,12 @@ Widgets
   Composites          vk_filedialog, vk_popup, vk_viewport
   Attachment          vk_scroller
 
+Ownership
+
+  - A container owns what it holds: destroying a window, frame, box
+    or grid destroys everything inside it, to any depth, carried by
+    VK_EVENT_ON_DESTROY.  Tear a dialog down with one destroy call.
+
 Screen
 
   - vk_screen_t with virtual surfaces (multi-desktop), wallpaper

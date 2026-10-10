@@ -1797,51 +1797,32 @@ int main(void)
             vk_activity_destroy(activity[i]);
     }
     vk_marquee_destroy(marquee);
+
+    /* a container owns what it holds, so only the outermost widgets
+       are destroyed here; each takes its children, and their attached
+       scrollers, with it */
+
+    /* box: window1..3, and in them the listbox, the menu and the
+       textbox */
     vk_box_destroy(box);
 
-    vk_scroller_destroy(vscroller1);
-    vk_scroller_destroy(hscroller1);
-    vk_scroller_destroy(vscroller2);
-    vk_scroller_destroy(hscroller2);
-    vk_scroller_destroy(vscroller3);
-
-    vk_window_destroy(window1);
-    vk_window_destroy(window2);
-    vk_window_destroy(window3);
-
-    vk_listbox_destroy(listbox);
-    vk_listbox_destroy(menu);
-    vk_textbox_destroy(textbox3);
-
-    vk_scroller_destroy(lang_vscroller);
-    vk_scroller_destroy(lang_hscroller);
+    /* the frame around the language list */
     vk_frame_destroy(lang_frame);
-    vk_listbox_destroy(lang_listbox);
 
-    vk_scroller_destroy(vscroller4);
-    vk_scroller_destroy(vscroller5);
+    /* box2: window4, window5 and the about window, with the checkbox
+       list, the radio list and the about text */
     vk_box_destroy(box2);
-    vk_window_destroy(window4);
-    vk_window_destroy(window5);
-    vk_window_destroy(about_window);
-    vk_selectbox_destroy(checkbox);
-    vk_selectbox_destroy(radio);
-    vk_widget_destroy(about);
 
+    /* a deck arranges windows but does not own them: it lets go of
+       them, and they are destroyed one by one.  deck_win5 holds the
+       button box, deck_win6 the file dialog. */
     vk_deck_destroy(deck);
     vk_window_destroy(deck_win1);
     vk_window_destroy(deck_win2);
     vk_window_destroy(deck_win3);
     vk_window_destroy(deck_win4);
-    {
-        int bi;
-        for(bi = 0; bi < 5; bi++)
-            vk_button_destroy(deck_buttons[bi]);
-    }
-    vk_box_destroy(deck_box5);
     vk_window_destroy(deck_win5);
     vk_window_destroy(deck_win6);
-    vk_filedialog_destroy(filedialog);
 
     vk_screen_destroy(vk_screen);
 

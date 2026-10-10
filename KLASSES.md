@@ -217,9 +217,21 @@ The `(argp == NULL)` check in each ctor distinguishes "called directly" from
 After the parent constructs, the derived ctor overwrites the function pointer
 slots in its own struct region with its implementations.
 
-## Destructor Chaining (Demote Pattern)
+## Destruction
 
-Destruction cascades from derived to base. A derived dtor:
+Destroying a widget has two sides, and they run in different directions.
+
+**Up the type chain** -- one object is taken apart layer by layer, from
+its own type down to `vk_object_t`. This is the demote pattern, below.
+
+**Down the widget tree** -- a widget that hosts others destroys them when
+it is destroyed, and each of those does the same for what it hosts. This
+is the destroy cascade, further below. It is carried by an event, the
+same way a resize is.
+
+### Destructor Chaining (Demote Pattern)
+
+A derived dtor:
 
 1. Cleans up its own resources
 2. Calls `vk_object_demote(object, parent_type)` to rewrite `.name` and `.size`
@@ -227,20 +239,29 @@ Destruction cascades from derived to base. A derived dtor:
 
 This continues until `vk_object_destroy()` calls `free()`.
 
-### Example: vk_window_t
+#### Example: vk_window_t
 
 ```
 _vk_window_dtor
-  -> free title, detach child
-  -> vk_object_demote(object, vk_widget_t)
-  -> vk_widget_destroy
-    -> _vk_widget_dtor
-      -> vk_object_demote(object, vk_object_t)
-      -> vk_object_destroy
-        -> free(object)
+  -> free title
+  -> vk_object_demote(object, vk_frame_t)
+  -> vk_frame_destroy
+    -> _vk_frame_dtor
+      -> vk_object_demote(object, vk_container_t)
+      -> vk_container_destroy
+        -> _vk_container_dtor
+          -> vk_object_demote(object, vk_widget_t)
+          -> vk_widget_destroy
+            -> _vk_widget_dtor
+              -> take itself off its parent's list
+              -> emit VK_EVENT_ON_DESTROY      (the cascade, below)
+              -> destroy attached scrollers
+              -> vk_object_demote(object, vk_object_t)
+              -> vk_object_destroy
+                -> free(object)
 ```
 
-### Example: vk_scroller_t
+#### Example: vk_scroller_t
 
 ```
 _vk_scroller_dtor
@@ -253,10 +274,61 @@ _vk_scroller_dtor
         -> free(object)
 ```
 
-> **Note:** `vk_frame_t`, `vk_window_t`, and `vk_box_t` skip the container
-> dtor and demote directly to `vk_widget_t` because `vk_container_t` does not
-> install its own dtor during construction (left NULL from calloc).
-> Similarly, `vk_label_t` and `vk_marquee_t` demote directly to `vk_widget_t`.
+Every class built on `vk_container_t` (`vk_box_t`, `vk_frame_t`,
+`vk_window_t`, `vk_popup_t`, `vk_grid_t`, `vk_table_t`, `vk_color_t`,
+`vk_filedialog_t`) passes through the container's destructor on the way
+down. Leaf classes (`vk_label_t`, `vk_button_t`, ...) demote directly to
+`vk_widget_t`.
+
+### The Destroy Cascade (since 10.0.0)
+
+**A container owns what it holds.** Destroying a window destroys its
+child; destroying a box or a grid destroys what is in its slots; and so
+on down the tree, to any depth.
+
+The mechanism is `VK_EVENT_ON_DESTROY`:
+
+1. `_vk_widget_dtor` emits `VK_EVENT_ON_DESTROY` on every widget as it is
+   torn down, once.
+2. `vk_container_t` registers a handler for that event in its constructor
+   (`_vk_container_on_destroy`), so every class built on it takes part --
+   the same way each of them registers for its own `VK_EVENT_ON_RESIZE`.
+3. The handler walks the container's child list, takes each child off it,
+   and destroys the child through the destructor of the child's own type
+   (`vk_object_dispose`).
+4. Each child emits the same event as it goes, which reaches its children.
+
+An application can register for `VK_EVENT_ON_DESTROY` on any widget, for
+example to free what its user pointer refers to. The event arrives at the
+widget layer of the teardown: the layers of the widget's own type are
+already gone, so a handler may use what every widget has (its id, its
+user pointer) and nothing type-specific. A container's children are
+already destroyed by the time a handler registered later than the
+container's own runs.
+
+What follows from this:
+
+- **Destroy the outermost widget and nothing else.** A dialog is torn
+  down with one `vk_window_destroy()`.
+- **Do not destroy a child after its container.** It is already gone;
+  that is a double free. (Before 10.0.0 containers only unlinked their
+  children, and callers had to destroy each one by hand.)
+- **Destroying a child first is still safe.** A widget takes itself off
+  its parent's list as it is destroyed.
+- **To keep a child, take it out first:** `vk_box_set_widget(box, slot,
+  NULL, ...)`, `vk_frame_set_child(frame, NULL, ...)`,
+  `vk_popup_set_client(popup, NULL)`, `vk_container_remove_widget()`, or
+  `vk_container_vacate()` for all of them.
+- **Attached scrollers go with their widget.** Detach one first
+  (`vk_widget_detach_scroller`) to keep it.
+- **A deck and a screen do not own.** `vk_deck_destroy()` lets go of the
+  windows on it, and a widget attached to a screen surface is only shown
+  there; both are destroyed by whoever created them.
+
+`vk_widget_destroy()` accepts a widget of any derived type and destroys
+it as what it is. `vk_object_dispose()` does the same for any object.
+The typed calls (`vk_button_destroy()` and the rest) still refuse an
+object that is not exactly their type.
 
 ## RTTI (vk_object_assert)
 
@@ -607,6 +679,7 @@ Events are grouped by purpose with spaced numeric ranges:
 | `VK_EVENT_ON_RESIZE` | 1 | `vk_widget_resize()` after canvas resize succeeds |
 | `VK_EVENT_ON_RECREATE` | 2 | `vk_widget_recreate()` after `_recreate` succeeds |
 | `VK_EVENT_ON_TELEPORT` | 3 | `vk_screen_teleport()` after terminal migration completes |
+| `VK_EVENT_ON_DESTROY` | 4 | every widget, from `_vk_widget_dtor`, as it is destroyed; containers answer by destroying their children |
 | `VK_EVENT_ON_CLICK` | 10 | `vk_button_press()` |
 | `VK_EVENT_ON_SELECT` | 11 | listbox/selectbox/menubar navigation and check/radio selection |
 | `VK_EVENT_ON_UNSELECT` | 12 | selectbox uncheck |
@@ -791,7 +864,7 @@ Because the deck has no canvas, `_erase` and `_resize` are no-ops, and
 | `vk_deck_set_shadow(deck, enabled)` | Enable or disable drop shadows on all children |
 | `vk_deck_set_shadow_colors(deck, fg, bg)` | Set shadow color pair (default white-on-black) |
 | `vk_deck_update(deck)` | Manually composite children (delegates to `_draw`) |
-| `vk_deck_destroy(deck)` | Detach all children and destroy |
+| `vk_deck_destroy(deck)` | Let go of all windows (they are not destroyed) and destroy the deck |
 
 The deck's `_draw` sets each child's `surface` pointer to `deck->surface`
 before drawing. This means children do not need a valid surface at add time —
@@ -1423,9 +1496,10 @@ last, and Down on the last wraps to the first. Disabled by default.
 
 ### Destructor
 
-The filedialog dtor saves pointers to all children, removes them from the
-container, demotes to `vk_box_t`, destroys the box, then destroys each
-child widget individually (scroller, button bar, buttons, file list, input).
+The filedialog is a box with all of its parts in the box's slots, so its
+dtor frees its own strings, demotes to `vk_box_t` and destroys the box;
+the destroy cascade takes the input, the list frame and list, the button
+bar and buttons, and the list's scroller.
 
 ### API
 
@@ -1477,9 +1551,9 @@ or 3 for framed styles.
 
 `vk_popup_set_client(popup, widget)` replaces the default filler with a
 user-provided widget. The widget is given `VK_STATE_EXPAND`. Passing NULL
-restores the default filler. The popup does not destroy the user's client
-widget — only its own internal widgets (buttons, button bar, default
-filler, layout).
+restores the default filler. Since 10.0.0 a popup destroys its client
+along with everything else in it; call `vk_popup_set_client(popup, NULL)`
+before `vk_popup_destroy()` to keep the client.
 
 ### Buttons
 
