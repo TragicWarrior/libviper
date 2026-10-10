@@ -147,16 +147,12 @@ static int
 _vk_window_dtor(vk_object_t *object)
 {
     vk_window_t     *window;
-    vk_frame_t      *frame;
-    vk_container_t  *container;
 
     if(object == NULL) return -1;
 
     if(!vk_object_assert(object, vk_window_t)) return -1;
 
     window = VK_WINDOW(object);
-    frame = VK_FRAME(object);
-    container = VK_CONTAINER(object);
 
     if(window->title != NULL)
     {
@@ -164,14 +160,10 @@ _vk_window_dtor(vk_object_t *object)
         window->title = NULL;
     }
 
-    if(frame->child != NULL)
-    {
-        container->remove_widget(container, frame->child);
-        frame->child = NULL;
-    }
-
-    vk_object_demote(object, vk_widget_t);
-    vk_widget_destroy(VK_WIDGET(object));
+    /* a window is a frame with a title: the frame's destructor, and
+       the container's under it, see to the child */
+    vk_object_demote(object, vk_frame_t);
+    vk_frame_destroy(VK_FRAME(object));
 
     return 0;
 }

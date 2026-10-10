@@ -353,7 +353,17 @@ vk_widget_destroy(vk_widget_t *widget)
 {
     if(widget == NULL) return;
 
-    if(!vk_object_assert(widget, vk_widget_t)) return;
+    /* a widget of a derived type -- a window, a button -- handed to
+       the general call: destroy it as what it is.  (This used to
+       return without doing anything, which silently leaked every
+       widget destroyed through a plain widget pointer.)  The derived
+       destructors come back here once they have stepped the object
+       down to a plain widget. */
+    if(!vk_object_assert(widget, vk_widget_t))
+    {
+        vk_object_dispose(VK_OBJECT(widget));
+        return;
+    }
 
     widget->dtor(VK_OBJECT(widget));
 
@@ -557,6 +567,27 @@ _vk_widget_dtor(vk_object_t *object)
     if(object == NULL) return -1;
 
     widget = VK_WIDGET(object);
+
+    /* a widget that is destroyed while a container or a deck still
+       lists it takes itself off that list, so the holder is not left
+       with a pointer into freed memory to trip over later.  (A node
+       that was never listed points at itself; one that was removed
+       has been cleared.) */
+    if(widget->list.next != NULL && widget->list.next != &widget->list)
+        list_del(&widget->list);
+
+    /* tell whoever is listening that this widget is going.  A widget
+       that hosts others (see _vk_container_on_destroy) destroys them in
+       answer, and each of those emits the same to its own. */
+    vk_object_emit(object, VK_EVENT_ON_DESTROY);
+
+    /* scrollers attached to the widget go with it.  One that should
+       outlive it has to be detached first (vk_widget_detach_scroller).
+       The scroller's own destructor clears the link back to us. */
+    if(widget->vscroller != NULL)
+        vk_object_dispose(VK_OBJECT(widget->vscroller));
+    if(widget->hscroller != NULL)
+        vk_object_dispose(VK_OBJECT(widget->hscroller));
 
     if(widget->composer != widget->canvas)
         delwin(widget->composer);

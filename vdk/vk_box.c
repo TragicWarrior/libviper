@@ -251,30 +251,21 @@ static int
 _vk_box_dtor(vk_object_t *object)
 {
     vk_box_t        *box;
-    vk_container_t  *container;
-    int             i;
 
     if(object == NULL) return -1;
 
     if(!vk_object_assert(object, vk_box_t)) return -1;
 
     box = VK_BOX(object);
-    container = VK_CONTAINER(object);
 
-    for(i = 0; i < box->slots; i++)
-    {
-        if(box->slot_widgets[i] != NULL)
-        {
-            container->remove_widget(container, box->slot_widgets[i]);
-            box->slot_widgets[i] = NULL;
-        }
-    }
-
+    /* the slots are only the box's view of its children; the children
+       themselves are on the container's list and are destroyed with it
+       (see _vk_container_on_destroy) */
     free(box->slot_widgets);
     box->slot_widgets = NULL;
 
-    vk_object_demote(object, vk_widget_t);
-    vk_widget_destroy(VK_WIDGET(object));
+    vk_object_demote(object, vk_container_t);
+    vk_container_destroy(VK_CONTAINER(object));
 
     return 0;
 }

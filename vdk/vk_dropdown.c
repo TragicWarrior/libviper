@@ -80,11 +80,10 @@ vk_dropdown_set_expanded(vk_dropdown_t *dropdown, bool expanded)
 
     if(!expanded && dropdown->popup != NULL)
     {
-        vk_listbox_t *lb = dropdown->popup_listbox;
+        /* the list is the popup window's child and goes with it */
         dropdown->popup_listbox = NULL;
         vk_window_destroy(dropdown->popup);
         dropdown->popup = NULL;
-        vk_listbox_destroy(lb);
     }
 
     if(expanded)
@@ -254,11 +253,10 @@ _vk_dropdown_dtor(vk_object_t *object)
 
     if(dropdown->popup != NULL)
     {
-        vk_listbox_t *lb = dropdown->popup_listbox;
+        /* the list is the popup window's child and goes with it */
         dropdown->popup_listbox = NULL;
         vk_window_destroy(dropdown->popup);
         dropdown->popup = NULL;
-        vk_listbox_destroy(lb);
     }
 
     vk_object_demote(object, vk_listbox_t);

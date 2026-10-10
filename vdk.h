@@ -157,6 +157,14 @@ enum
     VK_EVENT_ON_RESIZE      = 1,
     VK_EVENT_ON_RECREATE    = 2,
     VK_EVENT_ON_TELEPORT    = 3,
+    /* the widget is being destroyed.  Emitted once on every widget,
+       from the widget layer of its teardown: the layers of its own
+       type have already been taken down, so a handler may use what
+       every widget has (its id, its user pointer) and nothing that
+       belongs to the particular type.  Containers answer it by
+       destroying their children, which is how destroying a window
+       reaches everything inside it. */
+    VK_EVENT_ON_DESTROY     = 4,
 
     /* interaction */
     VK_EVENT_ON_CLICK       = 10,
@@ -293,6 +301,8 @@ typedef void        (*VkWindowDecorateFunc)(vk_window_t *window,
 #define VK_SPINBUTTON(x)        ((vk_spinbutton_t *)x)
 
 /* vk_object */
+/* the name of the object's type as written in the code ("vk_box_t"),
+   the most derived one while the object is alive.  Library-owned. */
 const char*     vk_object_get_klass_name(vk_object_t *object);
 int             vk_object_set_kmio(vk_object_t *object, VkKmioFunc func);
 int             vk_object_push_keystroke(vk_object_t *object,
@@ -303,6 +313,11 @@ int             vk_object_unregister_event(vk_object_t *object,
                     int event, VkEventFunc func);
 int             vk_object_emit(vk_object_t *object, int event);
 int             vk_object_destroy(vk_object_t *object);
+/* destroy an object of any type through the destructor of the type it
+   actually is.  The typed destroy calls each refuse an object that is
+   not exactly their type; this is for when all you hold is a widget or
+   object pointer.  NULL is a no-op. */
+void            vk_object_dispose(vk_object_t *object);
 
 /* vk_screen */
 vk_screen_t*    vk_screen_create(void);
@@ -400,6 +415,8 @@ void            vk_widget_set_userptr(vk_widget_t *widget, void *ptr);
 void*           vk_widget_get_userptr(vk_widget_t *widget);
 /* process-lifetime id assigned in the widget ctor.  0 if widget is NULL. */
 uint32_t        vk_widget_get_id(vk_widget_t *widget);
+/* destroy a widget of any type: one of a derived type (a window, a
+   button) is destroyed as what it is.  Emits VK_EVENT_ON_DESTROY. */
 void            vk_widget_destroy(vk_widget_t *widget);
 
 /* vk_container */

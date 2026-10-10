@@ -1,3 +1,51 @@
+Version 10.0.0
+
+vdk
+* [Bryan Christ] A container owns what it holds: the destroy cascade.
+
+  Destroying a widget that hosts others now destroys them too, to any
+  depth -- a window its child, a box or grid what is in its slots.
+  Until now containers only unlinked their children (vk_container.c
+  has carried "todo iterate over container list and destroy" since
+  2017), so every caller had to destroy each widget by hand, and
+  whatever it forgot was leaked.
+
+  It is carried by the event framework, the way a resize is:
+    - new VK_EVENT_ON_DESTROY, emitted once on every widget as it is
+      torn down
+    - vk_container_t registers a handler for it in its constructor, so
+      box, frame, window, popup, grid, table, color and filedialog all
+      inherit it; the handler destroys the children, each of which
+      emits the same to its own
+    - applications can register for the event on any widget
+
+  Also new:
+    - vk_object_dispose(object): destroy an object of any type through
+      the destructor of the type it is
+    - vk_widget_destroy() accepts a widget of a derived type and
+      destroys it as what it is.  It used to return without doing
+      anything, which silently leaked every window or button destroyed
+      through a plain widget pointer.
+    - vk_object_get_klass_name() exists.  vdk.h has declared it since
+      2017 but nothing defined it.
+    - a widget takes itself off its parent's list when it is destroyed,
+      so destroying a child before its container is safe
+    - attached scrollers are destroyed with their widget
+    - vk_container_t installs its destructor; box, frame, window and
+      grid now chain through it instead of skipping it
+
+  CHANGED BEHAVIOUR -- the reason for the major version.  Code written
+  for 9.x that destroys a container and THEN destroys the widgets that
+  were in it now frees them twice.  Destroy the outermost widget only.
+  The same goes for a popup's client (vk_popup_set_client(popup, NULL)
+  first to keep it) and for a scroller destroyed after the widget it
+  was attached to.  Destroying children first, or taking them out of
+  the container first, is unaffected.  A deck and a screen still do
+  not own what is on them.  See "Destruction" in KLASSES.md.
+
+  The shared library is now libvdk.so.10; programs built against 9.x
+  need a rebuild, and a review of their teardown code.
+
 Version 9.0.0
 
 vdk
