@@ -706,17 +706,18 @@ vk_listbox_add_separator(vk_listbox_t *listbox, int style)
     return listbox->_add_separator(listbox, style);
 }
 
-inline void
+inline int
 vk_listbox_destroy(vk_listbox_t *listbox)
 {
-    if(listbox == NULL) return;
+    if(listbox == NULL) return -1;
 
-    // make sure the object is actually a listbox
-    if(!vk_object_assert(listbox, vk_listbox_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
     listbox->dtor(VK_OBJECT(listbox));
 
-    return;
+    return 0;
 }
 
 static int

@@ -418,14 +418,18 @@ vk_filedialog_update(vk_filedialog_t *dialog)
     return 0;
 }
 
-inline void
+inline int
 vk_filedialog_destroy(vk_filedialog_t *dialog)
 {
-    if(dialog == NULL) return;
+    if(dialog == NULL) return -1;
 
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
 
     dialog->dtor(VK_OBJECT(dialog));
+
+    return 0;
 }
 
 static int

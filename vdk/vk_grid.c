@@ -412,14 +412,18 @@ vk_grid_update(vk_grid_t *grid)
     return grid->_update(grid);
 }
 
-inline void
+inline int
 vk_grid_destroy(vk_grid_t *grid)
 {
-    if(grid == NULL) return;
+    if(grid == NULL) return -1;
 
-    if(!vk_object_assert(grid, vk_grid_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(grid, vk_grid_t)) return -1;
 
     grid->dtor(VK_OBJECT(grid));
+
+    return 0;
 }
 
 static int

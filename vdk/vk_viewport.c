@@ -140,14 +140,18 @@ vk_viewport_update(vk_viewport_t *vp)
     return vp->_update(vp);
 }
 
-inline void
+inline int
 vk_viewport_destroy(vk_viewport_t *vp)
 {
-    if(vp == NULL) return;
+    if(vp == NULL) return -1;
 
-    if(!vk_object_assert(vp, vk_viewport_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(vp, vk_viewport_t)) return -1;
 
     vp->dtor(VK_OBJECT(vp));
+
+    return 0;
 }
 
 /*

@@ -229,6 +229,25 @@ it is destroyed, and each of those does the same for what it hosts. This
 is the destroy cascade, further below. It is carried by an event, the
 same way a resize is.
 
+### What a Destroy Call Returns (since 10.2.0)
+
+Every `vk_<type>_destroy()` returns **0** when it destroyed the object
+and **-1** when it did not.
+
+The typed calls are strict. Each destroys only an object that is
+*exactly* its type and refuses any other, a derived one included:
+`vk_frame_destroy()` will not destroy a window, `vk_label_destroy()`
+will not destroy a marquee. A refusal changes nothing -- the object is
+still alive and still the caller's to destroy -- and -1 is the only sign
+of it. NULL is refused the same way.
+
+Before 10.2.0 these calls returned nothing, so a refusal was silent and
+the object simply leaked.
+
+When all you hold is a widget or object pointer, `vk_widget_destroy()`
+and `vk_object_dispose()` destroy an object as whatever it really is.
+`vk_widget_destroy()` returns -1 only for NULL.
+
 ### Destructor Chaining (Demote Pattern)
 
 A derived dtor:

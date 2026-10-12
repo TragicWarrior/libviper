@@ -168,14 +168,18 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
     return 0;
 }
 
-inline void
+inline int
 vk_selectbox_destroy(vk_selectbox_t *selectbox)
 {
-    if(selectbox == NULL) return;
+    if(selectbox == NULL) return -1;
 
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
 
     selectbox->dtor(VK_OBJECT(selectbox));
+
+    return 0;
 }
 
 static int

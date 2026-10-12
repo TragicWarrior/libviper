@@ -92,16 +92,18 @@ vk_window_set_decorate(vk_window_t *window, VkWindowDecorateFunc func,
     return 0;
 }
 
-inline void
+inline int
 vk_window_destroy(vk_window_t *window)
 {
-    if(window == NULL) return;
+    if(window == NULL) return -1;
 
-    if(!vk_object_assert(window, vk_window_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(window, vk_window_t)) return -1;
 
     window->dtor(VK_OBJECT(window));
 
-    return;
+    return 0;
 }
 
 static int

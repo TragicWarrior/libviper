@@ -445,7 +445,7 @@ int             vk_screen_set_wallpaper(vk_screen_t *screen,
 int             vk_screen_set_overlay(vk_screen_t *screen,
                     VkSurfaceBkgdFunc func);
 int             vk_screen_refresh(vk_screen_t *screen);
-void            vk_screen_destroy(vk_screen_t *screen);
+int             vk_screen_destroy(vk_screen_t *screen);
 
 /* vk_widget */
 vk_widget_t*    vk_widget_create(int width, int height);
@@ -497,9 +497,25 @@ void            vk_widget_set_userptr(vk_widget_t *widget, void *ptr);
 void*           vk_widget_get_userptr(vk_widget_t *widget);
 /* process-lifetime id assigned in the widget ctor.  0 if widget is NULL. */
 uint32_t        vk_widget_get_id(vk_widget_t *widget);
+/*
+    Destroy calls and what they return.
+
+    Every vk_<type>_destroy() returns 0 when it destroyed the object and
+    -1 when it did not.  The typed calls are strict: each destroys only
+    an object that is exactly its type, and refuses any other -- one of
+    a derived type included, so vk_frame_destroy() will not destroy a
+    window, nor vk_label_destroy() a marquee.  A refusal leaves the
+    object as it was, still alive and still the caller's to destroy.
+    NULL is refused the same way.
+
+    When all you hold is a widget or object pointer, vk_widget_destroy()
+    and vk_object_dispose() destroy an object as whatever it really is.
+*/
+
 /* destroy a widget of any type: one of a derived type (a window, a
-   button) is destroyed as what it is.  Emits VK_EVENT_ON_DESTROY. */
-void            vk_widget_destroy(vk_widget_t *widget);
+   button) is destroyed as what it is.  Emits VK_EVENT_ON_DESTROY.
+   Returns 0, or -1 for NULL. */
+int             vk_widget_destroy(vk_widget_t *widget);
 
 /* vk_container */
 vk_container_t* vk_container_create(int width, int height);
@@ -574,7 +590,7 @@ int             vk_listbox_get_metrics(vk_listbox_t *listbox,
 int             vk_listbox_update(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
 int             vk_listbox_add_separator(vk_listbox_t *listbox, int style);
-void            vk_listbox_destroy(vk_listbox_t *listbox);
+int             vk_listbox_destroy(vk_listbox_t *listbox);
 
 /* vk_selectbox */
 vk_selectbox_t* vk_selectbox_create(int width, int height, int mode);
@@ -615,7 +631,7 @@ int             vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_uncheck_all(vk_selectbox_t *selectbox);
 #define         vk_selectbox_update(sb) \
                     vk_listbox_update(VK_LISTBOX(sb))
-void            vk_selectbox_destroy(vk_selectbox_t *selectbox);
+int             vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
 /* vk_dropdown */
 vk_dropdown_t*  vk_dropdown_create(int width, int max_visible);
@@ -649,7 +665,7 @@ int             vk_dropdown_popup_select(vk_dropdown_t *dropdown);
 #define         vk_dropdown_set_prev(dd) \
                     vk_listbox_set_prev(VK_LISTBOX(dd))
 int             vk_dropdown_update(vk_dropdown_t *dropdown);
-void            vk_dropdown_destroy(vk_dropdown_t *dropdown);
+int             vk_dropdown_destroy(vk_dropdown_t *dropdown);
 
 /* vk_frame */
 vk_frame_t*     vk_frame_create(int width, int height);
@@ -664,7 +680,7 @@ int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child,
                     uint32_t flags);
 vk_widget_t*    vk_frame_get_child(vk_frame_t *frame);
 int             vk_frame_update(vk_frame_t *frame);
-void            vk_frame_destroy(vk_frame_t *frame);
+int             vk_frame_destroy(vk_frame_t *frame);
 
 /* vk_scroller */
 vk_scroller_t*  vk_scroller_create(int flags);
@@ -694,7 +710,7 @@ int vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
 int vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
 
 int             vk_scroller_update(vk_scroller_t *scroller);
-void            vk_scroller_destroy(vk_scroller_t *scroller);
+int             vk_scroller_destroy(vk_scroller_t *scroller);
 
 /* vk_progress */
 vk_progress_t*  vk_progress_create(int orientation, int length, int thickness);
@@ -720,7 +736,7 @@ int             vk_progress_set_trough_attrs(vk_progress_t *progress,
 int             vk_progress_set_thickness(vk_progress_t *progress,
                     int thickness);
 int             vk_progress_update(vk_progress_t *progress);
-void            vk_progress_destroy(vk_progress_t *progress);
+int             vk_progress_destroy(vk_progress_t *progress);
 
 /* vk_meter -- derives from vk_progress; use vk_progress_* via VK_PROGRESS() for
  * range / value / relief / trough / style / thickness */
@@ -728,7 +744,7 @@ vk_meter_t*     vk_meter_create(int orientation, int length, int thickness);
 int             vk_meter_add_threshold(vk_meter_t *meter, double at,
                     short fg, short bg);
 int             vk_meter_clear_thresholds(vk_meter_t *meter);
-void            vk_meter_destroy(vk_meter_t *meter);
+int             vk_meter_destroy(vk_meter_t *meter);
 
 /* vk_graph -- bar graph; base widget.  vk_histogram will derive from it. */
 vk_graph_t*     vk_graph_create(int width, int height);
@@ -746,7 +762,7 @@ int             vk_graph_set_data(vk_graph_t *graph, const double *values,
 int             vk_graph_set_colors(vk_graph_t *graph, short fg, short bg);
 int             vk_graph_set_attrs(vk_graph_t *graph, attr_t attrs);
 int             vk_graph_update(vk_graph_t *graph);
-void            vk_graph_destroy(vk_graph_t *graph);
+int             vk_graph_destroy(vk_graph_t *graph);
 
 /* vk_histogram -- derives from vk_graph; bins raw samples into frequency
  * bars.  Use vk_graph_* via VK_GRAPH() for bar style, colours, x window. */
@@ -757,7 +773,7 @@ int             vk_histogram_set_bins(vk_histogram_t *hist, int nbins);
 int             vk_histogram_set_range(vk_histogram_t *hist,
                     double min, double max);
 int             vk_histogram_update(vk_histogram_t *hist);
-void            vk_histogram_destroy(vk_histogram_t *hist);
+int             vk_histogram_destroy(vk_histogram_t *hist);
 
 int             vk_widget_attach_scroller(vk_widget_t *host,
                     vk_scroller_t *scroller);
@@ -789,7 +805,7 @@ int             vk_window_set_decorate(vk_window_t *window,
                     VkWindowDecorateFunc func, void *anything);
 #define         vk_window_update(w) \
                     vk_frame_update(VK_FRAME(w))
-void            vk_window_destroy(vk_window_t *window);
+int             vk_window_destroy(vk_window_t *window);
 
 /* vk_box */
 vk_box_t*       vk_box_create(int width, int height,
@@ -802,7 +818,7 @@ int             vk_box_get_slot_count(vk_box_t *box);
 int             vk_box_set_subfocus(vk_box_t *box, int slot);
 int             vk_box_get_subfocus(vk_box_t *box);
 int             vk_box_update(vk_box_t *box);
-void            vk_box_destroy(vk_box_t *box);
+int             vk_box_destroy(vk_box_t *box);
 
 /* vk_grid -- 2D layout container; cells can be widget slots or paint areas */
 vk_grid_t*      vk_grid_create(int width, int height, int cols, int rows);
@@ -824,7 +840,7 @@ int             vk_grid_set_subfocus(vk_grid_t *grid, int col, int row);
 int             vk_grid_get_subfocus_col(vk_grid_t *grid);
 int             vk_grid_get_subfocus_row(vk_grid_t *grid);
 int             vk_grid_update(vk_grid_t *grid);
-void            vk_grid_destroy(vk_grid_t *grid);
+int             vk_grid_destroy(vk_grid_t *grid);
 
 /* vk_table -- vk_grid with rendered dividers (single/double/ascii) */
 vk_table_t*     vk_table_create(int width, int height, int cols, int rows,
@@ -835,7 +851,7 @@ int             vk_table_set_border_colors(vk_table_t *table,
                     short fg, short bg);
 int             vk_table_set_border_attrs(vk_table_t *table, attr_t attrs);
 int             vk_table_update(vk_table_t *table);
-void            vk_table_destroy(vk_table_t *table);
+int             vk_table_destroy(vk_table_t *table);
 
 /* vk_color -- 16-cell ANSI-color picker (vk_table subclass) */
 vk_color_t*     vk_color_create(int width, int height, int cols, int rows,
@@ -846,7 +862,7 @@ int             vk_color_set_focus_colors(vk_color_t *color,
                     short fg, short bg);
 int             vk_color_set_focus_attrs(vk_color_t *color, attr_t attrs);
 int             vk_color_update(vk_color_t *color);
-void            vk_color_destroy(vk_color_t *color);
+int             vk_color_destroy(vk_color_t *color);
 
 /* vk_label */
 vk_label_t*     vk_label_create(int width);
@@ -854,7 +870,7 @@ int             vk_label_set_text(vk_label_t *label, const char *text);
 const char*     vk_label_get_text(vk_label_t *label);
 int             vk_label_set_justify(vk_label_t *label, int justify);
 int             vk_label_update(vk_label_t *label);
-void            vk_label_destroy(vk_label_t *label);
+int             vk_label_destroy(vk_label_t *label);
 
 /* vk_textbox */
 vk_textbox_t*   vk_textbox_create(int width, int height);
@@ -870,7 +886,7 @@ int             vk_textbox_scroll_pgdn(vk_textbox_t *textbox);
 int             vk_textbox_scroll_home(vk_textbox_t *textbox);
 int             vk_textbox_scroll_end(vk_textbox_t *textbox);
 int             vk_textbox_update(vk_textbox_t *textbox);
-void            vk_textbox_destroy(vk_textbox_t *textbox);
+int             vk_textbox_destroy(vk_textbox_t *textbox);
 
 /* vk_marquee */
 vk_marquee_t*   vk_marquee_create(int width);
@@ -882,7 +898,7 @@ int             vk_marquee_set_speed(vk_marquee_t *marquee, int interval);
 int             vk_marquee_set_pause(vk_marquee_t *marquee, int duration);
 int             vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat);
 int             vk_marquee_run(vk_marquee_t *marquee);
-void            vk_marquee_destroy(vk_marquee_t *marquee);
+int             vk_marquee_destroy(vk_marquee_t *marquee);
 
 /* vk_deck */
 vk_deck_t*      vk_deck_create(void);
@@ -901,7 +917,7 @@ int             vk_deck_set_shadow_colors(vk_deck_t *deck,
                     short fg, short bg);
 int             vk_deck_update(vk_deck_t *deck);
 vk_widget_t*    vk_deck_hit_test(vk_deck_t *deck, int x, int y);
-void            vk_deck_destroy(vk_deck_t *deck);
+int             vk_deck_destroy(vk_deck_t *deck);
 
 /* vk_button */
 vk_button_t*    vk_button_create(const char *text);
@@ -915,11 +931,11 @@ int             vk_button_set_on_press(vk_button_t *button,
 int             vk_button_press(vk_button_t *button);
 int             vk_button_release(vk_button_t *button);
 int             vk_button_update(vk_button_t *button);
-void            vk_button_destroy(vk_button_t *button);
+int             vk_button_destroy(vk_button_t *button);
 
 /* vk_filler */
 vk_filler_t*    vk_filler_create(void);
-void            vk_filler_destroy(vk_filler_t *filler);
+int             vk_filler_destroy(vk_filler_t *filler);
 
 /* vk_viewport -- a window into a logical canvas served by a callback */
 vk_viewport_t*  vk_viewport_create(int width, int height);
@@ -937,7 +953,7 @@ int             vk_viewport_update(vk_viewport_t *vp);
 void            vk_viewport_scroll_info(vk_widget_t *child,
                     int *content_h, int *content_w,
                     int *scroll_y, int *scroll_x);
-void            vk_viewport_destroy(vk_viewport_t *vp);
+int             vk_viewport_destroy(vk_viewport_t *vp);
 
 /* vk_spinbutton -- numeric value field with increment / decrement arrows */
 vk_spinbutton_t* vk_spinbutton_create(int width);
@@ -962,7 +978,7 @@ int             vk_spinbutton_step(vk_spinbutton_t *spin, int n);
 bool            vk_spinbutton_click(vk_spinbutton_t *spin,
                     int local_x, int local_y);
 int             vk_spinbutton_update(vk_spinbutton_t *spin);
-void            vk_spinbutton_destroy(vk_spinbutton_t *spin);
+int             vk_spinbutton_destroy(vk_spinbutton_t *spin);
 
 /* vk_input */
 vk_input_t*     vk_input_create(int width);
@@ -979,7 +995,7 @@ int             vk_input_end(vk_input_t *input);
 int             vk_input_clear(vk_input_t *input);
 void            vk_input_show_cursor(vk_input_t *input, bool visible);
 int             vk_input_update(vk_input_t *input);
-void            vk_input_destroy(vk_input_t *input);
+int             vk_input_destroy(vk_input_t *input);
 
 /* vk_activity */
 vk_activity_t*  vk_activity_create(void);
@@ -990,7 +1006,7 @@ int             vk_activity_start(vk_activity_t *activity);
 int             vk_activity_stop(vk_activity_t *activity);
 bool            vk_activity_is_running(vk_activity_t *activity);
 int             vk_activity_run(vk_activity_t *activity);
-void            vk_activity_destroy(vk_activity_t *activity);
+int             vk_activity_destroy(vk_activity_t *activity);
 
 /* vk_menubar */
 vk_menubar_t*   vk_menubar_create(int width);
@@ -1013,7 +1029,7 @@ int             vk_menubar_get_item_position(vk_menubar_t *menubar,
                     int idx, int *x);
 int             vk_menubar_update(vk_menubar_t *menubar);
 int             vk_menubar_reset(vk_menubar_t *menubar);
-void            vk_menubar_destroy(vk_menubar_t *menubar);
+int             vk_menubar_destroy(vk_menubar_t *menubar);
 
 /* vk_filedialog */
 vk_filedialog_t* vk_filedialog_create(int width, int height,
@@ -1036,7 +1052,7 @@ int             vk_filedialog_set_button_attrs(vk_filedialog_t *dialog,
                     attr_t attrs);
 vk_listbox_t*   vk_filedialog_get_file_list(vk_filedialog_t *dialog);
 int             vk_filedialog_update(vk_filedialog_t *dialog);
-void            vk_filedialog_destroy(vk_filedialog_t *dialog);
+int             vk_filedialog_destroy(vk_filedialog_t *dialog);
 
 /* vk_calendar */
 vk_calendar_t*  vk_calendar_create(void);
@@ -1059,7 +1075,7 @@ int             vk_calendar_set_header_colors(vk_calendar_t *calendar,
 int             vk_calendar_set_header_attrs(vk_calendar_t *calendar,
                     attr_t attrs);
 int             vk_calendar_update(vk_calendar_t *calendar);
-void            vk_calendar_destroy(vk_calendar_t *calendar);
+int             vk_calendar_destroy(vk_calendar_t *calendar);
 
 /* vk_popup */
 vk_popup_t*     vk_popup_create(int width, int height, int style, ...);
@@ -1089,6 +1105,6 @@ int             vk_popup_set_button_attrs(vk_popup_t *popup,
 #define         vk_popup_set_border_attrs(p, a) \
                     vk_window_set_border_attrs(VK_WINDOW(p), (a))
 int             vk_popup_update(vk_popup_t *popup);
-void            vk_popup_destroy(vk_popup_t *popup);
+int             vk_popup_destroy(vk_popup_t *popup);
 
 #endif

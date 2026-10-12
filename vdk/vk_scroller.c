@@ -198,16 +198,18 @@ vk_scroller_update(vk_scroller_t *scroller)
     return scroller->_update(scroller);
 }
 
-inline void
+inline int
 vk_scroller_destroy(vk_scroller_t *scroller)
 {
-    if(scroller == NULL) return;
+    if(scroller == NULL) return -1;
 
-    if(!vk_object_assert(scroller, vk_scroller_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
 
     scroller->dtor(VK_OBJECT(scroller));
 
-    return;
+    return 0;
 }
 
 inline int

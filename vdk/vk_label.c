@@ -87,14 +87,18 @@ vk_label_update(vk_label_t *label)
     return label->_update(label);
 }
 
-inline void
+inline int
 vk_label_destroy(vk_label_t *label)
 {
-    if(label == NULL) return;
+    if(label == NULL) return -1;
 
-    if(!vk_object_assert(label, vk_label_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(label, vk_label_t)) return -1;
 
     label->dtor(VK_OBJECT(label));
+
+    return 0;
 }
 
 static int

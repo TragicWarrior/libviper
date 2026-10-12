@@ -191,14 +191,18 @@ vk_box_update(vk_box_t *box)
     return box->_update(box);
 }
 
-inline void
+inline int
 vk_box_destroy(vk_box_t *box)
 {
-    if(box == NULL) return;
+    if(box == NULL) return -1;
 
-    if(!vk_object_assert(box, vk_box_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(box, vk_box_t)) return -1;
 
     box->dtor(VK_OBJECT(box));
+
+    return 0;
 }
 
 static int

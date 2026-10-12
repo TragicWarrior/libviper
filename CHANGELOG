@@ -1,3 +1,26 @@
+Version 10.2.0
+
+vdk
+* [Bryan Christ] Every destroy call says whether it destroyed anything.
+
+  The typed destroy calls -- vk_label_destroy(), vk_window_destroy() and
+  the rest, twenty-nine of them, and vk_screen_destroy() and
+  vk_widget_destroy() with them -- returned nothing.  They now return 0
+  when the object was destroyed and -1 when it was not.
+
+  The typed calls stay strict: each destroys only an object that is
+  exactly its type, and refuses any other, a derived one included.
+  vk_frame_destroy() does not destroy a window.  That refusal used to
+  be silent, and the object leaked; -1 is now the caller's sign of it.
+  NULL is refused the same way.  vk_widget_destroy() takes any widget
+  and so returns -1 only for NULL.
+
+  A program that ignores the result behaves exactly as before, and one
+  built against an older vdk.h keeps working without a rebuild.
+
+  test_destroy covers it: each call with NULL, and exact, derived and
+  unrelated objects through the typed calls.
+
 Version 10.1.2
 
 vdk

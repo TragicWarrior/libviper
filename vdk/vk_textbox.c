@@ -258,14 +258,18 @@ vk_textbox_update(vk_textbox_t *textbox)
     return textbox->_update(textbox);
 }
 
-inline void
+inline int
 vk_textbox_destroy(vk_textbox_t *textbox)
 {
-    if(textbox == NULL) return;
+    if(textbox == NULL) return -1;
 
-    if(!vk_object_assert(textbox, vk_textbox_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
 
     textbox->dtor(VK_OBJECT(textbox));
+
+    return 0;
 }
 
 static int

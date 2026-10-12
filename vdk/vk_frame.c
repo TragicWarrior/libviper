@@ -139,16 +139,18 @@ vk_frame_update(vk_frame_t *frame)
     return frame->_update(frame);
 }
 
-inline void
+inline int
 vk_frame_destroy(vk_frame_t *frame)
 {
-    if(frame == NULL) return;
+    if(frame == NULL) return -1;
 
-    if(!vk_object_assert(frame, vk_frame_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(frame, vk_frame_t)) return -1;
 
     frame->dtor(VK_OBJECT(frame));
 
-    return;
+    return 0;
 }
 
 static int

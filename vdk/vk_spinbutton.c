@@ -621,14 +621,18 @@ vk_spinbutton_update(vk_spinbutton_t *spin)
     return spin->_update(spin);
 }
 
-inline void
+inline int
 vk_spinbutton_destroy(vk_spinbutton_t *spin)
 {
-    if(spin == NULL) return;
+    if(spin == NULL) return -1;
 
-    if(!vk_object_assert(spin, vk_spinbutton_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(spin, vk_spinbutton_t)) return -1;
 
     spin->dtor(VK_OBJECT(spin));
+
+    return 0;
 }
 
 /* ── ctor / dtor ─────────────────────────────────────────────────── */

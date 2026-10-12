@@ -243,16 +243,20 @@ vk_histogram_update(vk_histogram_t *hist)
     return vk_graph_update(VK_GRAPH(hist));
 }
 
-void
+int
 vk_histogram_destroy(vk_histogram_t *hist)
 {
-    if(hist == NULL) return;
+    if(hist == NULL) return -1;
 
-    if(!vk_object_assert(hist, vk_histogram_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(hist, vk_histogram_t)) return -1;
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
         in vk_widget_destroy(), which frees the object.
     */
     hist->dtor(VK_OBJECT(hist));
+
+    return 0;
 }

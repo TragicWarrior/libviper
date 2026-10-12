@@ -171,14 +171,18 @@ vk_button_update(vk_button_t *button)
     return button->_update(button);
 }
 
-inline void
+inline int
 vk_button_destroy(vk_button_t *button)
 {
-    if(button == NULL) return;
+    if(button == NULL) return -1;
 
-    if(!vk_object_assert(button, vk_button_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(button, vk_button_t)) return -1;
 
     button->dtor(VK_OBJECT(button));
+
+    return 0;
 }
 
 static int

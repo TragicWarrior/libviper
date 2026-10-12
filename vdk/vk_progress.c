@@ -508,16 +508,20 @@ vk_progress_update(vk_progress_t *progress)
     return _vk_progress_render(VK_WIDGET(progress));
 }
 
-void
+int
 vk_progress_destroy(vk_progress_t *progress)
 {
-    if(progress == NULL) return;
+    if(progress == NULL) return -1;
 
-    if(!vk_object_assert(progress, vk_progress_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(progress, vk_progress_t)) return -1;
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
         in vk_widget_destroy(), which frees the object.
     */
     progress->dtor(VK_OBJECT(progress));
+
+    return 0;
 }

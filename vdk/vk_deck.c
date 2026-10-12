@@ -242,14 +242,18 @@ vk_deck_hit_test(vk_deck_t *deck, int x, int y)
     return NULL;
 }
 
-inline void
+inline int
 vk_deck_destroy(vk_deck_t *deck)
 {
-    if(deck == NULL) return;
+    if(deck == NULL) return -1;
 
-    if(!vk_object_assert(deck, vk_deck_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(deck, vk_deck_t)) return -1;
 
     deck->dtor(VK_OBJECT(deck));
+
+    return 0;
 }
 
 static int

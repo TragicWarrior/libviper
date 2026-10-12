@@ -339,14 +339,18 @@ vk_popup_update(vk_popup_t *popup)
     return 0;
 }
 
-inline void
+inline int
 vk_popup_destroy(vk_popup_t *popup)
 {
-    if(popup == NULL) return;
+    if(popup == NULL) return -1;
 
-    if(!vk_object_assert(popup, vk_popup_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(popup, vk_popup_t)) return -1;
 
     popup->dtor(VK_OBJECT(popup));
+
+    return 0;
 }
 
 static int

@@ -209,14 +209,18 @@ vk_calendar_update(vk_calendar_t *calendar)
     return calendar->_update(calendar);
 }
 
-inline void
+inline int
 vk_calendar_destroy(vk_calendar_t *calendar)
 {
-    if(calendar == NULL) return;
+    if(calendar == NULL) return -1;
 
-    if(!vk_object_assert(calendar, vk_calendar_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(calendar, vk_calendar_t)) return -1;
 
     calendar->dtor(VK_OBJECT(calendar));
+
+    return 0;
 }
 
 static int

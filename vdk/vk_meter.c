@@ -162,16 +162,20 @@ vk_meter_clear_thresholds(vk_meter_t *meter)
     return 0;
 }
 
-void
+int
 vk_meter_destroy(vk_meter_t *meter)
 {
-    if(meter == NULL) return;
+    if(meter == NULL) return -1;
 
-    if(!vk_object_assert(meter, vk_meter_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(meter, vk_meter_t)) return -1;
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
         in vk_widget_destroy(), which frees the object.
     */
     meter->dtor(VK_OBJECT(meter));
+
+    return 0;
 }

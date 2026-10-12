@@ -828,14 +828,18 @@ _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
     return 0;
 }
 
-inline void
+inline int
 vk_screen_destroy(vk_screen_t *screen)
 {
-    if(screen == NULL) return;
+    if(screen == NULL) return -1;
 
-    if(!vk_object_assert(screen, vk_screen_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
     screen->dtor(VK_OBJECT(screen));
+
+    return 0;
 }
 
 static int
