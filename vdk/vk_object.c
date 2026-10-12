@@ -149,9 +149,20 @@ vk_object_destroy(vk_object_t *object)
     struct list_head        *pos;
     struct list_head        *n;
 
+    if(object == NULL) return -1;
+
+    /*
+        still a derived type: its own destructor does the whole job.
+        the chain it starts ends back here -- the last destructor demotes
+        the object to vk_object_t and calls this function again -- and
+        that inner call frees the handlers and the object.  so there is
+        nothing left for this call to do, and nothing left that it may
+        touch: carrying on would walk a freed handler list and free the
+        object a second time.
+    */
     if(!vk_object_assert(object, vk_object_t))
     {
-        object->dtor(object);
+        return object->dtor(object);
     }
 
     list_for_each_safe(pos, n, &object->event_handlers)

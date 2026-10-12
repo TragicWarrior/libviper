@@ -381,6 +381,10 @@ int             vk_object_register_event(vk_object_t *object,
 int             vk_object_unregister_event(vk_object_t *object,
                     int event, VkEventFunc func);
 int             vk_object_emit(vk_object_t *object, int event);
+/* destroy an object.  For one that is still a derived type this runs
+   its own destructor, the same as vk_object_dispose; the destructors
+   themselves call it last, on the plain vk_object_t that is left, to
+   free the handlers and the memory.  Returns -1 for NULL. */
 int             vk_object_destroy(vk_object_t *object);
 /* destroy an object of any type through the destructor of the type it
    actually is.  The typed destroy calls each refuse an object that is
