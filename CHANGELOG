@@ -1,3 +1,43 @@
+Version 10.1.0
+
+vdk
+* [Bryan Christ] A canvas can be read back as portable cells.
+
+  What a program draws lives in ncurses WINDOWs, and a cell of one
+  cannot be handed to anything outside the process: its character may
+  be a key into the terminal's line-drawing set, its attribute bits are
+  in ncurses' own layout, and its colours are a pair number only this
+  process's ncurses can resolve.  The new call works all of that out.
+
+    - vdk_cell_t: one cell in 16 bytes with a fixed layout -- the
+      character as Unicode, foreground and background as RGB, and
+      flags for bold, underline, italic and blink
+    - vdk_cells_read_row(win, y, cells, cols) decodes a row of any
+      WINDOW
+    - vk_widget_read_row() does it for a widget (its composer: what is
+      on show, which for a frozen widget is the snapshot)
+    - vk_screen_read_row() does it for the active surface, as composed
+
+  Reverse video and dim do not come back as attributes.  A reader
+  cannot count on a terminal honouring either, so they are worked into
+  the colours: reverse swaps them, dim moves the foreground halfway to
+  the background.  A double-width character comes back as a first cell
+  flagged VDK_CELL_WIDE and an empty second cell flagged
+  VDK_CELL_WIDE_TAIL.  A colour that was the terminal's default still
+  carries a usable RGB value, with a flag saying so.
+
+  Colours need vdk_color_init().  ncurses cannot say what a standard
+  palette colour looks like -- for one nobody has redefined it reports
+  a placeholder -- so the standard 256-colour palette is built in, and
+  ncurses is believed only for a colour whose value has changed since
+  vdk_color_init() looked.
+
+  This is for showing a canvas somewhere other than the terminal it is
+  on: as an image, or as a copy in another program.
+
+* [Bryan Christ] A first headless test, test/test_cells, run by ctest.
+  It uses a detached screen and needs no terminal.
+
 Version 10.0.0
 
 vdk

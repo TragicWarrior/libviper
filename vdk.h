@@ -17,6 +17,75 @@ short           vdk_color_pair(short fg, short bg);
 
 #define VDK_COLORS(fg, bg)  (COLOR_PAIR(vdk_color_pair(fg, bg)))
 
+/*
+    A canvas read back as portable cells (vdk_cells.c).
+
+    A cell in an ncurses WINDOW cannot be handed to anything outside
+    this process as it stands: its character may be a key into the
+    terminal's line-drawing set, its attribute bits are in ncurses' own
+    layout, and its colours are a pair number that only this process's
+    ncurses can resolve.  A vdk_cell_t is the same cell with all of that
+    worked out, laid out with fixed sizes so that it can be drawn as an
+    image or written out for another program to read.
+*/
+
+/* attributes that survive into a cell.  reverse and dim do not appear:
+   they are worked into the colours (see vdk_cells_read_row) */
+#define VDK_CELL_BOLD           (1 << 0)    // 1
+#define VDK_CELL_UNDERLINE      (1 << 1)    // 2
+#define VDK_CELL_ITALIC         (1 << 2)    // 4
+#define VDK_CELL_BLINK          (1 << 3)    // 8
+
+/* the colour was the terminal's own default rather than one that was
+   asked for.  fg / bg still hold a usable RGB value (light gray on
+   black); the flag is for a reader that can do better */
+#define VDK_CELL_FG_DEFAULT     (1 << 0)    // 1
+#define VDK_CELL_BG_DEFAULT     (1 << 1)    // 2
+
+/* a double-width character takes two cells: the first holds it and is
+   marked WIDE, the second is marked WIDE_TAIL and holds no character */
+#define VDK_CELL_WIDE           (1 << 2)    // 4
+#define VDK_CELL_WIDE_TAIL      (1 << 3)    // 8
+
+/* what a default colour is taken to be when one has to be drawn */
+#define VDK_CELL_DEFAULT_FG     0x00E5E5E5
+#define VDK_CELL_DEFAULT_BG     0x00000000
+
+/* the parts of a colour held as 0x00RRGGBB */
+#define VDK_CELL_R(rgb)         (((rgb) >> 16) & 0xFF)
+#define VDK_CELL_G(rgb)         (((rgb) >> 8) & 0xFF)
+#define VDK_CELL_B(rgb)         ((rgb) & 0xFF)
+
+/* one cell: 16 bytes, no padding */
+typedef struct
+{
+    uint32_t    ch;         /* Unicode code point; 0 in a WIDE_TAIL cell */
+    uint32_t    fg;         /* foreground, 0x00RRGGBB                    */
+    uint32_t    bg;         /* background, 0x00RRGGBB                    */
+    uint16_t    attrs;      /* VDK_CELL_BOLD and friends                 */
+    uint16_t    flags;      /* VDK_CELL_FG_DEFAULT and friends           */
+}
+vdk_cell_t;
+
+/*
+    Decode row `y` of `win` into `cells`, which has room for `cols`
+    cells.  Columns past the window's own width are left blank.
+    Returns the number of cells written (`cols`), or -1 when there is
+    no such row.
+
+    `win` is any ncurses WINDOW: a widget's canvas, a surface's canvas.
+    Reverse video and dim do not come back as attributes -- a reader
+    cannot count on either, so they are worked into the colours.  Only
+    the first character of a cell is kept; a combining mark after it is
+    left out.
+
+    Colours are right only if vdk_color_init() set them up: it notes
+    what ncurses reports for each colour before any is redefined, which
+    is how a redefined colour is told from an untouched one later.
+*/
+int             vdk_cells_read_row(WINDOW *win, int y, vdk_cell_t *cells,
+                    int cols);
+
 /* size / position sentinels */
 #define WSIZE_UNCHANGED             -2
 #define WPOS_UNCHANGED              -1
@@ -335,6 +404,10 @@ int             vk_screen_set_surface_bkgd(vk_screen_t *screen,
                     int surface_id, wchar_t wch, attr_t attrs, short pair);
 int             vk_screen_apply_stdscr_bkgd(vk_screen_t *screen);
 WINDOW*         vk_screen_get_window(vk_screen_t *screen);
+/* row `y` of the active surface, as composed, as portable cells: see
+   vdk_cells_read_row */
+int             vk_screen_read_row(vk_screen_t *screen, int y,
+                    vdk_cell_t *cells, int cols);
 int             vk_screen_get_fd(vk_screen_t *screen);
 /* the descriptor the screen reads keys from, for an event loop to wait
    on.  It is not always vk_screen_get_fd(): after a teleport or adopt
@@ -375,6 +448,11 @@ vk_widget_t*    vk_widget_create(int width, int height);
 int             vk_widget_set_surface(vk_widget_t *widget, WINDOW *window);
 WINDOW*         vk_widget_get_surface(vk_widget_t *widget);
 WINDOW*         vk_widget_get_canvas(vk_widget_t *widget);
+/* row `y` of the widget as it is being shown (a frozen widget's
+   snapshot, not what it has drawn since), as portable cells: see
+   vdk_cells_read_row */
+int             vk_widget_read_row(vk_widget_t *widget, int y,
+                    vdk_cell_t *cells, int cols);
 void            vk_widget_set_colors(vk_widget_t *widget, int fg, int bg);
 int             vk_widget_get_colors(vk_widget_t *widget,
                     short *fg, short *bg);

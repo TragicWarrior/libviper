@@ -32,12 +32,13 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
 # leave the support out.
 
-set(PROJECT_VERSION 10.0.0)
+set(PROJECT_VERSION 10.1.0)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
 set(VDK_SOURCES
     vdk/vdk_color.c
+    vdk/vdk_cells.c
     vdk/vdk_private.c
     vdk/vk_object.c
     vdk/vk_screen.c
@@ -148,3 +149,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 add_subdirectory(demo)
+
+# the tests need no terminal; run them with `ctest` (or `make test`)
+enable_testing()
+add_subdirectory(test)

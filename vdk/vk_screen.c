@@ -359,6 +359,16 @@ vk_screen_get_window(vk_screen_t *screen)
     return surface->canvas;
 }
 
+/*
+    Row `y` of the screen as portable cells: the active surface's
+    canvas, where the surface's widgets have been composed.
+*/
+int
+vk_screen_read_row(vk_screen_t *screen, int y, vdk_cell_t *cells, int cols)
+{
+    return vdk_cells_read_row(vk_screen_get_window(screen), y, cells, cols);
+}
+
 inline int
 vk_screen_get_fd(vk_screen_t *screen)
 {
