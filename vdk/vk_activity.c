@@ -214,14 +214,18 @@ vk_activity_run(vk_activity_t *activity)
     return 0;
 }
 
-inline void
+inline int
 vk_activity_destroy(vk_activity_t *activity)
 {
-    if(activity == NULL) return;
+    if(activity == NULL) return -1;
 
-    if(!vk_object_assert(activity, vk_activity_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(activity, vk_activity_t)) return -1;
 
     activity->dtor(VK_OBJECT(activity));
+
+    return 0;
 }
 
 static int

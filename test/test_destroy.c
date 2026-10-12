@@ -223,8 +223,76 @@ main(void)
     check("and is still there to be destroyed afterwards",
         events == 3 && strcmp(order, "second box first ") == 0);
 
+    /* what the destroy calls return: 0 for destroyed, -1 for refused */
     reset();
-    vk_screen_destroy(screen);
+    check("every destroy call refuses NULL with -1",
+        vk_widget_destroy(NULL) == -1 && vk_container_destroy(NULL) == -1
+        && vk_label_destroy(NULL) == -1 && vk_marquee_destroy(NULL) == -1
+        && vk_textbox_destroy(NULL) == -1 && vk_button_destroy(NULL) == -1
+        && vk_filler_destroy(NULL) == -1 && vk_input_destroy(NULL) == -1
+        && vk_activity_destroy(NULL) == -1 && vk_progress_destroy(NULL) == -1
+        && vk_meter_destroy(NULL) == -1 && vk_graph_destroy(NULL) == -1
+        && vk_histogram_destroy(NULL) == -1 && vk_scroller_destroy(NULL) == -1
+        && vk_listbox_destroy(NULL) == -1 && vk_selectbox_destroy(NULL) == -1
+        && vk_dropdown_destroy(NULL) == -1 && vk_spinbutton_destroy(NULL) == -1
+        && vk_calendar_destroy(NULL) == -1 && vk_menubar_destroy(NULL) == -1
+        && vk_viewport_destroy(NULL) == -1 && vk_deck_destroy(NULL) == -1
+        && vk_frame_destroy(NULL) == -1 && vk_window_destroy(NULL) == -1
+        && vk_popup_destroy(NULL) == -1 && vk_box_destroy(NULL) == -1
+        && vk_filedialog_destroy(NULL) == -1 && vk_grid_destroy(NULL) == -1
+        && vk_table_destroy(NULL) == -1 && vk_color_destroy(NULL) == -1
+        && vk_screen_destroy(NULL) == -1);
+
+    /* the exact type is destroyed */
+    reset();
+    label = vk_label_create(10);
+    watch(label, "label");
+    check("the typed call returns 0 for an object of its own type",
+        vk_label_destroy(label) == 0 && events == 1);
+
+    /* a derived object through its parent's call: refused, and alive */
+    reset();
+    {
+        vk_marquee_t    *marquee = vk_marquee_create(10);
+
+        watch(marquee, "marquee");
+        check("a marquee is refused by vk_label_destroy, with -1",
+            vk_label_destroy((vk_label_t *)marquee) == -1 && events == 0);
+        check("and is still there for its own call, which returns 0",
+            vk_marquee_destroy(marquee) == 0 && events == 1);
+    }
+
+    reset();
+    window = vk_window_create(24, 6);
+    watch(window, "window");
+    check("a window is refused by vk_frame_destroy and vk_container_destroy",
+        vk_frame_destroy((vk_frame_t *)window) == -1
+        && vk_container_destroy((vk_container_t *)window) == -1
+        && events == 0);
+    check("and destroyed by vk_window_destroy",
+        vk_window_destroy(window) == 0 && events == 1);
+
+    /* an unrelated object */
+    reset();
+    {
+        vk_button_t     *button = vk_button_create("ok");
+
+        watch(button, "button");
+        check("a button is refused by vk_label_destroy and vk_box_destroy",
+            vk_label_destroy((vk_label_t *)button) == -1
+            && vk_box_destroy((vk_box_t *)button) == -1 && events == 0);
+        check("vk_widget_destroy takes any widget and returns 0",
+            vk_widget_destroy(VK_WIDGET(button)) == 0 && events == 1);
+    }
+
+    /* a container's result is its own, whatever it held */
+    reset();
+    box = make_box(&a, &b);
+    check("vk_box_destroy returns 0 and takes its children",
+        vk_box_destroy(box) == 0 && events == 3);
+
+    reset();
+    check("vk_screen_destroy returns 0", vk_screen_destroy(screen) == 0);
 
     printf("%d of %d passed\n", passed, passed + failed);
 

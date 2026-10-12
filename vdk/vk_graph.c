@@ -705,16 +705,20 @@ vk_graph_update(vk_graph_t *graph)
     return _vk_graph_render(VK_WIDGET(graph));
 }
 
-void
+int
 vk_graph_destroy(vk_graph_t *graph)
 {
-    if(graph == NULL) return;
+    if(graph == NULL) return -1;
 
-    if(!vk_object_assert(graph, vk_graph_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(graph, vk_graph_t)) return -1;
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
         in vk_widget_destroy(), which frees the object.
     */
     graph->dtor(VK_OBJECT(graph));
+
+    return 0;
 }

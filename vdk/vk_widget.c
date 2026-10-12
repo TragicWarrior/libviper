@@ -362,26 +362,27 @@ vk_widget_get_id(vk_widget_t *widget)
     return widget->id;
 }
 
-inline void
+inline int
 vk_widget_destroy(vk_widget_t *widget)
 {
-    if(widget == NULL) return;
+    if(widget == NULL) return -1;
 
     /* a widget of a derived type -- a window, a button -- handed to
        the general call: destroy it as what it is.  (This used to
        return without doing anything, which silently leaked every
        widget destroyed through a plain widget pointer.)  The derived
        destructors come back here once they have stepped the object
-       down to a plain widget. */
+       down to a plain widget.  Unlike the typed calls, this one takes
+       any widget, so the only refusal is NULL. */
     if(!vk_object_assert(widget, vk_widget_t))
     {
         vk_object_dispose(VK_OBJECT(widget));
-        return;
+        return 0;
     }
 
     widget->dtor(VK_OBJECT(widget));
 
-    return;
+    return 0;
 }
 
 static int

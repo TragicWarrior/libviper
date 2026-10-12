@@ -130,14 +130,18 @@ vk_marquee_run(vk_marquee_t *marquee)
     return VK_LABEL(marquee)->_update(VK_LABEL(marquee));
 }
 
-inline void
+inline int
 vk_marquee_destroy(vk_marquee_t *marquee)
 {
-    if(marquee == NULL) return;
+    if(marquee == NULL) return -1;
 
-    if(!vk_object_assert(marquee, vk_marquee_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
 
     marquee->dtor(VK_OBJECT(marquee));
+
+    return 0;
 }
 
 static int

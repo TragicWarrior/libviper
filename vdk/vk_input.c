@@ -285,14 +285,18 @@ vk_input_update(vk_input_t *input)
     return input->_update(input);
 }
 
-inline void
+inline int
 vk_input_destroy(vk_input_t *input)
 {
-    if(input == NULL) return;
+    if(input == NULL) return -1;
 
-    if(!vk_object_assert(input, vk_input_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(input, vk_input_t)) return -1;
 
     input->dtor(VK_OBJECT(input));
+
+    return 0;
 }
 
 static int

@@ -99,14 +99,18 @@ vk_color_update(vk_color_t *color)
     return vk_grid_update(VK_GRID(color));
 }
 
-inline void
+inline int
 vk_color_destroy(vk_color_t *color)
 {
-    if(color == NULL) return;
+    if(color == NULL) return -1;
 
-    if(!vk_object_assert(color, vk_color_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(color, vk_color_t)) return -1;
 
     color->dtor(VK_OBJECT(color));
+
+    return 0;
 }
 
 static int

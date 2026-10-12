@@ -38,14 +38,18 @@ vk_filler_create(void)
     return filler;
 }
 
-inline void
+inline int
 vk_filler_destroy(vk_filler_t *filler)
 {
-    if(filler == NULL) return;
+    if(filler == NULL) return -1;
 
-    if(!vk_object_assert(filler, vk_filler_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(filler, vk_filler_t)) return -1;
 
     filler->dtor(VK_OBJECT(filler));
+
+    return 0;
 }
 
 static int

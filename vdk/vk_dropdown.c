@@ -195,14 +195,18 @@ vk_dropdown_update(vk_dropdown_t *dropdown)
     return VK_LISTBOX(dropdown)->_update(VK_LISTBOX(dropdown));
 }
 
-inline void
+inline int
 vk_dropdown_destroy(vk_dropdown_t *dropdown)
 {
-    if(dropdown == NULL) return;
+    if(dropdown == NULL) return -1;
 
-    if(!vk_object_assert(dropdown, vk_dropdown_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(dropdown, vk_dropdown_t)) return -1;
 
     dropdown->dtor(VK_OBJECT(dropdown));
+
+    return 0;
 }
 
 static int

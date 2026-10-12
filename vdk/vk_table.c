@@ -105,14 +105,18 @@ vk_table_update(vk_table_t *table)
     return vk_grid_update(VK_GRID(table));
 }
 
-inline void
+inline int
 vk_table_destroy(vk_table_t *table)
 {
-    if(table == NULL) return;
+    if(table == NULL) return -1;
 
-    if(!vk_object_assert(table, vk_table_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(table, vk_table_t)) return -1;
 
     table->dtor(VK_OBJECT(table));
+
+    return 0;
 }
 
 static int

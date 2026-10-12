@@ -292,16 +292,18 @@ vk_menubar_reset(vk_menubar_t *menubar)
     return menubar->_reset(menubar);
 }
 
-inline void
+inline int
 vk_menubar_destroy(vk_menubar_t *menubar)
 {
-    if(menubar == NULL) return;
+    if(menubar == NULL) return -1;
 
-    if(!vk_object_assert(menubar, vk_menubar_t)) return;
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(menubar, vk_menubar_t)) return -1;
 
     menubar->dtor(VK_OBJECT(menubar));
 
-    return;
+    return 0;
 }
 
 static int
