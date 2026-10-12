@@ -1,3 +1,12 @@
+Version 10.1.2
+
+vdk
+* [Bryan Christ] vk_container_destroy() returned -1 when it succeeded.
+  Every exit returned -1, the last one included, so a caller could not
+  tell a container that was destroyed from one that was refused.  It
+  returns 0 on success.  Nothing in the library looked at the result.
+  test_destroy checks it.
+
 Version 10.1.1
 
 vdk

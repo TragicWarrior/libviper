@@ -155,6 +155,23 @@ main(void)
     check("vk_object_destroy refuses NULL",
         vk_object_destroy(NULL) == -1);
 
+    /* a plain container says whether it was destroyed */
+    reset();
+    {
+        vk_container_t  *container = vk_container_create(10, 2);
+
+        watch(container, "container");
+        check("vk_container_destroy returns 0 when it destroys",
+            vk_container_destroy(container) == 0 && events == 1);
+    }
+
+    reset();
+    box = make_box(&a, &b);
+    check("and -1 for NULL, or for something that is not exactly a container",
+        vk_container_destroy(NULL) == -1
+        && vk_container_destroy(VK_CONTAINER(box)) == -1 && events == 0);
+    vk_box_destroy(box);
+
     /* a container takes what it holds along */
     reset();
     box = make_box(&a, &b);

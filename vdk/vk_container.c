@@ -94,7 +94,8 @@ vk_container_destroy(vk_container_t *container)
 
     container->dtor(VK_OBJECT(container));
 
-    return -1;
+    /* destroyed: this used to report -1, the same as a refusal */
+    return 0;
 }
 
 static int
