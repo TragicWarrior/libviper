@@ -1,7 +1,9 @@
 #include <stdlib.h>
+#include <string.h>
 #include <limits.h>
 
 #include "vdk.h"
+#include "vdk_private.h"
 
 static void
 _vdk_color_init_extended(void)
@@ -74,6 +76,10 @@ vdk_color_init(void)
     free(matrix);
 
     if(COLORS >= 256) _vdk_color_init_extended();
+
+    /* nothing has redefined a colour yet on this SCREEN: record what
+       ncurses says each one is (see vdk_cells.c) */
+    _vdk_cells_colors_baseline();
 }
 
 short

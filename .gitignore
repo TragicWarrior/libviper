@@ -17,6 +17,12 @@ demo/vk_demo
 demo/vk_viewport_demo
 demo/vk_graph_demo
 demo/vk_histogram_demo
+test/test_cells
+
+# ctest
+CTestTestfile.cmake
+*/CTestTestfile.cmake
+Testing/
 
 # editor backups / swap
 *.save

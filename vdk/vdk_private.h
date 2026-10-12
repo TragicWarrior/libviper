@@ -96,4 +96,13 @@ void    vdk_scroller_draw(vk_widget_t *widget);
 */
 int     vdk_widget_reset_canvas(vk_widget_t *widget);
 
+/*
+    Note what ncurses reports for every colour while none has been
+    redefined.  vdk_color_init() calls this as its last step, so it is
+    taken afresh whenever colours are set up -- at start-up, and again
+    on a SCREEN the program has moved to.  vdk_cells_read_row() compares
+    against it to tell a redefined colour from an untouched one.
+*/
+void    _vdk_cells_colors_baseline(void);
+
 #endif  /* _VDK_PRIVATE_H_ */

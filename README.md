@@ -69,6 +69,8 @@ Color
 
   - vdk_color_init() / vdk_color_pair() with 16x16 ANSI pair tier
     and extended 256-color pair registration
+  - vdk_cells_read_row(): any canvas read back as portable cells
+    (Unicode, RGB) for an image or a copy elsewhere
 
 Style
 

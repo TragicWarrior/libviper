@@ -428,6 +428,48 @@ ncurses way) rather than the `VDK_COLORS` macro.
 If the caller does not call `vdk_color_init()`, they are responsible for
 calling `start_color()` and `init_pair()` themselves.
 
+## Reading a Canvas Back (since 10.1.0)
+
+Everything drawn ends up in an ncurses `WINDOW`: a widget's canvas, or
+the canvas of a surface where widgets are composed. A cell of one is
+private to the process -- its character may be a line-drawing key, its
+attributes are ncurses bits, its colours are a pair number. To show a
+canvas anywhere else (an image, a copy in another program) those have to
+be worked out, and one function does it:
+
+- `vdk_cells_read_row(win, y, cells, cols)` -- decode row `y` of any
+  `WINDOW` into `vdk_cell_t`. Returns `cols`, or -1 for no such row.
+- `vk_widget_read_row(widget, y, cells, cols)` -- the same for a widget.
+  It reads the **composer**, which is what is on show: the canvas, or a
+  frozen widget's snapshot.
+- `vk_screen_read_row(screen, y, cells, cols)` -- the same for the
+  active surface's canvas, i.e. the screen as composed.
+
+A `vdk_cell_t` is 16 bytes with a fixed layout:
+
+| Field | Meaning |
+|-------|---------|
+| `ch` | Unicode code point (line-drawing keys already translated); 0 in the second half of a double-width character |
+| `fg`, `bg` | `0x00RRGGBB` (`VDK_CELL_R/G/B` unpack them) |
+| `attrs` | `VDK_CELL_BOLD`, `VDK_CELL_UNDERLINE`, `VDK_CELL_ITALIC`, `VDK_CELL_BLINK` |
+| `flags` | `VDK_CELL_FG_DEFAULT`, `VDK_CELL_BG_DEFAULT`, `VDK_CELL_WIDE`, `VDK_CELL_WIDE_TAIL` |
+
+Things a reader should know:
+
+- **Reverse and dim are not attributes.** A terminal cannot be counted on
+  for either, so they are folded into the colours: reverse swaps `fg` and
+  `bg`, dim moves `fg` halfway to `bg`.
+- **A default colour still has an RGB value** (light gray on black), plus
+  a flag, so a reader that cannot do better has something to draw.
+- **Only the first character of a cell is kept.** A combining mark after
+  it is dropped.
+- **Colours rely on `vdk_color_init()`.** ncurses does not know what the
+  standard 256-colour palette looks like; asked about a colour nobody
+  has redefined, it returns a placeholder. So the palette is built in,
+  `vdk_color_init()` records ncurses' placeholders as its last step, and
+  ncurses is believed only for a colour whose value has since changed
+  (a program redefined it).
+
 ## Screens and Surfaces
 
 `vk_screen_t` manages the ncurses terminal (SCREEN) and provides virtual

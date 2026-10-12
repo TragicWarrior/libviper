@@ -186,6 +186,20 @@ vk_widget_get_canvas(vk_widget_t *widget)
     return widget->canvas;
 }
 
+/*
+    Row `y` of the widget as portable cells.  The composer is read, not
+    the canvas: it is what is copied to the surface, so it is what is
+    on show.  The two are the same window unless the widget is frozen,
+    when the composer is the snapshot taken at that moment.
+*/
+int
+vk_widget_read_row(vk_widget_t *widget, int y, vdk_cell_t *cells, int cols)
+{
+    if(widget == NULL) return -1;
+
+    return vdk_cells_read_row(widget->composer, y, cells, cols);
+}
+
 inline int
 vk_widget_get_metrics(vk_widget_t *widget, int *width, int *height)
 {
