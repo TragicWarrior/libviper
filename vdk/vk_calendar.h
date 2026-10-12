@@ -35,7 +35,6 @@ struct _vk_calendar_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_calendar_t *);
 };
 
 #endif

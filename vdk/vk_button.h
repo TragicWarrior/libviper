@@ -25,7 +25,6 @@ struct _vk_button_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_button_t *);
 };
 
 #endif

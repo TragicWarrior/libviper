@@ -1,3 +1,68 @@
+Version 11.0.0
+
+vdk
+* [Bryan Christ] A widget repaints itself, and events are only notices.
+
+  Until now a good part of what the library did for a widget was carried
+  by event handlers the widget types registered on themselves: a list
+  repainted after a resize because its constructor had registered for
+  its own resize event, a window destroyed its child because the
+  container had registered for its own destroy event.  A type that did
+  not know to do the same did not work, and what an application's own
+  handler found depended on the order of registration.  That is gone.
+  The library registers no handler on its own objects, and an object
+  with no handlers at all behaves completely.
+
+  Painting is one slot.  How a type paints itself is named in its klass
+  descriptor (.redraw), with the klass it is built on (.parent).  The
+  slot lives in vk_object_t, so the base can call it for any widget.  A
+  type that names none takes its parent's.  A type that wants its
+  parent's painting calls it first, through the parent's klass
+  (VK_WINDOW_KLASS->redraw(object)), and paints its own on top; whether
+  to is the author's choice.  The per-type _update slots are removed.
+
+  Resize and recreate do the whole job.  vk_widget_resize() resizes the
+  canvas, refits attached scroll bars, has the type arrange what it
+  holds (a new, optional _layout slot), repaints, and only then emits
+  VK_EVENT_ON_RESIZE.  vk_widget_recreate() does the same for a new
+  terminal.  Every widget is therefore repainted after either, with no
+  handler: labels, buttons, inputs, progress bars, graphs and the rest
+  were not before, and had to be repainted by the application.
+
+  Destroy is announced first.  VK_EVENT_ON_DESTROY is emitted once, by
+  the destroy call made on the object, before anything is taken down.
+  A handler sees the object whole, and a container's handler runs while
+  its children are still alive.  It used to arrive from the widget
+  layer, with the object's own type gone and the children destroyed.
+  A container destroys its children in its destructor.
+
+  Names.  Painting the canvas is "redraw" and copying the canvas to the
+  surface is "blit": vk_<type>_update() is now vk_<type>_redraw(),
+  vk_widget_draw() is vk_widget_blit(), and vk_widget_redraw() repaints
+  a widget of any type.  The old names remain as macros in vdk.h and
+  will be removed in a later release, so existing programs compile
+  unchanged.
+
+  A graph keeps its own copies of the x-axis labels it is given
+  (vk_graph_set_x_labels).  It kept the caller's pointers, which was
+  safe only while nothing repainted the graph after the caller freed
+  them.
+
+  What a program may notice:
+  - It must be rebuilt: the library is libvdk.so.11.
+  - A destroy handler now runs before the teardown instead of during it.
+  - A widget the program repainted by hand after a resize is painted
+    twice.  Harmless; the program's repaint can go.
+  - A marquee moves one step each time it is redrawn, so it also moves
+    when it is resized.
+  - A type defined outside the library names .parent in its descriptor,
+    and .redraw in place of filling an _update slot.
+
+  KLASSES.md describes all of it and has a step-by-step recipe for a
+  new widget type.  test_redraw covers it (every type: no handlers
+  registered, repainted after resize and recreate) and test_destroy the
+  new order.
+
 Version 10.2.0
 
 vdk

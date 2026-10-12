@@ -15,7 +15,7 @@
     virtuals -- all geometry, bar style and colour are inherited.
 
     Use the vk_graph_* setters via VK_GRAPH() for bar style, colours, the
-    visible bin (x) window, etc.  vk_histogram_update() rebins and auto-scales
+    visible bin (x) window, etc.  vk_histogram_redraw() rebins and auto-scales
     the value (y) axis to the tallest bin, then renders.  (Mirrors how vk_meter
     overrides only vk_progress's _fill_color.)
 */

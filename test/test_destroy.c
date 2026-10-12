@@ -4,7 +4,8 @@
     it holds.
 
     What can be observed from outside is VK_EVENT_ON_DESTROY: every
-    widget emits it exactly once as it goes.  Each check counts those,
+    widget emits it exactly once, before anything of it is taken apart
+    -- so a container is announced before the widgets it holds.  Each check counts those,
     and notes the order they came in.  A double free shows up as the
     program being killed, which fails the test.
 
@@ -177,21 +178,21 @@ main(void)
     box = make_box(&a, &b);
     vk_box_destroy(box);
     check("destroying a box destroys both its labels", events == 3);
-    check("the children go before the box's own handler runs",
-        before("first second", "box"));
+    check("the box is announced before anything it holds is taken apart",
+        before("box", "first") && before("box", "second"));
 
     /* the same through the general calls */
     reset();
     box = make_box(&a, &b);
     vk_object_destroy(VK_OBJECT(box));
     check("vk_object_destroy on a box cascades the same way",
-        events == 3 && before("first second", "box"));
+        events == 3 && before("box", "first") && before("box", "second"));
 
     reset();
     box = make_box(&a, &b);
     vk_object_dispose(VK_OBJECT(box));
     check("and so does vk_object_dispose",
-        events == 3 && before("first second", "box"));
+        events == 3 && before("box", "first") && before("box", "second"));
 
     /* to any depth: a window holding a box holding labels */
     reset();
@@ -201,7 +202,8 @@ main(void)
     watch(window, "window");
     vk_window_destroy(window);
     check("a window takes the box and its labels with it",
-        events == 4 && before("first second", "box") && before("box", "window"));
+        events == 4 && before("window", "box") && before("box", "first")
+        && before("box", "second"));
 
     /* a child destroyed first takes itself off its parent's list */
     reset();
@@ -210,7 +212,7 @@ main(void)
     check("a child can be destroyed first", events == 1);
     vk_box_destroy(box);
     check("and its parent then destroys only what is left",
-        events == 3 && before("first second", "box"));
+        events == 3 && before("first", "box") && before("box", "second"));
 
     /* a child taken out of its container outlives it */
     reset();
@@ -218,10 +220,10 @@ main(void)
     vk_box_set_widget(box, 0, NULL, VK_INHERIT_NONE);
     vk_box_destroy(box);
     check("a child taken out first is not destroyed with the box",
-        events == 2 && strcmp(order, "second box ") == 0);
+        events == 2 && strcmp(order, "box second ") == 0);
     vk_label_destroy(a);
     check("and is still there to be destroyed afterwards",
-        events == 3 && strcmp(order, "second box first ") == 0);
+        events == 3 && strcmp(order, "box second first ") == 0);
 
     /* what the destroy calls return: 0 for destroyed, -1 for refused */
     reset();

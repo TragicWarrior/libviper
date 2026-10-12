@@ -20,7 +20,7 @@ _vk_table_dtor(vk_object_t *object);
    a subclass wants the table render unchanged then paints something
    on top (e.g. vk_color) */
 int
-_vk_table_update(vk_grid_t *grid);
+_vk_table_redraw(vk_object_t *object);
 
 /* exposed for subclasses (vk_color overdraws the focused cell's
    borders with these same junctions in a highlight color) */
@@ -40,6 +40,8 @@ declare_klass(VK_TABLE_KLASS)
     .name = KLASS_NAME(vk_table_t),
     .ctor = _vk_table_ctor,
     .dtor = _vk_table_dtor,
+    .parent = &VK_GRID_KLASS,
+    .redraw = _vk_table_redraw,
 };
 
 inline vk_table_t*
@@ -99,10 +101,10 @@ vk_table_set_border_attrs(vk_table_t *table, attr_t attrs)
 }
 
 inline int
-vk_table_update(vk_table_t *table)
+vk_table_redraw(vk_table_t *table)
 {
     if(table == NULL) return -1;
-    return vk_grid_update(VK_GRID(table));
+    return vk_grid_redraw(VK_GRID(table));
 }
 
 inline int
@@ -113,6 +115,9 @@ vk_table_destroy(vk_table_t *table)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(table, vk_table_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(table));
 
     table->dtor(VK_OBJECT(table));
 
@@ -157,9 +162,8 @@ _vk_table_ctor(vk_object_t *object, va_list *argp, ...)
     vk_grid_set_gap(grid,
         (divider_style == VK_BORDER_NONE) ? 0 : 1);
 
-    /* override the grid's update slot -- vk_grid_update will now route
-       through _vk_table_update, which does layout then dividers */
-    grid->_update = _vk_table_update;
+    /* painting goes through _vk_table_redraw (the klass's redraw):
+       the grid's layout first, then the dividers on top */
 
     return 0;
 }
@@ -350,15 +354,16 @@ _vk_table_draw_dividers(vk_table_t *table)
 }
 
 int
-_vk_table_update(vk_grid_t *grid)
+_vk_table_redraw(vk_object_t *object)
 {
+    vk_grid_t *grid = (vk_grid_t *)object;
     vk_table_t  *table;
     int         rc;
 
     /* run the standard grid layout to paint background + position
        slot widgets; then overlay our dividers on top of the gap
        regions the grid already left blank */
-    rc = _vk_grid_update(grid);
+    rc = _vk_grid_redraw(VK_OBJECT(grid));
     if(rc != 0) return rc;
 
     table = VK_TABLE(grid);

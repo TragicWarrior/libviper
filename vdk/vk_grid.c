@@ -16,7 +16,7 @@ static int
 _vk_grid_dtor(vk_object_t *object);
 
 static int
-_vk_grid_on_resize(vk_object_t *object, int event, void *anything);
+_vk_grid_layout(vk_widget_t *widget);
 
 static int
 _vk_grid_recreate(vk_widget_t *widget);
@@ -24,7 +24,7 @@ _vk_grid_recreate(vk_widget_t *widget);
 /* not static so vk_table (and other subclasses) can chain through it
    for layout before overlaying their own decorations */
 int
-_vk_grid_update(vk_grid_t *grid);
+_vk_grid_redraw(vk_object_t *object);
 
 static int
 _vk_grid_kmio(vk_object_t *object, int32_t keystroke);
@@ -159,6 +159,8 @@ declare_klass(VK_GRID_KLASS)
     .name = KLASS_NAME(vk_grid_t),
     .ctor = _vk_grid_ctor,
     .dtor = _vk_grid_dtor,
+    .parent = &VK_CONTAINER_KLASS,
+    .redraw = _vk_grid_redraw,
 };
 
 inline vk_grid_t*
@@ -405,11 +407,11 @@ vk_grid_get_subfocus_row(vk_grid_t *grid)
 }
 
 inline int
-vk_grid_update(vk_grid_t *grid)
+vk_grid_redraw(vk_grid_t *grid)
 {
     if(grid == NULL) return -1;
 
-    return grid->_update(grid);
+    return vk_widget_redraw(VK_WIDGET(grid));
 }
 
 inline int
@@ -420,6 +422,9 @@ vk_grid_destroy(vk_grid_t *grid)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(grid, vk_grid_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(grid));
 
     grid->dtor(VK_OBJECT(grid));
 
@@ -468,11 +473,9 @@ _vk_grid_ctor(vk_object_t *object, va_list *argp, ...)
 
     grid->ctor = _vk_grid_ctor;
     grid->dtor = _vk_grid_dtor;
-    grid->_update = _vk_grid_update;
 
-    vk_object_register_event(VK_OBJECT(grid),
-        VK_EVENT_ON_RESIZE, _vk_grid_on_resize, NULL);
     VK_WIDGET(grid)->_recreate = _vk_grid_recreate;
+    VK_WIDGET(grid)->_layout = _vk_grid_layout;
 
     object->kmio = _vk_grid_kmio;
 
@@ -491,7 +494,7 @@ _vk_grid_dtor(vk_object_t *object)
 
     /* the cells are only the grid's view of its children; the children
        themselves are on the container's list and are destroyed with it
-       (see _vk_container_on_destroy) */
+       (see _vk_container_dtor) */
     free(grid->slot_widgets);    grid->slot_widgets = NULL;
     free(grid->col_widths);      grid->col_widths   = NULL;
     free(grid->row_heights);     grid->row_heights  = NULL;
@@ -510,17 +513,14 @@ _vk_grid_dtor(vk_object_t *object)
     queried via get_cell_rect when the consumer wants to repaint.
 */
 static int
-_vk_grid_on_resize(vk_object_t *object, int event, void *anything)
+_vk_grid_layout(vk_widget_t *widget)
 {
     vk_grid_t   *grid;
     int         *col_sizes;
     int         *row_sizes;
     int         c, r;
 
-    (void)event;
-    (void)anything;
-
-    grid = VK_GRID(object);
+    grid = VK_GRID(widget);
 
     col_sizes = calloc(grid->cols, sizeof(int));
     row_sizes = calloc(grid->rows, sizeof(int));
@@ -598,8 +598,9 @@ _vk_grid_kmio(vk_object_t *object, int32_t keystroke)
 }
 
 int
-_vk_grid_update(vk_grid_t *grid)
+_vk_grid_redraw(vk_object_t *object)
 {
+    vk_grid_t *grid = (vk_grid_t *)object;
     vk_widget_t *widget;
     int         *col_sizes;
     int         *row_sizes;
@@ -664,7 +665,7 @@ _vk_grid_update(vk_grid_t *grid)
 
             vk_widget_move(child,
                 col_offsets[c] + xoff, row_offsets[r] + yoff);
-            vk_widget_draw(child);
+            vk_widget_blit(child);
         }
     }
 

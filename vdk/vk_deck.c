@@ -13,7 +13,7 @@ static int
 _vk_deck_dtor(vk_object_t *object);
 
 static int
-_vk_deck_draw(vk_widget_t *widget);
+_vk_deck_blit(vk_widget_t *widget);
 
 static int
 _vk_deck_erase(vk_widget_t *widget);
@@ -25,7 +25,7 @@ static int
 _vk_deck_recreate(vk_widget_t *widget);
 
 static int
-_vk_deck_update(vk_deck_t *deck);
+_vk_deck_redraw(vk_object_t *object);
 
 static int
 _vk_deck_kmio(vk_object_t *object, int32_t keystroke);
@@ -41,6 +41,8 @@ declare_klass(VK_DECK_KLASS)
     .name = KLASS_NAME(vk_deck_t),
     .ctor = _vk_deck_ctor,
     .dtor = _vk_deck_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_deck_redraw,
 };
 
 inline vk_deck_t*
@@ -211,11 +213,11 @@ vk_deck_set_shadow_colors(vk_deck_t *deck, short fg, short bg)
 }
 
 inline int
-vk_deck_update(vk_deck_t *deck)
+vk_deck_redraw(vk_deck_t *deck)
 {
     if(deck == NULL) return -1;
 
-    return deck->_update(deck);
+    return vk_widget_redraw(VK_WIDGET(deck));
 }
 
 inline vk_widget_t*
@@ -250,6 +252,9 @@ vk_deck_destroy(vk_deck_t *deck)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(deck, vk_deck_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(deck));
 
     deck->dtor(VK_OBJECT(deck));
 
@@ -288,9 +293,8 @@ _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)
 
     deck->ctor = _vk_deck_ctor;
     deck->dtor = _vk_deck_dtor;
-    deck->_update = _vk_deck_update;
 
-    widget->_draw = _vk_deck_draw;
+    widget->_blit = _vk_deck_blit;
     widget->_erase = _vk_deck_erase;
     widget->_resize = _vk_deck_resize;
     widget->_recreate = _vk_deck_recreate;
@@ -339,7 +343,7 @@ _vk_deck_dtor(vk_object_t *object)
 }
 
 static int
-_vk_deck_draw(vk_widget_t *widget)
+_vk_deck_blit(vk_widget_t *widget)
 {
     vk_deck_t           *deck;
     struct list_head    *pos;
@@ -356,14 +360,14 @@ _vk_deck_draw(vk_widget_t *widget)
         child->surface = widget->surface;
 
         /* hidden (minimized) members: skip the shadow and the draw.  the
-           shadow is painted before vk_widget_draw's own visibility gate, so
+           shadow is painted before vk_widget_blit's own visibility gate, so
            without this a hidden member's drop-shadow would still leak. */
         if(!(child->state & VK_STATE_VISIBLE)) continue;
 
         if(deck->shadows)
             _vk_deck_draw_shadow(deck, child, widget->surface);
 
-        vk_widget_draw(child);
+        vk_widget_blit(child);
     }
 
     return 0;
@@ -448,13 +452,14 @@ _vk_deck_draw_shadow(vk_deck_t *deck, vk_widget_t *child, WINDOW *surface)
 }
 
 static int
-_vk_deck_update(vk_deck_t *deck)
+_vk_deck_redraw(vk_object_t *object)
 {
+    vk_deck_t *deck = (vk_deck_t *)object;
     vk_widget_t *widget;
 
     if(deck == NULL) return -1;
 
     widget = VK_WIDGET(deck);
 
-    return widget->_draw(widget);
+    return widget->_blit(widget);
 }

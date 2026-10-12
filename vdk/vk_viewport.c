@@ -15,7 +15,7 @@ static int
 _vk_viewport_dtor(vk_object_t *object);
 
 static int
-_vk_viewport_update(vk_viewport_t *vp);
+_vk_viewport_redraw(vk_object_t *object);
 
 void
 vk_viewport_scroll_info(vk_widget_t *child,
@@ -33,6 +33,8 @@ declare_klass(VK_VIEWPORT_KLASS)
     .name = KLASS_NAME(vk_viewport_t),
     .ctor = _vk_viewport_ctor,
     .dtor = _vk_viewport_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_viewport_redraw,
 };
 
 inline vk_viewport_t*
@@ -133,11 +135,11 @@ vk_viewport_pgdn(vk_viewport_t *vp)
 }
 
 inline int
-vk_viewport_update(vk_viewport_t *vp)
+vk_viewport_redraw(vk_viewport_t *vp)
 {
     if(vp == NULL) return -1;
 
-    return vp->_update(vp);
+    return vk_widget_redraw(VK_WIDGET(vp));
 }
 
 inline int
@@ -148,6 +150,9 @@ vk_viewport_destroy(vk_viewport_t *vp)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(vp, vk_viewport_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(vp));
 
     vp->dtor(VK_OBJECT(vp));
 
@@ -190,8 +195,9 @@ _vk_viewport_clamp_scroll(vk_viewport_t *vp)
 }
 
 static int
-_vk_viewport_update(vk_viewport_t *vp)
+_vk_viewport_redraw(vk_object_t *object)
 {
+    vk_viewport_t *vp = (vk_viewport_t *)object;
     vk_widget_t *widget;
     cchar_t     *row_buf;
     int         visible_rows;
@@ -238,8 +244,8 @@ _vk_viewport_update(vk_viewport_t *vp)
     free(row_buf);
 
     /* refresh attached scroller if any */
-    if(widget->vscroller != NULL) vk_scroller_update(widget->vscroller);
-    if(widget->hscroller != NULL) vk_scroller_update(widget->hscroller);
+    if(widget->vscroller != NULL) vk_scroller_redraw(widget->vscroller);
+    if(widget->hscroller != NULL) vk_scroller_redraw(widget->hscroller);
 
     return 0;
 }
@@ -303,7 +309,6 @@ _vk_viewport_ctor(vk_object_t *object, va_list *argp, ...)
 
     vp->ctor = _vk_viewport_ctor;
     vp->dtor = _vk_viewport_dtor;
-    vp->_update = _vk_viewport_update;
 
     return 0;
 }

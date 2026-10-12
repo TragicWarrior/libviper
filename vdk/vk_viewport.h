@@ -32,7 +32,6 @@ struct _vk_viewport_s
     int                     (*ctor)             (vk_object_t *, va_list *, ...);
     int                     (*dtor)             (vk_object_t *);
 
-    int                     (*_update)          (vk_viewport_t *);
 };
 
 #endif

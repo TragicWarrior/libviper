@@ -14,10 +14,7 @@ static int
 _vk_label_dtor(vk_object_t *object);
 
 static int
-_vk_label_update(vk_label_t *label);
-
-static int
-_vk_label_recreate(vk_widget_t *widget);
+_vk_label_redraw(vk_object_t *object);
 
 require_klass(VK_WIDGET_KLASS);
 
@@ -27,6 +24,8 @@ declare_klass(VK_LABEL_KLASS)
     .name = KLASS_NAME(vk_label_t),
     .ctor = _vk_label_ctor,
     .dtor = _vk_label_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_label_redraw,
 };
 
 inline vk_label_t*
@@ -80,11 +79,11 @@ vk_label_set_justify(vk_label_t *label, int justify)
 }
 
 inline int
-vk_label_update(vk_label_t *label)
+vk_label_redraw(vk_label_t *label)
 {
     if(label == NULL) return -1;
 
-    return label->_update(label);
+    return vk_widget_redraw(VK_WIDGET(label));
 }
 
 inline int
@@ -95,6 +94,9 @@ vk_label_destroy(vk_label_t *label)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(label, vk_label_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(label));
 
     label->dtor(VK_OBJECT(label));
 
@@ -126,24 +128,9 @@ _vk_label_ctor(vk_object_t *object, va_list *argp, ...)
 
     label->ctor = _vk_label_ctor;
     label->dtor = _vk_label_dtor;
-    label->_update = _vk_label_update;
 
-    VK_WIDGET(label)->_recreate = _vk_label_recreate;
 
     return 0;
-}
-
-/*
-    After a teleport recreate the canvas is empty -- re-render the
-    label text so the new SCREEN shows the same content the old one
-    did, instead of a blank slot.
-*/
-static int
-_vk_label_recreate(vk_widget_t *widget)
-{
-    if(vdk_widget_reset_canvas(widget) < 0) return -1;
-
-    return _vk_label_update(VK_LABEL(widget));
 }
 
 static int
@@ -170,8 +157,9 @@ _vk_label_dtor(vk_object_t *object)
 }
 
 static int
-_vk_label_update(vk_label_t *label)
+_vk_label_redraw(vk_object_t *object)
 {
+    vk_label_t *label = (vk_label_t *)object;
     vk_widget_t *widget;
     int         text_len;
     int         x;

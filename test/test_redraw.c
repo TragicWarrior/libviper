@@ -1,0 +1,332 @@
+/*
+    test_redraw -- headless checks that a widget looks after itself.
+
+    The rule being tested: a widget behaves correctly with no event
+    handlers registered at all.  The library registers none on its own
+    objects; after a resize, or after its canvas is thrown away and
+    made again (which is what moving to another terminal does), a
+    widget repaints itself without anyone asking.
+
+    For each widget type the test paints it, then resizes it and
+    compares its canvas with what an explicit redraw at that size
+    produces, then recreates it and compares again.
+
+    Exit status 0 when every check passes.
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <locale.h>
+
+#include "vdk.h"
+#include "vk_object.h"
+#include "vk_widget.h"
+
+static int  passed = 0;
+static int  failed = 0;
+
+/* record one check */
+static void
+check(const char *type, const char *what, int ok)
+{
+    if(ok) passed++;
+    else failed++;
+
+    printf("%s  %-12s %s\n", ok ? "PASS" : "FAIL", type, what);
+}
+
+/* does the object have any event handler registered on it? */
+static int
+has_handlers(void *object)
+{
+    return !list_empty(&VK_OBJECT(object)->event_handlers);
+}
+
+/* a widget's canvas as cells: `cells` must hold width * height */
+static void
+snapshot(vk_widget_t *widget, vdk_cell_t *cells)
+{
+    int width = 0, height = 0;
+    int y;
+
+    vk_widget_get_metrics(widget, &width, &height);
+
+    for(y = 0; y < height; y++)
+        vk_widget_read_row(widget, y, cells + (size_t)y * width, width);
+}
+
+/* does the widget's canvas now show exactly what a redraw produces? */
+static int
+is_current(vk_widget_t *widget)
+{
+    static vdk_cell_t   before[200 * 60];
+    static vdk_cell_t   after[200 * 60];
+    int                 width = 0, height = 0;
+    size_t              bytes;
+
+    vk_widget_get_metrics(widget, &width, &height);
+    if(width > 200 || height > 60) return 0;
+
+    bytes = (size_t)width * height * sizeof(vdk_cell_t);
+
+    snapshot(widget, before);
+    vk_widget_redraw(widget);
+    snapshot(widget, after);
+
+    return memcmp(before, after, bytes) == 0;
+}
+
+/* something was actually painted: not every cell is a blank */
+static int
+has_content(vk_widget_t *widget)
+{
+    static vdk_cell_t   cells[200 * 60];
+    int                 width = 0, height = 0;
+    int                 i;
+
+    vk_widget_get_metrics(widget, &width, &height);
+    snapshot(widget, cells);
+
+    for(i = 0; i < width * height; i++)
+    {
+        if(cells[i].ch != ' ' && cells[i].ch != 0) return 1;
+    }
+
+    return 0;
+}
+
+/*
+    The checks every type gets.  `painted` says whether the type is
+    expected to put visible characters on its canvas.
+*/
+static void
+exercise(const char *type, void *object, int new_w, int new_h, int painted)
+{
+    vk_widget_t *widget = VK_WIDGET(object);
+
+    check(type, "registers no event handlers of its own",
+        !has_handlers(object));
+
+    vk_widget_redraw(widget);
+
+    if(painted)
+        check(type, "paints something when redrawn", has_content(widget));
+
+    check(type, "resize succeeds",
+        vk_widget_resize(widget, new_w, new_h) == 0);
+    check(type, "is repainted after a resize, unasked", is_current(widget));
+    if(painted)
+        check(type, "and still shows its contents", has_content(widget));
+
+    check(type, "recreate succeeds", vk_widget_recreate(widget) == 0);
+    check(type, "is repainted after a recreate, unasked",
+        is_current(widget));
+    if(painted)
+        check(type, "and still shows its contents", has_content(widget));
+
+    check(type, "still has no event handlers", !has_handlers(object));
+}
+
+/* counts the resize notices an application handler receives */
+static int  notices = 0;
+static int  notice_was_current = 0;
+
+static int
+on_resize(vk_object_t *object, int event, void *anything)
+{
+    (void)event;
+    (void)anything;
+
+    notices++;
+    notice_was_current = is_current(VK_WIDGET(object));
+
+    return 0;
+}
+
+int
+main(void)
+{
+    vk_screen_t     *screen;
+    vk_label_t      *label;
+    vk_marquee_t    *marquee;
+    vk_button_t     *button;
+    vk_input_t      *input;
+    vk_textbox_t    *textbox;
+    vk_listbox_t    *listbox;
+    vk_selectbox_t  *selectbox;
+    vk_filler_t     *filler;
+    vk_progress_t   *progress;
+    vk_calendar_t   *calendar;
+    vk_menubar_t    *menubar;
+    vk_frame_t      *frame;
+    vk_window_t     *window;
+    vk_box_t        *box;
+    vk_grid_t       *grid;
+    vk_label_t      *inner;
+    vk_label_t      *a;
+    vk_label_t      *b;
+    int             w = 0, h = 0;
+
+    setenv("TERM", "xterm-256color", 1);
+    setlocale(LC_ALL, "");
+
+    screen = vk_screen_create_detached(120, 40);
+    if(screen == NULL)
+    {
+        printf("FAIL  could not create a detached screen\n");
+        return 1;
+    }
+
+    vdk_color_init();
+
+    /* ---- types that paint their own contents ---- */
+
+    label = vk_label_create(20);
+    vk_label_set_text(label, "a label");
+    exercise("label", label, 30, 1, 1);
+
+    button = vk_button_create("Okay");
+    vk_widget_get_metrics(VK_WIDGET(button), &w, &h);
+    exercise("button", button, w + 4, h, 1);
+
+    input = vk_input_create(20);
+    vk_input_set_text(input, "typed");
+    vk_widget_get_metrics(VK_WIDGET(input), &w, &h);
+    exercise("input", input, w + 8, h, 1);
+
+    textbox = vk_textbox_create(20, 4);
+    vk_textbox_set_text(textbox, "some words to wrap across the lines");
+    exercise("textbox", textbox, 12, 6, 1);
+
+    listbox = vk_listbox_create(20, 4);
+    vk_listbox_add_item(listbox, "one", NULL, NULL);
+    vk_listbox_add_item(listbox, "two", NULL, NULL);
+    vk_listbox_add_item(listbox, "three", NULL, NULL);
+    exercise("listbox", listbox, 26, 6, 1);
+
+    selectbox = vk_selectbox_create(20, 4, VK_SELECTBOX_CHECKBOX);
+    vk_selectbox_add_item(selectbox, "first", NULL, NULL);
+    vk_selectbox_add_item(selectbox, "second", NULL, NULL);
+    exercise("selectbox", selectbox, 26, 5, 1);
+
+    progress = vk_progress_create(VK_PROGRESS_HORIZONTAL, 20, 1);
+    vk_progress_set_value(progress, 0.6);
+    exercise("progress", progress, 30, 1, 1);
+
+    calendar = vk_calendar_create();
+    vk_widget_get_metrics(VK_WIDGET(calendar), &w, &h);
+    exercise("calendar", calendar, w + 2, h + 1, 1);
+
+    menubar = vk_menubar_create(30);
+    vk_menubar_add_item(menubar, "File", NULL, NULL);
+    vk_menubar_add_item(menubar, "Edit", NULL, NULL);
+    exercise("menubar", menubar, 40, 1, 1);
+
+    /* a filler paints blanks in its colours: nothing visible to find */
+    filler = vk_filler_create();
+    vk_widget_set_colors(VK_WIDGET(filler), COLOR_WHITE, COLOR_BLUE);
+    exercise("filler", filler, 6, 3, 0);
+
+    /* a marquee's redraw also moves its text along, so two redraws in
+       a row are not expected to match: it is only checked for running */
+    marquee = vk_marquee_create(10);
+    vk_marquee_set_text(marquee, "scrolling text that is too long to fit");
+    check("marquee", "registers no event handlers of its own",
+        !has_handlers(marquee));
+    check("marquee", "resize and recreate succeed",
+        vk_widget_resize(VK_WIDGET(marquee), 16, 1) == 0
+        && vk_widget_recreate(VK_WIDGET(marquee)) == 0);
+    check("marquee", "shows its contents after both, unasked",
+        has_content(VK_WIDGET(marquee)));
+
+    /* ---- types that hold others ---- */
+
+    frame = vk_frame_create(20, 5);
+    vk_frame_set_border_style(frame, VK_BORDER_SINGLE);
+    inner = vk_label_create(10);
+    vk_label_set_text(inner, "in a frame");
+    vk_widget_set_expand(VK_WIDGET(inner));
+    vk_frame_set_child(frame, VK_WIDGET(inner), VK_INHERIT_NONE);
+    exercise("frame", frame, 30, 7, 1);
+    vk_widget_get_metrics(VK_WIDGET(inner), &w, &h);
+    check("frame", "its expanding child was resized with it",
+        w == 28 && h == 5);
+
+    window = vk_window_create(24, 6);
+    vk_window_set_border_style(window, VK_BORDER_SINGLE);
+    vk_window_set_title(window, " title ");
+    exercise("window", window, 34, 8, 1);
+
+    box = vk_box_create(20, 2, VK_BOX_VERTICAL, 2);
+    a = vk_label_create(20);
+    b = vk_label_create(20);
+    vk_label_set_text(a, "top slot");
+    vk_label_set_text(b, "bottom slot");
+    vk_widget_set_expand(VK_WIDGET(a));
+    vk_widget_set_expand(VK_WIDGET(b));
+    vk_box_set_widget(box, 0, VK_WIDGET(a), VK_INHERIT_NONE);
+    vk_box_set_widget(box, 1, VK_WIDGET(b), VK_INHERIT_NONE);
+
+    /* a box's redraw copies its slots in; it does not repaint them.
+       the labels are painted here so that there is something to copy */
+    vk_label_redraw(a);
+    vk_label_redraw(b);
+    exercise("box", box, 30, 4, 1);
+    vk_widget_get_metrics(VK_WIDGET(a), &w, &h);
+    check("box", "its expanding children were laid out again",
+        w == 30 && h == 2);
+    check("box", "and each repainted itself at its new size",
+        is_current(VK_WIDGET(a)) && is_current(VK_WIDGET(b)));
+
+    grid = vk_grid_create(20, 4, 2, 2);
+    exercise("grid", grid, 30, 6, 0);
+
+    /* ---- an application's handler is a notice, after the work ---- */
+
+    label = vk_label_create(10);
+    vk_label_set_text(label, "notice");
+    vk_object_register_event(VK_OBJECT(label), VK_EVENT_ON_RESIZE,
+        on_resize, NULL);
+    vk_widget_resize(VK_WIDGET(label), 16, 1);
+    check("events", "an application's resize handler is called once",
+        notices == 1);
+    check("events", "and finds the widget already repainted",
+        notice_was_current);
+
+    /* ---- a klass reaches its parent's redraw through the klass ---- */
+
+    {
+        extern vk_object_t  *VK_WIDGET_KLASS;
+        extern vk_object_t  *VK_CONTAINER_KLASS;
+        extern vk_object_t  *VK_WINDOW_KLASS;
+        extern vk_object_t  *VK_POPUP_KLASS;
+        vk_popup_t          *popup;
+
+        popup = vk_popup_create(30, 8, VK_BORDER_SINGLE, "Okay", NULL);
+        check("klass", "a popup paints itself (its redraw calls the window's)",
+            vk_widget_redraw(VK_WIDGET(popup)) == 0
+            && has_content(VK_WIDGET(popup)));
+        check("klass", "every klass on the way has a redraw to call",
+            VK_WIDGET_KLASS->redraw != NULL
+            && VK_CONTAINER_KLASS->redraw != NULL
+            && VK_WINDOW_KLASS->redraw != NULL
+            && VK_POPUP_KLASS->redraw != NULL);
+        check("klass", "one that names none has its parent's",
+            VK_CONTAINER_KLASS->redraw == VK_WIDGET_KLASS->redraw);
+        vk_popup_destroy(popup);
+    }
+
+    /* ---- the names from before 11.0.0 still build and still work ---- */
+
+    label = vk_label_create(10);
+    vk_label_set_text(label, "old names");
+    check("compat", "vk_label_update is vk_label_redraw",
+        vk_label_update(label) == 0 && has_content(VK_WIDGET(label)));
+
+    vk_screen_destroy(screen);
+
+    printf("%d of %d passed\n", passed, passed + failed);
+
+    return (failed == 0) ? 0 : 1;
+}

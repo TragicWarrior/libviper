@@ -19,7 +19,7 @@ static int
 _vk_color_dtor(vk_object_t *object);
 
 static int
-_vk_color_update(vk_grid_t *grid);
+_vk_color_redraw(vk_object_t *object);
 
 static int
 _vk_color_kmio(vk_object_t *object, int32_t keystroke);
@@ -32,6 +32,8 @@ declare_klass(VK_COLOR_KLASS)
     .name = KLASS_NAME(vk_color_t),
     .ctor = _vk_color_ctor,
     .dtor = _vk_color_dtor,
+    .parent = &VK_TABLE_KLASS,
+    .redraw = _vk_color_redraw,
 };
 
 inline vk_color_t*
@@ -93,10 +95,10 @@ vk_color_set_focus_attrs(vk_color_t *color, attr_t attrs)
 }
 
 inline int
-vk_color_update(vk_color_t *color)
+vk_color_redraw(vk_color_t *color)
 {
     if(color == NULL) return -1;
-    return vk_grid_update(VK_GRID(color));
+    return vk_grid_redraw(VK_GRID(color));
 }
 
 inline int
@@ -108,6 +110,9 @@ vk_color_destroy(vk_color_t *color)
        included, is refused, and the caller is told */
     if(!vk_object_assert(color, vk_color_t)) return -1;
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(color));
+
     color->dtor(VK_OBJECT(color));
 
     return 0;
@@ -117,7 +122,6 @@ static int
 _vk_color_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_color_t  *color;
-    vk_grid_t   *grid;
     va_list     args;
 
     if(object == NULL) return -1;
@@ -135,7 +139,6 @@ _vk_color_ctor(vk_object_t *object, va_list *argp, ...)
     va_end(args);
 
     color = VK_COLOR(object);
-    grid = VK_GRID(object);
 
     color->selected    = 0;
     color->focus_fg    = COLOR_YELLOW;
@@ -145,9 +148,8 @@ _vk_color_ctor(vk_object_t *object, va_list *argp, ...)
     color->ctor = _vk_color_ctor;
     color->dtor = _vk_color_dtor;
 
-    /* take over the grid's update slot so vk_grid_update / vk_table_update
-       on a vk_color routes through our paint + dividers + focus overlay */
-    grid->_update = _vk_color_update;
+    /* painting goes through _vk_color_redraw (the klass's redraw):
+       the table's layout and dividers, then the swatches on top */
 
     /* take over the kmio slot for arrow / Tab / Enter navigation */
     object->kmio = _vk_color_kmio;
@@ -343,8 +345,9 @@ _vk_color_overdraw_focus(vk_color_t *color, vk_grid_t *grid,
 }
 
 static int
-_vk_color_update(vk_grid_t *grid)
+_vk_color_redraw(vk_object_t *object)
 {
+    vk_grid_t *grid = (vk_grid_t *)object;
     vk_color_t  *color  = VK_COLOR(grid);
     vk_widget_t *widget = VK_WIDGET(grid);
     int         cols    = grid->cols;
@@ -354,7 +357,7 @@ _vk_color_update(vk_grid_t *grid)
     /* 1. let vk_table do its full pass: bg fill + dividers in the
           table's normal border color.  cells stay empty since we run
           in paint mode (no slot widgets). */
-    if(_vk_table_update(grid) != 0) return -1;
+    if(_vk_table_redraw(VK_OBJECT(grid)) != 0) return -1;
 
     /* 2. paint each of the 16 cells with its color */
     for(r = 0; r < rows; r++)

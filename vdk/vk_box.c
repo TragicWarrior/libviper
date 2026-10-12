@@ -16,13 +16,13 @@ static int
 _vk_box_dtor(vk_object_t *object);
 
 static int
-_vk_box_on_resize(vk_object_t *object, int event, void *anything);
+_vk_box_layout(vk_widget_t *widget);
 
 static int
 _vk_box_recreate(vk_widget_t *widget);
 
 static int
-_vk_box_update(vk_box_t *box);
+_vk_box_redraw(vk_object_t *object);
 
 static int
 _vk_box_kmio(vk_object_t *object, int32_t keystroke);
@@ -35,6 +35,8 @@ declare_klass(VK_BOX_KLASS)
     .name = KLASS_NAME(vk_box_t),
     .ctor = _vk_box_ctor,
     .dtor = _vk_box_dtor,
+    .parent = &VK_CONTAINER_KLASS,
+    .redraw = _vk_box_redraw,
 };
 
 inline vk_box_t*
@@ -184,11 +186,11 @@ vk_box_get_subfocus(vk_box_t *box)
 }
 
 inline int
-vk_box_update(vk_box_t *box)
+vk_box_redraw(vk_box_t *box)
 {
     if(box == NULL) return -1;
 
-    return box->_update(box);
+    return vk_widget_redraw(VK_WIDGET(box));
 }
 
 inline int
@@ -199,6 +201,9 @@ vk_box_destroy(vk_box_t *box)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(box, vk_box_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(box));
 
     box->dtor(VK_OBJECT(box));
 
@@ -240,11 +245,9 @@ _vk_box_ctor(vk_object_t *object, va_list *argp, ...)
 
     box->ctor = _vk_box_ctor;
     box->dtor = _vk_box_dtor;
-    box->_update = _vk_box_update;
 
-    vk_object_register_event(VK_OBJECT(box),
-        VK_EVENT_ON_RESIZE, _vk_box_on_resize, NULL);
     VK_WIDGET(box)->_recreate = _vk_box_recreate;
+    VK_WIDGET(box)->_layout = _vk_box_layout;
 
     object->kmio = _vk_box_kmio;
 
@@ -264,7 +267,7 @@ _vk_box_dtor(vk_object_t *object)
 
     /* the slots are only the box's view of its children; the children
        themselves are on the container's list and are destroyed with it
-       (see _vk_container_on_destroy) */
+       (see _vk_container_dtor) */
     free(box->slot_widgets);
     box->slot_widgets = NULL;
 
@@ -275,16 +278,12 @@ _vk_box_dtor(vk_object_t *object)
 }
 
 static int
-_vk_box_on_resize(vk_object_t *object, int event, void *anything)
+_vk_box_layout(vk_widget_t *widget)
 {
-    vk_widget_t     *widget = VK_WIDGET(object);
     vk_box_t        *box;
     vk_widget_t     *child;
     int             i;
     bool            horiz;
-
-    (void)event;
-    (void)anything;
 
     box = VK_BOX(widget);
     horiz = (box->orientation == VK_BOX_HORIZONTAL);
@@ -417,8 +416,9 @@ _vk_box_kmio(vk_object_t *object, int32_t keystroke)
 }
 
 static int
-_vk_box_update(vk_box_t *box)
+_vk_box_redraw(vk_object_t *object)
 {
+    vk_box_t *box = (vk_box_t *)object;
     vk_widget_t     *widget;
     vk_widget_t     *child;
     int             i;
@@ -486,7 +486,7 @@ _vk_box_update(vk_box_t *box)
                 else
                     vk_widget_move(child, xoff, pos + yoff);
 
-                vk_widget_draw(child);
+                vk_widget_blit(child);
             }
 
             pos += slot_size;
@@ -558,7 +558,7 @@ _vk_box_update(vk_box_t *box)
             else
                 vk_widget_move(child, 0, pos);
 
-            vk_widget_draw(child);
+            vk_widget_blit(child);
             pos += slot_size;
         }
     }

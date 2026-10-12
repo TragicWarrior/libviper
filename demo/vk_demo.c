@@ -520,8 +520,8 @@ listbox_kmio(vk_object_t *object, int32_t keystroke)
             return 0;
     }
 
-    vk_listbox_update(listbox);
-    vk_widget_draw(VK_WIDGET(object));
+    vk_listbox_redraw(listbox);
+    vk_widget_blit(VK_WIDGET(object));
 
     return 0;
 }
@@ -542,7 +542,7 @@ textbox_kmio(vk_object_t *object, int32_t keystroke)
         default:            return 0;
     }
 
-    vk_textbox_update(textbox);
+    vk_textbox_redraw(textbox);
 
     return 0;
 }
@@ -572,8 +572,8 @@ selectbox_kmio(vk_object_t *object, int32_t keystroke)
             return 0;
     }
 
-    vk_selectbox_update(selectbox);
-    vk_widget_draw(VK_WIDGET(object));
+    vk_selectbox_redraw(selectbox);
+    vk_widget_blit(VK_WIDGET(object));
 
     return 0;
 }
@@ -1201,14 +1201,14 @@ int main(void)
     vk_box_set_widget(box, 1, VK_WIDGET(window2), VK_INHERIT_NONE);
     vk_box_set_widget(box, 2, VK_WIDGET(window3), VK_INHERIT_NONE);
 
-    vk_listbox_update(listbox);
-    vk_listbox_update(menu);
-    vk_textbox_update(textbox3);
-    vk_window_update(window1);
-    vk_window_update(window2);
-    vk_window_update(window3);
+    vk_listbox_redraw(listbox);
+    vk_listbox_redraw(menu);
+    vk_textbox_redraw(textbox3);
+    vk_window_redraw(window1);
+    vk_window_redraw(window2);
+    vk_window_redraw(window3);
 
-    vk_box_update(box);
+    vk_box_redraw(box);
 
     // surface 0: event registrations
     fc_s0[0] = (struct focus_ctx){ window1, vscroller1, hscroller1, COLOR_CYAN };
@@ -1268,8 +1268,8 @@ int main(void)
     vk_screen_attach_widget(vk_screen, 1, VK_WIDGET(lang_frame));
     vk_widget_move(VK_WIDGET(lang_frame), 0, 1);
 
-    vk_listbox_update(lang_listbox);
-    vk_frame_update(lang_frame);
+    vk_listbox_redraw(lang_listbox);
+    vk_frame_redraw(lang_frame);
 
     // --- surface 2: selectbox ---
 
@@ -1339,13 +1339,13 @@ int main(void)
     vk_box_set_widget(box2, 1, VK_WIDGET(window5), VK_INHERIT_NONE);
     vk_box_set_widget(box2, 2, VK_WIDGET(about_window), VK_INHERIT_NONE);
 
-    vk_selectbox_update(checkbox);
-    vk_selectbox_update(radio);
-    vk_window_update(window4);
-    vk_window_update(window5);
-    vk_window_update(about_window);
+    vk_selectbox_redraw(checkbox);
+    vk_selectbox_redraw(radio);
+    vk_window_redraw(window4);
+    vk_window_redraw(window5);
+    vk_window_redraw(about_window);
 
-    vk_box_update(box2);
+    vk_box_redraw(box2);
 
     // surface 2: event registrations
     fc_s2[0] = (struct focus_ctx){ window4, vscroller4, NULL, COLOR_CYAN };
@@ -1392,7 +1392,7 @@ int main(void)
     vk_window_set_border_colors(deck_win1, COLOR_WHITE, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win1), COLOR_WHITE, COLOR_BLUE);
     vk_window_set_decorate(deck_win1, deck_notes_decorate, NULL);
-    vk_window_update(deck_win1);
+    vk_window_redraw(deck_win1);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win1), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win1), 3, 2);
 
@@ -1402,7 +1402,7 @@ int main(void)
     vk_window_set_border_colors(deck_win2, COLOR_RED, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win2), COLOR_WHITE, COLOR_GREEN);
     vk_window_set_decorate(deck_win2, deck_tasks_decorate, NULL);
-    vk_window_update(deck_win2);
+    vk_window_redraw(deck_win2);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win2), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win2), 15, 5);
 
@@ -1412,7 +1412,7 @@ int main(void)
     vk_window_set_border_colors(deck_win3, COLOR_WHITE, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win3), COLOR_WHITE, COLOR_MAGENTA);
     vk_window_set_decorate(deck_win3, deck_help_decorate, NULL);
-    vk_window_update(deck_win3);
+    vk_window_redraw(deck_win3);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win3), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win3), 27, 8);
 
@@ -1423,7 +1423,7 @@ int main(void)
     vk_window_set_border_colors(deck_win4, COLOR_YELLOW, COLOR_BLACK);
     vk_widget_set_colors(VK_WIDGET(deck_win4), COLOR_WHITE, COLOR_CYAN);
     vk_window_set_decorate(deck_win4, deck_log_decorate, NULL);
-    vk_window_update(deck_win4);
+    vk_window_redraw(deck_win4);
     vk_deck_add_widget(deck, VK_WIDGET(deck_win4), VK_DECK_TOP);
     vk_widget_move(VK_WIDGET(deck_win4), 39, 11);
 
@@ -1466,7 +1466,7 @@ int main(void)
             if(bi == 3)
                 vk_button_set_border_style(deck_buttons[bi],
                     VK_BORDER_ASCII);
-            vk_button_update(deck_buttons[bi]);
+            vk_button_redraw(deck_buttons[bi]);
         }
 
         deck_box5 = vk_box_create(33, 3, VK_BOX_HORIZONTAL, 5);
@@ -1482,7 +1482,7 @@ int main(void)
 
         vk_window_set_child(deck_win5, VK_WIDGET(deck_box5), VK_INHERIT_NONE);
         vk_widget_move(VK_WIDGET(deck_box5), 1, 6);
-        vk_window_update(deck_win5);
+        vk_window_redraw(deck_win5);
         vk_deck_add_widget(deck, VK_WIDGET(deck_win5), VK_DECK_TOP);
         vk_widget_move(VK_WIDGET(deck_win5), 51, 14);
     }
@@ -1504,15 +1504,15 @@ int main(void)
 
         vk_window_set_child(deck_win6, VK_WIDGET(filedialog), VK_INHERIT_NONE);
         vk_widget_move(VK_WIDGET(filedialog), 1, 3);
-        vk_filedialog_update(filedialog);
-        vk_window_update(deck_win6);
+        vk_filedialog_redraw(filedialog);
+        vk_window_redraw(deck_win6);
         vk_deck_add_widget(deck, VK_WIDGET(deck_win6), VK_DECK_TOP);
         vk_widget_move(VK_WIDGET(deck_win6), 63, 17);
     }
 
     // --- initial draw and event loop ---
 
-    vk_box_update(box);
+    vk_box_redraw(box);
     {
         int i;
         for(i = 0; i < 4; i++)
@@ -1720,25 +1720,25 @@ int main(void)
 
         if(current_surface == 0)
         {
-            vk_window_update(window1);
-            vk_window_update(window2);
-            vk_textbox_update(textbox3);
-            vk_window_update(window3);
-            vk_box_update(box);
+            vk_window_redraw(window1);
+            vk_window_redraw(window2);
+            vk_textbox_redraw(textbox3);
+            vk_window_redraw(window3);
+            vk_box_redraw(box);
         }
         else if(current_surface == 1)
         {
-            vk_listbox_update(lang_listbox);
-            vk_frame_update(lang_frame);
+            vk_listbox_redraw(lang_listbox);
+            vk_frame_redraw(lang_frame);
         }
         else if(current_surface == 2)
         {
-            vk_selectbox_update(checkbox);
-            vk_window_update(window4);
-            vk_selectbox_update(radio);
-            vk_window_update(window5);
-            vk_window_update(about_window);
-            vk_box_update(box2);
+            vk_selectbox_redraw(checkbox);
+            vk_window_redraw(window4);
+            vk_selectbox_redraw(radio);
+            vk_window_redraw(window5);
+            vk_window_redraw(about_window);
+            vk_box_redraw(box2);
         }
         if(deck_surface == current_surface)
         {
@@ -1760,10 +1760,10 @@ int main(void)
             vk_window_set_border_colors(deck_win5, c5, COLOR_BLACK);
             vk_window_set_border_colors(deck_win6, c6, COLOR_BLACK);
 
-            vk_window_update(deck_win1);
-            vk_window_update(deck_win2);
-            vk_window_update(deck_win3);
-            vk_window_update(deck_win4);
+            vk_window_redraw(deck_win1);
+            vk_window_redraw(deck_win2);
+            vk_window_redraw(deck_win3);
+            vk_window_redraw(deck_win4);
 
             {
                 int bi;
@@ -1772,14 +1772,14 @@ int main(void)
                 {
                     vk_widget_set_attrs(VK_WIDGET(deck_buttons[bi]),
                         (bi == bf) ? A_BOLD : 0);
-                    vk_button_update(deck_buttons[bi]);
+                    vk_button_redraw(deck_buttons[bi]);
                 }
             }
-            vk_box_update(deck_box5);
-            vk_window_update(deck_win5);
+            vk_box_redraw(deck_box5);
+            vk_window_redraw(deck_win5);
 
-            vk_filedialog_update(filedialog);
-            vk_window_update(deck_win6);
+            vk_filedialog_redraw(filedialog);
+            vk_window_redraw(deck_win6);
         }
 
         {

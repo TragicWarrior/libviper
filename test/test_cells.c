@@ -181,7 +181,7 @@ main(void)
     vk_widget_move(widget, 5, 3);
     vk_screen_attach_widget(screen, vk_screen_get_active_surface(screen),
         widget);
-    vk_widget_draw(widget);
+    vk_widget_blit(widget);
     vk_screen_refresh(screen);
     {
         vdk_cell_t  screen_row[80];

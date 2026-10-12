@@ -41,7 +41,7 @@ struct _vk_table_s
 /* internal helpers shared with subclasses (e.g. vk_color uses these
    to overdraw the focused cell's border in a highlight color, and to
    chain through vk_table's full layout+divider pass) */
-int             _vk_table_update(vk_grid_t *grid);
+int             _vk_table_redraw(vk_object_t *object);
 const cchar_t*  _vk_table_pick_junction(int divider_style,
                     int r, int rows, int c, int cols);
 void            _vk_table_compute_lines(vk_table_t *table,

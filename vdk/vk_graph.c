@@ -12,7 +12,8 @@
 static int      _vk_graph_ctor(vk_object_t *object, va_list *argp, ...);
 static int      _vk_graph_dtor(vk_object_t *object);
 static int      _vk_graph_render(vk_widget_t *widget);
-static int      _vk_graph_recreate(vk_widget_t *widget);
+static int      _vk_graph_redraw(vk_object_t *object);
+static void     _vk_graph_free_x_labels(vk_graph_t *graph);
 static int      _vk_graph_default_bar_count(vk_graph_t *graph);
 static double   _vk_graph_default_bar_value(vk_graph_t *graph, int index);
 
@@ -24,6 +25,8 @@ declare_klass(VK_GRAPH_KLASS)
     .name = KLASS_NAME(vk_graph_t),
     .ctor = _vk_graph_ctor,
     .dtor = _vk_graph_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_graph_redraw,
 };
 
 /*
@@ -91,9 +94,9 @@ _vk_graph_ctor(vk_object_t *object, va_list *argp, ...)
     graph->_bar_count    = _vk_graph_default_bar_count;
     graph->_bar_value    = _vk_graph_default_bar_value;
 
-    /* re-render after a teleport/resize rebuilds the canvas (mirrors
-       vk_progress); the inherited base _draw composites it onto the surface */
-    VK_WIDGET(object)->_recreate = _vk_graph_recreate;
+    /* the graph is rendered into the widget's own canvas by the klass's
+       redraw, which the base calls again after a resize or a move to
+       another terminal; the base blit copies the canvas to the surface */
 
     return 0;
 }
@@ -113,11 +116,7 @@ _vk_graph_dtor(vk_object_t *object)
         free(graph->data);
         graph->data = NULL;
     }
-    if(graph->x_labels != NULL)
-    {
-        free(graph->x_labels);
-        graph->x_labels = NULL;
-    }
+    _vk_graph_free_x_labels(graph);
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
@@ -532,12 +531,11 @@ _vk_graph_render(vk_widget_t *widget)
     return 0;
 }
 
+/* a graph's redraw: render its series and axes into the canvas */
 static int
-_vk_graph_recreate(vk_widget_t *widget)
+_vk_graph_redraw(vk_object_t *object)
 {
-    if(vdk_widget_reset_canvas(widget) < 0) return -1;
-
-    return _vk_graph_render(widget);
+    return _vk_graph_render(VK_WIDGET(object));
 }
 
 int
@@ -671,38 +669,50 @@ vk_graph_set_attrs(vk_graph_t *graph, attr_t attrs)
 int
 vk_graph_set_x_labels(vk_graph_t *graph, const char * const *labels, int count)
 {
+    char    **copy;
+    int     i;
+
     if(graph == NULL) return -1;
 
-    if(graph->x_labels != NULL)
+    /* the labels held until now, text and all */
+    _vk_graph_free_x_labels(graph);
+
+    if(labels == NULL || count <= 0) return 0;
+
+    copy = (char **)calloc((size_t)count, sizeof(char *));
+    if(copy == NULL) return -1;
+
+    /*
+        the graph keeps its own copy of each label's text, as it does of
+        its data.  it used to keep only the caller's pointers, which was
+        safe just as long as the caller's strings outlived every paint;
+        a graph is repainted whenever its canvas changes under it, so it
+        has to be able to paint from what it holds itself.
+    */
+    for(i = 0; i < count; i++)
     {
-        free(graph->x_labels);
-        graph->x_labels = NULL;
+        copy[i] = strdup((labels[i] != NULL) ? labels[i] : "");
+
+        if(copy[i] == NULL)
+        {
+            while(i-- > 0) free(copy[i]);
+            free(copy);
+            return -1;
+        }
     }
 
-    if(labels != NULL && count > 0)
-    {
-        const char **copy = (const char **)malloc((size_t)count * sizeof(char *));
-        if(copy == NULL) return -1;
-        memcpy(copy, labels, (size_t)count * sizeof(char *));
-        graph->x_labels  = copy;
-        graph->x_label_count = count;
-    }
-    else
-    {
-        graph->x_label_count = 0;
-    }
+    graph->x_labels = (const char **)copy;
+    graph->x_label_count = count;
 
     return 0;
 }
 
 int
-vk_graph_update(vk_graph_t *graph)
+vk_graph_redraw(vk_graph_t *graph)
 {
     if(graph == NULL) return -1;
 
-    /* render current state into the canvas; vk_screen_refresh's base _draw
-       composites it onto the surface (mirrors vk_progress_update) */
-    return _vk_graph_render(VK_WIDGET(graph));
+    return vk_widget_redraw(VK_WIDGET(graph));
 }
 
 int
@@ -714,6 +724,9 @@ vk_graph_destroy(vk_graph_t *graph)
        included, is refused, and the caller is told */
     if(!vk_object_assert(graph, vk_graph_t)) return -1;
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(graph));
+
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
         in vk_widget_destroy(), which frees the object.
@@ -721,4 +734,23 @@ vk_graph_destroy(vk_graph_t *graph)
     graph->dtor(VK_OBJECT(graph));
 
     return 0;
+}
+
+/* let go of the x-axis labels the graph holds: each label's text, then
+   the array of them */
+static void
+_vk_graph_free_x_labels(vk_graph_t *graph)
+{
+    int i;
+
+    if(graph->x_labels != NULL)
+    {
+        for(i = 0; i < graph->x_label_count; i++)
+            free((void *)graph->x_labels[i]);
+
+        free(graph->x_labels);
+        graph->x_labels = NULL;
+    }
+
+    graph->x_label_count = 0;
 }

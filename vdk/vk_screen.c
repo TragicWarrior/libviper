@@ -126,12 +126,15 @@ _vk_surface_create(SCREEN *term, int width, int height);
 static void
 _vk_surface_destroy(vk_surface_t *surface);
 
+require_klass(VK_OBJECT_KLASS);
+
 declare_klass(VK_SCREEN_KLASS)
 {
     .size = KLASS_SIZE(vk_screen_t),
     .name = KLASS_NAME(vk_screen_t),
     .ctor = _vk_screen_ctor,
     .dtor = _vk_screen_dtor,
+    .parent = &VK_OBJECT_KLASS,
 };
 
 /* a screen on the terminal this program was started on (stdin/stdout) */
@@ -583,7 +586,7 @@ vk_screen_refresh(vk_screen_t *screen)
             surface->canvas);
 
     for(i = 0; i < surface->widget_count; i++)
-        vk_widget_draw(surface->widgets[i]);
+        vk_widget_blit(surface->widgets[i]);
 
     overwrite(surface->canvas, stdscr);
 
@@ -836,6 +839,9 @@ vk_screen_destroy(vk_screen_t *screen)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(screen));
 
     screen->dtor(VK_OBJECT(screen));
 

@@ -13,9 +13,6 @@ _vk_container_ctor(vk_object_t *object, va_list *argp, ...);
 static int
 _vk_container_dtor(vk_object_t *object);
 
-static int
-_vk_container_on_destroy(vk_object_t *object, int event, void *anything);
-
 // super klass methods
 static int
 _vk_container_add_widget(vk_container_t *container, vk_widget_t *widget);
@@ -37,6 +34,7 @@ declare_klass(VK_CONTAINER_KLASS)
     .name = KLASS_NAME(vk_container_t),
     .ctor = _vk_container_ctor,
     .dtor = _vk_container_dtor,
+    .parent = &VK_WIDGET_KLASS,
 };
 
 // create a new widget from scratch
@@ -92,6 +90,9 @@ vk_container_destroy(vk_container_t *container)
 
     if(!vk_object_assert(container, vk_container_t)) return -1;
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(container));
+
     container->dtor(VK_OBJECT(container));
 
     /* destroyed: this used to report -1, the same as a refusal */
@@ -133,40 +134,35 @@ _vk_container_ctor(vk_object_t *object, va_list *argp, ...)
 
     INIT_LIST_HEAD(&container->widget_list);
 
-    /* every widget that can host others takes part in the destroy
-       cascade.  Registered here, in the base class, so that boxes,
-       frames, windows, grids and everything built on them inherit it,
-       the same way each of them registers for its own resize. */
-    vk_object_register_event(object, VK_EVENT_ON_DESTROY,
-        _vk_container_on_destroy, NULL);
-
     return 0;
 }
 
-/*
-    A container is being destroyed (VK_EVENT_ON_DESTROY, emitted on it
-    by the widget layer of its teardown).  It owns what it holds: every
-    widget still in it is destroyed, each through the destructor of its
-    own type, and a child that is itself a container gets this same
-    event and does the same for its children.  Each child is taken off
-    the list before it is destroyed.
-
-    A child that should outlive the container has to be taken out first
-    -- vk_container_remove_widget, vk_container_vacate, or the
-    subclass's own call (vk_box_set_widget / vk_frame_set_child with
-    NULL).
-*/
 static int
-_vk_container_on_destroy(vk_object_t *object, int event, void *anything)
+_vk_container_dtor(vk_object_t *object)
 {
-    vk_container_t      *container = VK_CONTAINER(object);
+    vk_container_t      *container;
     struct list_head    *pos;
     struct list_head    *tmp;
     vk_widget_t         *child;
 
-    (void)event;
-    (void)anything;
+    if(object == NULL) return -1;
 
+    container = VK_CONTAINER(object);
+
+    /*
+        A container owns what it holds: every widget still in it is
+        destroyed with it, each through the destructor of its own type.
+        A child that is itself a container does the same for its own,
+        so a whole tree goes with one call.  It is done here, as an
+        ordinary step of the container's teardown and while the
+        container is still intact -- not in answer to an event.
+
+        Each child is taken off the list before it is destroyed.  A
+        child that should outlive the container has to be taken out
+        first -- vk_container_remove_widget, vk_container_vacate, or
+        the subclass's own call (vk_box_set_widget / vk_frame_set_child
+        with NULL).
+    */
     list_for_each_safe(pos, tmp, &container->widget_list)
     {
         child = list_entry(pos, vk_widget_t, list);
@@ -174,17 +170,6 @@ _vk_container_on_destroy(vk_object_t *object, int event, void *anything)
         list_del(&child->list);
         vk_object_dispose(VK_OBJECT(child));
     }
-
-    return 0;
-}
-
-static int
-_vk_container_dtor(vk_object_t *object)
-{
-    if(object == NULL) return -1;
-
-    /* the children are not destroyed here but in answer to the destroy
-       event the widget layer emits next: see _vk_container_on_destroy */
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));

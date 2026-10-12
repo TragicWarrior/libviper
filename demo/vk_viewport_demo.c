@@ -159,8 +159,8 @@ main(void)
         (max_x - (VP_COLS + 3)) / 2,
         (max_y - (VP_ROWS + 3)) / 2);
 
-    vk_viewport_update(vp);
-    vk_window_update(window);
+    vk_viewport_redraw(vp);
+    vk_window_redraw(window);
     vk_screen_refresh(screen);
 
     for(;;)
@@ -185,8 +185,8 @@ main(void)
                 continue;
         }
 
-        vk_viewport_update(vp);
-        vk_window_update(window);
+        vk_viewport_redraw(vp);
+        vk_window_redraw(window);
         vk_screen_refresh(screen);
     }
 

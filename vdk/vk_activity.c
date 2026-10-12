@@ -21,6 +21,7 @@ declare_klass(VK_ACTIVITY_KLASS)
     .name = KLASS_NAME(vk_activity_t),
     .ctor = _vk_activity_ctor,
     .dtor = _vk_activity_dtor,
+    .parent = &VK_WIDGET_KLASS,
 };
 
 static const char *spinner_frames[] =
@@ -222,6 +223,9 @@ vk_activity_destroy(vk_activity_t *activity)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(activity, vk_activity_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(activity));
 
     activity->dtor(VK_OBJECT(activity));
 

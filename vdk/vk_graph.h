@@ -46,7 +46,7 @@ struct _vk_graph_s
     double              unit_scale;     /* display multiplier for tick values  */
     char                unit_label[VK_GRAPH_UNIT_MAX];
 
-    const char        **x_labels;       /* owned array of x-axis label strings */
+    const char        **x_labels;       /* x-axis labels: the graph's own copies */
     int                 x_label_count;
 
     short               bar_fg;

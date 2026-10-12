@@ -20,6 +20,7 @@ declare_klass(VK_METER_KLASS)
     .name = KLASS_NAME(vk_meter_t),
     .ctor = _vk_meter_ctor,
     .dtor = _vk_meter_dtor,
+    .parent = &VK_PROGRESS_KLASS,
 };
 
 vk_meter_t*
@@ -170,6 +171,9 @@ vk_meter_destroy(vk_meter_t *meter)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(meter, vk_meter_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(meter));
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends

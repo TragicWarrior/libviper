@@ -119,7 +119,15 @@ Cast macros are defined in `vdk.h`:
 Each type declares a global singleton "klass descriptor" using:
 
 ```c
-declare_klass(KLASS_NAME) { .size = ..., .name = ..., .ctor = ..., ... };
+declare_klass(KLASS_NAME)
+{
+    .size   = KLASS_SIZE(type),
+    .name   = KLASS_NAME(type),
+    .ctor   = ...,
+    .dtor   = ...,
+    .parent = &PARENT_KLASS,      // the type this one is built on
+    .redraw = ...,                // how it paints itself; optional
+};
 require_klass(KLASS_NAME);    // extern reference from other files
 ```
 
@@ -132,8 +140,16 @@ These are: `VK_OBJECT_KLASS`, `VK_SCREEN_KLASS`, `VK_WIDGET_KLASS`, `VK_CONTAINE
 `VK_MENUBAR_KLASS`, `VK_FILEDIALOG_KLASS`, `VK_CALENDAR_KLASS`,
 `VK_POPUP_KLASS`, `VK_VIEWPORT_KLASS`, `VK_PROGRESS_KLASS`,
 `VK_METER_KLASS`, `VK_GRAPH_KLASS`, `VK_HISTOGRAM_KLASS`.
-The template carries the type's size, name, constructor, and destructor.
-It serves as both the type descriptor and the vtable seed.
+The template carries the type's size, name, constructor and destructor,
+the klass it is built on (`.parent`, since 11.0.0) and how it paints
+itself (`.redraw`, since 11.0.0). It serves as both the type descriptor
+and the vtable seed.
+
+A type that names no `.redraw` takes its parent's: the first time an
+object of the type is constructed, the library follows `.parent` up the
+chain and fills the empty slot in. A type that paints exactly like the
+one it is built on (`vk_meter_t` on `vk_progress_t`) therefore names
+nothing.
 
 ## Allocation and Construction
 
@@ -226,8 +242,13 @@ its own type down to `vk_object_t`. This is the demote pattern, below.
 
 **Down the widget tree** -- a widget that hosts others destroys them when
 it is destroyed, and each of those does the same for what it hosts. This
-is the destroy cascade, further below. It is carried by an event, the
-same way a resize is.
+is the destroy cascade, further below. It is an ordinary step of the
+container's destructor.
+
+Before either, the object is **announced**: `VK_EVENT_ON_DESTROY` is
+emitted on it, once, while it is still whole. The library registers no
+handler for that event and nothing in the teardown depends on one; it is
+there for the application.
 
 ### What a Destroy Call Returns (since 10.2.0)
 
@@ -261,24 +282,33 @@ This continues until `vk_object_destroy()` calls `free()`.
 #### Example: vk_window_t
 
 ```
-_vk_window_dtor
-  -> free title
-  -> vk_object_demote(object, vk_frame_t)
-  -> vk_frame_destroy
-    -> _vk_frame_dtor
-      -> vk_object_demote(object, vk_container_t)
-      -> vk_container_destroy
-        -> _vk_container_dtor
-          -> vk_object_demote(object, vk_widget_t)
-          -> vk_widget_destroy
-            -> _vk_widget_dtor
-              -> take itself off its parent's list
-              -> emit VK_EVENT_ON_DESTROY      (the cascade, below)
-              -> destroy attached scrollers
-              -> vk_object_demote(object, vk_object_t)
-              -> vk_object_destroy
-                -> free(object)
+vk_window_destroy
+  -> emit VK_EVENT_ON_DESTROY          (once; the window is still whole)
+  -> _vk_window_dtor
+    -> free title
+    -> vk_object_demote(object, vk_frame_t)
+    -> vk_frame_destroy
+      -> _vk_frame_dtor
+        -> vk_object_demote(object, vk_container_t)
+        -> vk_container_destroy
+          -> _vk_container_dtor
+            -> destroy each child        (the cascade, below)
+            -> vk_object_demote(object, vk_widget_t)
+            -> vk_widget_destroy
+              -> _vk_widget_dtor
+                -> take itself off its parent's list
+                -> destroy attached scrollers
+                -> delete the canvas
+                -> vk_object_demote(object, vk_object_t)
+                -> vk_object_destroy
+                  -> free the handler list
+                  -> free(object)
 ```
+
+Every destroy call on the way down (`vk_frame_destroy`,
+`vk_container_destroy`, ...) would announce the object too; the object
+remembers that it has been announced, so the event is emitted by the
+first of them and by no other.
 
 #### Example: vk_scroller_t
 
@@ -305,27 +335,41 @@ down. Leaf classes (`vk_label_t`, `vk_button_t`, ...) demote directly to
 child; destroying a box or a grid destroys what is in its slots; and so
 on down the tree, to any depth.
 
-The mechanism is `VK_EVENT_ON_DESTROY`:
+The mechanism is the container's destructor (since 11.0.0):
 
-1. `_vk_widget_dtor` emits `VK_EVENT_ON_DESTROY` on every widget as it is
-   torn down, once.
-2. `vk_container_t` registers a handler for that event in its constructor
-   (`_vk_container_on_destroy`), so every class built on it takes part --
-   the same way each of them registers for its own `VK_EVENT_ON_RESIZE`.
-3. The handler walks the container's child list, takes each child off it,
-   and destroys the child through the destructor of the child's own type
-   (`vk_object_dispose`).
-4. Each child emits the same event as it goes, which reaches its children.
+1. `_vk_container_dtor` walks the container's child list, takes each
+   child off it, and destroys the child through the destructor of the
+   child's own type (`vk_object_dispose`).
+2. A child that is itself a container does the same for its own as it
+   goes.
 
-An application can register for `VK_EVENT_ON_DESTROY` on any widget, for
-example to free what its user pointer refers to. The event arrives at the
-widget layer of the teardown: the layers of the widget's own type are
-already gone, so a handler may use what every widget has (its id, its
-user pointer) and nothing type-specific. A container's children are
-already destroyed by the time a handler registered later than the
-container's own runs.
+Every class built on `vk_container_t` passes through that destructor, so
+every one of them takes part without doing anything.
 
-What follows from this:
+(10.x carried the cascade on `VK_EVENT_ON_DESTROY`: the container
+registered a handler for its own event. The teardown no longer depends
+on an event.)
+
+### The Destroy Event
+
+`VK_EVENT_ON_DESTROY` is a notice for the application, for example to
+free what a widget's user pointer refers to. Since 11.0.0:
+
+- It is emitted **once** per object, by whichever destroy call is made
+  on it, **before** anything of the object is taken down. A handler sees
+  the widget whole and may use anything of it, type-specific calls
+  included.
+- A container is announced **before** its children: its handler runs
+  while they are all still alive. Each child is announced in turn as the
+  container's destructor reaches it.
+- The library registers no handler of its own for it.
+- A handler must not destroy the object it was called for.
+
+(In 10.x the event arrived from the widget layer of the teardown, with
+the object's own type already gone and a container's children already
+destroyed.)
+
+What follows from the cascade:
 
 - **Destroy the outermost widget and nothing else.** A dialog is torn
   down with one `vk_window_destroy()`.
@@ -349,6 +393,141 @@ it as what it is. `vk_object_dispose()` does the same for any object.
 The typed calls (`vk_button_destroy()` and the rest) still refuse an
 object that is not exactly their type.
 
+## Writing a New Klass
+
+Everything a new widget type has to do, using a hypothetical `vk_gauge_t`
+built on `vk_widget_t`. Follow the steps and resize, teleport and
+destruction work without anything further.
+
+**1. The struct** embeds the parent first, then its own slots and data:
+
+```c
+struct _vk_gauge_s
+{
+    vk_widget_t     parent_klass;
+
+    int             (*ctor)     (vk_object_t *, va_list *, ...);
+    int             (*dtor)     (vk_object_t *);
+
+    int             value;
+};
+```
+
+**2. The descriptor** names the parent and the redraw:
+
+```c
+require_klass(VK_WIDGET_KLASS);
+
+declare_klass(VK_GAUGE_KLASS)
+{
+    .size   = KLASS_SIZE(vk_gauge_t),
+    .name   = KLASS_NAME(vk_gauge_t),
+    .ctor   = _vk_gauge_ctor,
+    .dtor   = _vk_gauge_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_gauge_redraw,
+};
+```
+
+**3. The constructor** calls the parent's first, then sets up its own:
+
+```c
+static int
+_vk_gauge_ctor(vk_object_t *object, va_list *argp, ...)
+{
+    va_list args;
+
+    if(argp == NULL)
+    {
+        va_start(args, argp);
+        argp = &args;
+    }
+
+    VK_WIDGET_KLASS->ctor(object, argp);
+
+    va_end(args);
+
+    VK_GAUGE(object)->ctor = _vk_gauge_ctor;
+    VK_GAUGE(object)->dtor = _vk_gauge_dtor;
+
+    return 0;
+}
+```
+
+**4. The destructor** frees its own, demotes, and hands on to the parent:
+
+```c
+static int
+_vk_gauge_dtor(vk_object_t *object)
+{
+    if(!vk_object_assert(object, vk_gauge_t)) return -1;
+
+    // free what vk_gauge_t allocated, if anything
+
+    vk_object_demote(object, vk_widget_t);
+    vk_widget_destroy(VK_WIDGET(object));
+
+    return 0;
+}
+```
+
+**5. The redraw** paints the canvas from the widget's state. If the type
+is built on one that paints, call that first (see Redraw and Blit):
+
+```c
+static int
+_vk_gauge_redraw(vk_object_t *object)
+{
+    vk_gauge_t  *gauge = VK_GAUGE(object);
+
+    // paint VK_WIDGET(gauge)->canvas from gauge->value
+
+    return 0;
+}
+```
+
+**6. The public calls**: create, destroy, redraw, and the type's own.
+
+```c
+vk_gauge_t*
+vk_gauge_create(int width)
+{
+    return (vk_gauge_t *)vk_object_create(VK_GAUGE_KLASS, width, 1);
+}
+
+int
+vk_gauge_destroy(vk_gauge_t *gauge)
+{
+    if(gauge == NULL) return -1;
+    if(!vk_object_assert(gauge, vk_gauge_t)) return -1;
+
+    _vk_object_announce_destroy(VK_OBJECT(gauge));
+
+    gauge->dtor(VK_OBJECT(gauge));
+
+    return 0;
+}
+
+int
+vk_gauge_redraw(vk_gauge_t *gauge)
+{
+    return vk_widget_redraw(VK_WIDGET(gauge));
+}
+```
+
+That is all. What the type does **not** do:
+
+- register an event handler for anything
+- repaint after a resize or a teleport -- the base calls its redraw
+- look after attached scroll bars
+- destroy its children, if it is built on a container -- the container's
+  destructor does
+
+Two optional extras, for a type that holds other widgets or wraps text:
+set `VK_WIDGET(object)->_layout` in the constructor to arrange the
+contents after a resize, and override `_recreate` to pass a teleport on
+to widgets the type holds outside a container's child list.
+
 ## RTTI (vk_object_assert)
 
 `vk_object_assert(object, type)` compares the object's runtime `.name` string
@@ -371,33 +550,98 @@ dispatch. Public APIs call through these pointers.
 
 | Klass | Slots |
 |-------|-------|
-| `vk_object_t` | `ctor`, `dtor`, `kmio` |
+| `vk_object_t` | `ctor`, `dtor`, `kmio`, `redraw` |
 | `vk_screen_t` | `ctor`, `dtor` |
-| `vk_widget_t` | `ctor`, `dtor`, `_draw`, `_move`, `_resize`, `_recreate`, `_erase` |
+| `vk_widget_t` | `ctor`, `dtor`, `_blit`, `_move`, `_resize`, `_recreate`, `_erase`, `_layout` |
 | `vk_container_t` | `ctor`, `dtor`, `add_widget`, `remove_widget`, `vacate`, `rotate` |
-| `vk_box_t` | `ctor`, `dtor`, `_update` |
-| `vk_frame_t` | `ctor`, `dtor`, `_set_border_style`, `_set_child`, `_draw_border`, `_update` |
-| `vk_scroller_t` | `ctor`, `dtor`, `_update`, `_draw_scrollbar` |
+| `vk_box_t` | `ctor`, `dtor` |
+| `vk_frame_t` | `ctor`, `dtor`, `_set_border_style`, `_set_child`, `_draw_border` |
+| `vk_scroller_t` | `ctor`, `dtor`, `_draw_scrollbar` |
 | `vk_window_t` | `ctor`, `dtor`, `_draw_title` |
-| `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_update`, `_reset` |
-| `vk_selectbox_t` | `ctor`, `dtor`, `_update` (overrides listbox's `_update`) |
-| `vk_dropdown_t` | `ctor`, `dtor` (overrides listbox's `_update`) |
-| `vk_label_t` | `ctor`, `dtor`, `_update` |
-| `vk_marquee_t` | `ctor`, `dtor` (overrides label's `_update`) |
-| `vk_textbox_t` | `ctor`, `dtor`, `_update` |
-| `vk_deck_t` | `ctor`, `dtor`, `_update` (overrides widget's `_draw`, `_erase`, `_resize`, `_recreate`) |
-| `vk_button_t` | `ctor`, `dtor`, `_update` |
-| `vk_input_t` | `ctor`, `dtor`, `_update` |
-| `vk_spinbutton_t` | `ctor`, `dtor`, `_update` |
+| `vk_listbox_t` | `ctor`, `dtor`, `_add_item`, `_set_item`, `_remove_item`, `_get_item`, `_get_item_count`, `_get_selected`, `_exec_item`, `_add_separator`, `_reset` |
+| `vk_selectbox_t` | `ctor`, `dtor` |
+| `vk_dropdown_t` | `ctor`, `dtor` |
+| `vk_label_t` | `ctor`, `dtor` |
+| `vk_marquee_t` | `ctor`, `dtor` |
+| `vk_textbox_t` | `ctor`, `dtor` |
+| `vk_deck_t` | `ctor`, `dtor` (overrides widget's `_blit`, `_erase`, `_resize`, `_recreate`) |
+| `vk_button_t` | `ctor`, `dtor` |
+| `vk_input_t` | `ctor`, `dtor` |
+| `vk_spinbutton_t` | `ctor`, `dtor` |
 | `vk_filler_t` | `ctor`, `dtor` |
-| `vk_menubar_t` | `ctor`, `dtor`, `_add_item`, `_get_item_count`, `_exec_item`, `_update`, `_reset` |
-| `vk_calendar_t` | `ctor`, `dtor`, `_update` |
+| `vk_menubar_t` | `ctor`, `dtor`, `_add_item`, `_get_item_count`, `_exec_item`, `_reset` |
+| `vk_calendar_t` | `ctor`, `dtor` |
 | `vk_filedialog_t` | `ctor`, `dtor` |
 | `vk_popup_t` | `ctor`, `dtor` |
-| `vk_progress_t` | `ctor`, `dtor`, `_update` |
+| `vk_progress_t` | `ctor`, `dtor` |
 | `vk_meter_t` | `ctor`, `dtor`, `_fill_color` (overrides progress's `_fill_color`) |
 | `vk_graph_t` | `ctor`, `dtor`, `_bar_count`, `_bar_value` |
 | `vk_histogram_t` | `ctor`, `dtor`, `_bar_count`, `_bar_value` (overrides graph's `_bar_*` virtuals) |
+
+### Redraw and Blit (since 11.0.0)
+
+Showing a widget is two separate operations.
+
+**Redraw** paints the widget's canvas from the widget's state: the text
+of a label, the items of a list, the border and title of a window. It is
+one slot, `redraw`, in `vk_object_t`, filled from the klass descriptor,
+so every widget has one and the base can call it without knowing the
+type. `vk_widget_redraw(widget)` calls it; so does every
+`vk_<type>_redraw()`.
+
+**Blit** copies the finished canvas to where the widget sits on the
+surface it is attached to. It paints nothing. It is the widget slot
+`_blit`, reached through `vk_widget_blit(widget)`.
+
+The slots were `_update` (one per type, in each type's own struct) and
+`_draw` before 11.0.0, and the public calls `vk_<type>_update()` and
+`vk_widget_draw()`. Those names still compile: `vdk.h` defines each as
+a macro for the new one. They will be removed in a later release.
+
+**Which types paint what.** A type either supplies a `redraw` or takes
+the one of the type it is built on. A type that supplies one decides for
+itself whether the parent's painting is part of it:
+
+| Type | `redraw` |
+|------|----------|
+| `vk_widget_t` | does nothing |
+| `vk_container_t` | the widget's |
+| `vk_meter_t` | the progress bar's |
+| `vk_marquee_t`, `vk_selectbox_t`, `vk_dropdown_t`, `vk_window_t` | its own, complete; the parent's is not called |
+| `vk_table_t` | the grid's, then its dividers |
+| `vk_color_t` | the table's, then its swatches |
+| `vk_histogram_t` | bins its samples, then the graph's |
+| `vk_popup_t` | lays out its buttons, then the window's |
+| `vk_filedialog_t` | repaints its parts, then the box's |
+| every other type | its own |
+
+**Calling the parent's.** A type that wants what its parent paints calls
+it first, then paints its own on top, so that its own is not painted
+over:
+
+```c
+static int
+_my_window_redraw(vk_object_t *object)
+{
+    // everything a window paints: border, title, scroll bars, child
+    VK_WINDOW_KLASS->redraw(object);
+
+    // then what is mine, on top
+    ...
+
+    return 0;
+}
+```
+
+It is called through the parent's klass, not through
+`vk_window_redraw()`: the public call goes through the object's own
+slot, which is this function. Calling the parent's is the author's
+choice; only constructors and destructors must chain.
+
+**Composites.** A box, grid or frame composites what it holds: its
+redraw blits each child's canvas into its own. It does not repaint the
+children. A child whose state changed is redrawn first, then its
+container.
 
 ## Public API Convention
 
@@ -707,7 +951,7 @@ where the default forwarding is insufficient. Typical patterns include:
 - **Navigation** — a listbox handler that moves `curr_item` on arrow keys,
   skips separators, and calls `_exec_item` on Enter.
 - **Scrolling** — a textbox handler that adjusts `scroll_top` on arrow/page
-  keys and calls `_update` to repaint.
+  keys and redraws.
 - **Toggle** — a selectbox handler that calls `vk_selectbox_toggle_item()`
   on Enter/Space and delegates navigation to the listbox handler.
 - **Focus rotation** — a box handler that uses `KEY_TAB` to cycle
@@ -737,10 +981,10 @@ Events are grouped by purpose with spaced numeric ranges:
 
 | Event | Value | Emitted by |
 |-------|-------|------------|
-| `VK_EVENT_ON_RESIZE` | 1 | `vk_widget_resize()` after canvas resize succeeds |
-| `VK_EVENT_ON_RECREATE` | 2 | `vk_widget_recreate()` after `_recreate` succeeds |
+| `VK_EVENT_ON_RESIZE` | 1 | `vk_widget_resize()`, last: the widget is resized, laid out and repainted |
+| `VK_EVENT_ON_RECREATE` | 2 | `vk_widget_recreate()`, last: the widget has its new canvas and is repainted |
 | `VK_EVENT_ON_TELEPORT` | 3 | `vk_screen_teleport()` after terminal migration completes |
-| `VK_EVENT_ON_DESTROY` | 4 | every widget, from `_vk_widget_dtor`, as it is destroyed; containers answer by destroying their children |
+| `VK_EVENT_ON_DESTROY` | 4 | the destroy call made on an object, first and once, before anything is taken down |
 | `VK_EVENT_ON_CLICK` | 10 | `vk_button_press()` |
 | `VK_EVENT_ON_SELECT` | 11 | listbox/selectbox/menubar navigation and check/radio selection |
 | `VK_EVENT_ON_UNSELECT` | 12 | selectbox uncheck |
@@ -752,14 +996,22 @@ Events are grouped by purpose with spaced numeric ranges:
 | `VK_EVENT_ON_SCROLL` | 22 | textbox scroll functions |
 | `VK_EVENT_ON_SURFACE_CHANGE` | 30 | `vk_screen_set_surface()` when the active surface changes |
 
-### Internal Use
+### Events Are for the Application (since 11.0.0)
 
-Widget klasses register their own event handlers in their constructors for
-resize and recreate propagation. For example, `vk_box_t` registers an
-`ON_RESIZE` handler that recalculates slot dimensions, and `vk_listbox_t`
-registers `ON_RESIZE` and `ON_RECREATE` handlers that propagate to attached
-scrollers and repaint. These internal handlers coexist with any application
-handlers on the same event — `vk_object_emit` fires all of them.
+The library registers no handler on its own objects. Nothing it does
+depends on one being present, on the order handlers were registered in,
+or on a handler doing something. An event is a notice, emitted after the
+library's own work is finished (or, for destroy, before it starts), and
+an object with no handlers at all behaves completely.
+
+So an application handler for `VK_EVENT_ON_RESIZE` finds the widget
+already at its new size, laid out and repainted, and has only its own
+business to do. A new widget type registers nothing to take part in
+resize, recreate or destroy.
+
+(Before 11.0.0 several types registered handlers for their own resize,
+recreate and destroy events in their constructors, and the library's
+behaviour was carried by them.)
 
 ### Cleanup
 
@@ -804,10 +1056,12 @@ Attachment is via `vk_widget_attach_scroller(host, scroller)`. This sets:
 - `scroller->surface = host->canvas` (blit target)
 - Scroller canvas sized to a 1-column or 1-row strip matching the host
 
-Bordered hosts (frame, window) draw attached scrollers in `_update` after the
-border and before children. Borderless hosts (listbox) draw scrollers after
-their own content. On resize, the host repositions attached scrollers. On
-recreate (teleport), the host updates scroller surfaces.
+Bordered hosts (frame, window) draw attached scrollers in their redraw after
+the border and before children. Borderless hosts (listbox) draw scrollers
+after their own content. On resize the scrollers are refitted to the host,
+and on recreate (teleport) they are given fresh canvases; both are done by
+`vk_widget_resize()` and `vk_widget_recreate()` for every widget, so no host
+type arranges for it.
 
 When there is nothing to scroll (content fits the viewport), the scroller
 skips drawing entirely so the host's border is preserved underneath.
@@ -820,18 +1074,18 @@ column (vertical) or bottom border row (horizontal). On a borderless host
 Scroll state is obtained through a `VkScrollInfoFunc` callback. The caller
 sets both the callback and a scroll source widget via
 `vk_scroller_set_scroll_source()`. The scroller queries the source during
-`_update` for content dimensions and scroll offsets. The scroller does not
+its redraw for content dimensions and scroll offsets. The scroller does not
 drive scrolling -- the source widget manages its own scroll position.
 
-Both `vk_window_t` and `vk_frame_t` override `_update` to include scroller
-drawing.
+Both `vk_window_t` and `vk_frame_t` include scroller drawing in their
+redraw.
 
 ## Windows
 
 `vk_window_t` inherits from `vk_frame_t` and adds a title drawn on the top
-border and a user decoration callback. Like `vk_scroller_t`, it overrides
-`_update` and `_recreate`. All frame APIs (border style, border colors,
-child management, update) are available under `vk_window_*` names via
+border and a user decoration callback. It supplies its own redraw and
+overrides `_recreate`. All frame APIs (border style, border colors,
+child management, redraw) are available under `vk_window_*` names via
 convenience macros.
 
 The title is rendered on border row 0 using the border colors and
@@ -847,7 +1101,7 @@ Justification is controlled by:
 If the border style is `VK_FRAME_NONE`, no title is drawn.
 
 A `VkWindowDecorateFunc` callback can be registered via
-`vk_window_set_decorate()`. It fires during `_update` after the border and
+`vk_window_set_decorate()`. It fires during the window's redraw after the border and
 title are drawn but before the child widget is drawn. The callback receives
 the window's canvas, so the caller can paint on the border (which persists)
 or inside the frame (which the child will overwrite).
@@ -886,7 +1140,7 @@ space evenly, with the last expand child taking any remainder. Hidden
 children (without `VK_STATE_VISIBLE`) are skipped entirely during both
 sizing and drawing passes, so their space is reclaimed by expand children.
 
-The box's `_update` erases, then for each slot: positions, resizes (if
+The box's redraw erases, then for each slot: positions, resizes (if
 expand), and draws the child widget. The box does not propagate resize to
 grandchildren (e.g. a frame's child won't be resized if the box resizes
 the frame).
@@ -899,7 +1153,7 @@ during the screen refresh cycle.
 
 Unlike other widget types, the deck has **no canvas of its own**. The ctor
 frees the canvas allocated by the widget base class and sets it to NULL.
-During `_draw`, the deck iterates its children in reverse (bottom-to-top)
+During `_blit`, the deck iterates its children in reverse (bottom-to-top)
 and draws each one directly onto the deck's surface (the screen surface
 canvas). Children use the standard destructive `copywin` so overlapping
 windows correctly occlude what's beneath them.
@@ -924,10 +1178,10 @@ Because the deck has no canvas, `_erase` and `_resize` are no-ops, and
 | `vk_deck_get_widget(deck, index)` | Widget at the given index (0 == top); NULL on bounds violation |
 | `vk_deck_set_shadow(deck, enabled)` | Enable or disable drop shadows on all children |
 | `vk_deck_set_shadow_colors(deck, fg, bg)` | Set shadow color pair (default white-on-black) |
-| `vk_deck_update(deck)` | Manually composite children (delegates to `_draw`) |
+| `vk_deck_redraw(deck)` | Manually composite children (delegates to `_blit`) |
 | `vk_deck_destroy(deck)` | Let go of all windows (they are not destroyed) and destroy the deck |
 
-The deck's `_draw` sets each child's `surface` pointer to `deck->surface`
+The deck's `_blit` sets each child's `surface` pointer to `deck->surface`
 before drawing. This means children do not need a valid surface at add time —
 the binding happens lazily during the screen refresh cycle. The deck can be
 attached and detached from surfaces at runtime, acting as a floating overlay.
@@ -948,29 +1202,44 @@ to recreate.
 
 ## Resize Propagation
 
-When `vk_widget_resize()` successfully resizes the canvas, it emits
-`VK_EVENT_ON_RESIZE`. Container klasses register their own `ON_RESIZE`
-handlers in their constructors to propagate resize to children:
+`vk_widget_resize()` does the whole job, in this order (since 11.0.0):
 
-- **vk_frame_t** -- resizes child to `(width - 2, height - 2)`;
-  resizes and repositions attached scrollers
-- **vk_box_t** -- recalculates slot dimensions and resizes each child
-- **vk_listbox_t** -- resizes and repositions attached scrollers, repaints
-- **vk_selectbox_t** -- resizes and repositions attached scrollers, repaints
-- **vk_textbox_t** -- resizes and repositions attached scrollers, reflows
-  text, repaints
+1. `_resize` -- the canvas gets its new size.
+2. Scroll bars attached to the widget are refitted to it.
+3. `_layout`, if the type has one -- the type arranges what it holds for
+   the new size.
+4. `redraw` -- the widget repaints itself.
+5. `VK_EVENT_ON_RESIZE` is emitted, for the application.
 
-Propagation is recursive: resizing a box emits `ON_RESIZE`, which fires
-the box's handler to resize each slot's widget, which in turn emits their
-own `ON_RESIZE` events (e.g. a frame inside a box will resize its own child).
+A request for the size the widget already has does nothing and emits
+nothing.
+
+`_layout` is a slot in `vk_widget_t` that most types leave empty. The
+types that fill it:
+
+- **vk_frame_t** (and window, popup) -- resizes the child to
+  `(width - 2, height - 2)`
+- **vk_box_t** (and file dialog) -- recalculates slot dimensions and
+  resizes each child
+- **vk_grid_t** (and table, colour picker) -- recalculates the cells
+- **vk_textbox_t** -- reflows its text to the new width
+
+Propagation is recursive: a box's `_layout` resizes each slot's widget
+with `vk_widget_resize()`, which runs the same five steps for it (a
+frame inside the box resizes its own child, and so on). A container is
+repainted after its children, so what it composites is current.
 
 ## Recreate Propagation
 
 Canvas recreation is triggered during `vk_screen_teleport()` when all
 widget canvases must be rebuilt on a new ncurses SCREEN.
 
-`vk_widget_recreate(widget)` calls `widget->_recreate(widget)` to create
-the new canvas, then emits `VK_EVENT_ON_RECREATE`.
+`vk_widget_recreate()` does the whole job, in this order (since 11.0.0):
+
+1. `_recreate` -- the widget gets a fresh, blank canvas.
+2. Scroll bars attached to the widget get fresh canvases too.
+3. `redraw` -- the widget repaints itself.
+4. `VK_EVENT_ON_RECREATE` is emitted, for the application.
 
 The base `_recreate` creates a fresh `newwin` and resets `composer` to
 the new canvas (clearing `VK_STATE_FROZEN`). Container klasses override
@@ -980,6 +1249,7 @@ the new canvas (clearing `VK_STATE_FROZEN`). Container klasses override
   scrollers, then recreates the child
 - **vk_window_t** -- same as frame (scrollers first, then child)
 - **vk_box_t** -- creates its canvas, then recreates each slot's widget
+- **vk_grid_t** -- creates its canvas, then recreates each cell's widget
 - **vk_deck_t** -- propagates recreate to children (deck has no canvas to recreate)
 
 All update child and scroller surface pointers before propagating so
@@ -987,17 +1257,10 @@ widgets blit to the correct parent canvas. All custom `_recreate` methods
 reset `composer = canvas` and clear `VK_STATE_FROZEN`, matching the base
 behavior.
 
-Content-bearing widgets register `ON_RECREATE` event handlers in their
-constructors to repaint after canvas recreation:
-
-- **vk_listbox_t** -- updates attached scroller surfaces, recreates them,
-  then calls its `_update` to repaint items and scrollers
-- **vk_selectbox_t** -- same as listbox
-- **vk_textbox_t** -- updates attached scroller surfaces, recreates them,
-  then calls its `_update` to repaint text and scrollers
-
-Application code can register additional `ON_RECREATE` handlers on any
-object via `vk_object_register_event()`.
+A type that only paints (a label, a list, a graph) overrides nothing:
+step 3 repaints it. An application registers for `VK_EVENT_ON_RECREATE`
+only for what the library cannot know about, such as content it drew on
+a widget's canvas by hand.
 
 ## Widget State Flags
 
@@ -1022,7 +1285,7 @@ written with `vk_widget_set_state()`.
 ### Visibility
 
 `vk_widget_show()` and `vk_widget_hide()` set/clear `STATE_VISIBLE`.
-`vk_widget_is_visible()` queries it. When not visible, `vk_widget_draw()`
+`vk_widget_is_visible()` queries it. When not visible, `vk_widget_blit()`
 returns 0 without blitting. Since `vk_screen_refresh()` erases the surface
 canvas before compositing, hidden widgets leave their region transparent
 to the wallpaper.
@@ -1126,7 +1389,7 @@ switching between 3D and basic styles.
 | `vk_button_set_on_press` | Register a `VkWidgetFunc` callback + user data |
 | `vk_button_press` | Set pressed state and fire callback |
 | `vk_button_release` | Clear pressed state |
-| `vk_button_update` | Redraw the button |
+| `vk_button_redraw` | Redraw the button |
 
 Normal colors are set via `vk_widget_set_colors()`. The button is
 IO-agnostic; the application calls `vk_button_press()` /
@@ -1179,7 +1442,7 @@ inserts beyond the limit are rejected and existing text is truncated.
 | `vk_input_home(input)` | Move cursor to start |
 | `vk_input_end(input)` | Move cursor to end |
 | `vk_input_clear(input)` | Clear text and reset cursor/scroll |
-| `vk_input_update(input)` | Redraw the input |
+| `vk_input_redraw(input)` | Redraw the input |
 | `vk_input_destroy(input)` | Destroy the input |
 
 The input is IO-agnostic; the application installs a `kmio` handler that
@@ -1243,7 +1506,7 @@ mirroring `vk_button`'s dual notify.
 | `vk_spinbutton_set_on_change(spin, func, data)` | Register a value-change callback |
 | `vk_spinbutton_step(spin, n)` | Apply n steps (n may be negative); clamps + notifies |
 | `vk_spinbutton_click(spin, lx, ly)` | Route a widget-local click; returns whether consumed |
-| `vk_spinbutton_update(spin)` | Redraw the spin button |
+| `vk_spinbutton_redraw(spin)` | Redraw the spin button |
 | `vk_spinbutton_destroy(spin)` | Destroy the spin button |
 
 ## Textboxes
@@ -1260,7 +1523,7 @@ hard-broken at the column limit.
 
 Scrolling is controlled by the application via a user-installed `kmio`
 handler that manipulates `textbox->scroll_top` and calls
-`textbox->_update(textbox)`. The textbox itself is IO-agnostic.
+`vk_textbox_redraw(textbox)`. The textbox itself is IO-agnostic.
 
 The textbox supports attached scrollers the same way `vk_listbox_t` does
 (borderless host pattern). When a vertical scroller is attached, the
@@ -1336,20 +1599,15 @@ cannot be checked.
 The selectbox is IO-agnostic. The application installs a `kmio` handler that
 calls `vk_selectbox_toggle_item()` on Enter/Space and delegates navigation
 to inherited listbox functions (e.g. `vk_selectbox_set_next()`,
-`vk_selectbox_update()`). All listbox item management and navigation APIs
+`vk_selectbox_redraw()`). All listbox item management and navigation APIs
 are available under `vk_selectbox_*` names via convenience macros.
 
-### _update Override
+### Its Own Redraw
 
-The selectbox overrides `VK_LISTBOX(selectbox)->_update` to point to its
-own rendering function. This ensures that internal listbox navigation
-(which calls `listbox->_update(listbox)` through the function pointer)
-dispatches to the selectbox's renderer, which prepends indicator glyphs.
-
-The selectbox registers its own `ON_RESIZE` and `ON_RECREATE` event
-handlers because the listbox's handlers call `_vk_listbox_update` directly
-(static function, not through the function pointer). The selectbox's
-handlers follow the same scroller-propagation pattern as the listbox's.
+The selectbox supplies its own `redraw` in its klass descriptor. Listbox
+navigation repaints through `vk_widget_redraw()`, which dispatches on the
+object, so it reaches the selectbox's renderer, which prepends indicator
+glyphs.
 
 ## Dropdowns
 
@@ -1397,7 +1655,7 @@ All listbox item management and navigation APIs are available under
 | `vk_dropdown_get_popup(dd)` | Return the popup widget (or NULL) |
 | `vk_dropdown_popup_navigate(dd, dir)` | Navigate popup selection (-1 = prev, 1 = next) |
 | `vk_dropdown_popup_select(dd)` | Commit popup selection and collapse |
-| `vk_dropdown_update(dd)` | Redraw the collapsed view |
+| `vk_dropdown_redraw(dd)` | Redraw the collapsed view |
 | `vk_dropdown_destroy(dd)` | Destroy dropdown and popup |
 
 ## Fillers
@@ -1407,9 +1665,9 @@ created at 1x1 with `VK_STATE_EXPAND` set, so it absorbs all available
 space when placed in a container. Use it as a spacer in non-homogeneous
 boxes to push other widgets apart.
 
-The filler registers `ON_RESIZE` and `ON_RECREATE` event handlers that
-fill the canvas with the widget's color pair. This ensures the filler
-paints correctly after a container resizes or recreates its children.
+The filler's redraw fills the canvas with the widget's color pair. Like
+every widget it is repainted after a resize or a recreate, so it paints
+correctly when a container resizes or recreates its children.
 
 | API | Description |
 |-----|-------------|
@@ -1436,9 +1694,9 @@ wraps and emits `VK_EVENT_ON_SELECT`. `exec_curr` emits
 enabling mouse interaction. `get_item_position` returns the column offset
 of a given item index, useful for positioning dropdowns.
 
-The menubar registers `ON_RESIZE` and `ON_RECREATE` event handlers that
-repaint the canvas, so it works correctly inside containers that resize
-their children (e.g. `vk_box_t`).
+Like every widget the menubar is repainted after a resize or a recreate,
+so it works correctly inside containers that resize their children (e.g.
+`vk_box_t`).
 
 | API | Description |
 |-----|-------------|
@@ -1455,7 +1713,7 @@ their children (e.g. `vk_box_t`).
 | `vk_menubar_get_focused(m)` | Return focus state |
 | `vk_menubar_hit_test(m, x)` | Return item index at column x, or -1 |
 | `vk_menubar_get_item_position(m, idx, &x)` | Get column offset of item |
-| `vk_menubar_update(m)` | Repaint the menubar |
+| `vk_menubar_redraw(m)` | Repaint the menubar |
 | `vk_menubar_reset(m)` | Remove all items |
 | `vk_menubar_destroy(m)` | Destroy the menubar |
 
@@ -1529,7 +1787,7 @@ struct access rather than the public box API:
 - Direct struct access: `VK_BOX(dialog)->homogeneous = false`
 - Internal helper: `_vk_filedialog_set_child()` writes `slot_widgets[]`
   and calls `container->add_widget()` directly
-- Virtual dispatch: `VK_BOX(dialog)->_update(VK_BOX(dialog))` for box layout
+- Its redraw repaints its parts, then calls `VK_BOX_KLASS->redraw()` for box layout
 
 ### KMIO
 
@@ -1576,7 +1834,7 @@ bar and buttons, and the list's scroller.
 | `vk_filedialog_set_button_colors(dialog, fg, bg)` | Set button face colors |
 | `vk_filedialog_set_button_attrs(dialog, attrs)` | Set button text attributes |
 | `vk_filedialog_get_file_list(dialog)` | Return the internal file list widget |
-| `vk_filedialog_update(dialog)` | Update all children and composite |
+| `vk_filedialog_redraw(dialog)` | Update all children and composite |
 | `vk_filedialog_destroy(dialog)` | Destroy dialog and all children |
 
 ## Popups
@@ -1653,7 +1911,7 @@ available under `vk_popup_*` names via convenience macros.
 | `vk_popup_set_colors(popup, fg, bg)` | Set interior (layout) colors |
 | `vk_popup_set_button_colors(popup, fg, bg)` | Set button and button bar colors |
 | `vk_popup_set_button_attrs(popup, attrs)` | Set button text attributes |
-| `vk_popup_update(popup)` | Update buttons, button bar, layout, and window |
+| `vk_popup_redraw(popup)` | Update buttons, button bar, layout, and window |
 | `vk_popup_destroy(popup)` | Destroy popup and all owned children |
 
 ## Calendars
@@ -1686,7 +1944,7 @@ records today's date for highlight rendering.
 | `vk_calendar_set_dimmed_attrs(cal, attrs)` | Set adjacent month day attributes |
 | `vk_calendar_set_header_colors(cal, fg, bg)` | Set month name / day-of-week colors |
 | `vk_calendar_set_header_attrs(cal, attrs)` | Set month name / day-of-week attributes |
-| `vk_calendar_update(cal)` | Repaint the calendar |
+| `vk_calendar_redraw(cal)` | Repaint the calendar |
 | `vk_calendar_destroy(cal)` | Destroy the calendar |
 
 ## Listbox Highlight Attributes
@@ -1775,7 +2033,7 @@ rendering, and range logic.
 | `vk_graph_set_data(graph, values, count)` | Replace plotted series (owned copy) |
 | `vk_graph_set_colors(graph, fg, bg)` | Bar foreground/background colour pair |
 | `vk_graph_set_attrs(graph, attrs)` | Bar ncurses attributes |
-| `vk_graph_update(graph)` | Render current state into the canvas |
+| `vk_graph_redraw(graph)` | Render current state into the canvas |
 | `vk_graph_destroy(graph)` | Destroy the graph |
 
 ## Histograms
@@ -1804,7 +2062,7 @@ Samples outside `[bin_min, bin_max]` are dropped; a sample exactly at
 
 ### Auto-scaling
 
-`vk_histogram_update()` recomputes the bin counts, finds the tallest
+`vk_histogram_redraw()` recomputes the bin counts, finds the tallest
 bin, and calls `vk_graph_set_y_range()` with `[0, max_count]` before
 rendering. This means the y-axis auto-scales to the data.
 
@@ -1817,7 +2075,7 @@ vk_histogram_set_range(hist, 0.0, 100.0);
 vk_histogram_set_samples(hist, values, count);
 vk_graph_set_bar_style(VK_GRAPH(hist), VK_GRAPH_BAR_BLOCK);
 vk_graph_set_colors(VK_GRAPH(hist), COLOR_GREEN, COLOR_BLACK);
-vk_histogram_update(hist);
+vk_histogram_redraw(hist);
 ```
 
 ### API
@@ -1828,7 +2086,7 @@ vk_histogram_update(hist);
 | `vk_histogram_set_samples(hist, values, count)` | Replace raw sample set (owned copy) |
 | `vk_histogram_set_bins(hist, nbins)` | Set number of frequency bins (min 1, default 10) |
 | `vk_histogram_set_range(hist, min, max)` | Set value domain `[min, max]` (default 0..100) |
-| `vk_histogram_update(hist)` | Rebin, auto-scale y-axis, and render |
+| `vk_histogram_redraw(hist)` | Rebin, auto-scale y-axis, and render |
 | `vk_histogram_destroy(hist)` | Destroy the histogram |
 
 Parent APIs (via `VK_GRAPH(hist)`) for bar style, colours, and x-range:

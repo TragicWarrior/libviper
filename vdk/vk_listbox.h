@@ -66,7 +66,6 @@ struct _vk_listbox_s
 
     int                 (*_add_separator)   (vk_listbox_t *, int);
 
-    int                 (*_update)          (vk_listbox_t *);
     int                 (*_reset)           (vk_listbox_t *);
 };
 

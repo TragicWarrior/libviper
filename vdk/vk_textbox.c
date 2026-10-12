@@ -16,16 +16,13 @@ static int
 _vk_textbox_dtor(vk_object_t *object);
 
 static int
-_vk_textbox_update(vk_textbox_t *textbox);
-
-static int
-_vk_textbox_on_resize(vk_object_t *object, int event, void *anything);
-
-static int
-_vk_textbox_on_recreate(vk_object_t *object, int event, void *anything);
+_vk_textbox_redraw(vk_object_t *object);
 
 static void
 _vk_textbox_reflow(vk_textbox_t *textbox);
+
+static int
+_vk_textbox_layout(vk_widget_t *widget);
 
 static void
 _vk_textbox_free_lines(vk_textbox_t *textbox);
@@ -38,6 +35,8 @@ declare_klass(VK_TEXTBOX_KLASS)
     .name = KLASS_NAME(vk_textbox_t),
     .ctor = _vk_textbox_ctor,
     .dtor = _vk_textbox_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_textbox_redraw,
 };
 
 inline vk_textbox_t*
@@ -251,11 +250,11 @@ vk_textbox_scroll_end(vk_textbox_t *textbox)
 }
 
 inline int
-vk_textbox_update(vk_textbox_t *textbox)
+vk_textbox_redraw(vk_textbox_t *textbox)
 {
     if(textbox == NULL) return -1;
 
-    return textbox->_update(textbox);
+    return vk_widget_redraw(VK_WIDGET(textbox));
 }
 
 inline int
@@ -266,6 +265,9 @@ vk_textbox_destroy(vk_textbox_t *textbox)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(textbox));
 
     textbox->dtor(VK_OBJECT(textbox));
 
@@ -301,12 +303,10 @@ _vk_textbox_ctor(vk_object_t *object, va_list *argp, ...)
 
     textbox->ctor = _vk_textbox_ctor;
     textbox->dtor = _vk_textbox_dtor;
-    textbox->_update = _vk_textbox_update;
 
-    vk_object_register_event(VK_OBJECT(textbox),
-        VK_EVENT_ON_RESIZE, _vk_textbox_on_resize, NULL);
-    vk_object_register_event(VK_OBJECT(textbox),
-        VK_EVENT_ON_RECREATE, _vk_textbox_on_recreate, NULL);
+    /* a new width means the text wraps differently */
+    VK_WIDGET(textbox)->_layout = _vk_textbox_layout;
+
 
     return 0;
 }
@@ -337,8 +337,9 @@ _vk_textbox_dtor(vk_object_t *object)
 }
 
 static int
-_vk_textbox_update(vk_textbox_t *textbox)
+_vk_textbox_redraw(vk_object_t *object)
 {
+    vk_textbox_t *textbox = (vk_textbox_t *)object;
     vk_widget_t     *widget;
     int             paint_width;
     int             paint_height;
@@ -393,34 +394,6 @@ _vk_textbox_update(vk_textbox_t *textbox)
     vdk_scroller_draw(widget);
 
     return 0;
-}
-
-static int
-_vk_textbox_on_resize(vk_object_t *object, int event, void *anything)
-{
-    vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)anything;
-
-    vdk_scroller_reflow(widget);
-
-    _vk_textbox_reflow(VK_TEXTBOX(widget));
-
-    return _vk_textbox_update(VK_TEXTBOX(widget));
-}
-
-static int
-_vk_textbox_on_recreate(vk_object_t *object, int event, void *anything)
-{
-    vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)anything;
-
-    vdk_scroller_recreate(widget);
-
-    return _vk_textbox_update(VK_TEXTBOX(widget));
 }
 
 static void
@@ -535,4 +508,13 @@ _vk_textbox_reflow(vk_textbox_t *textbox)
     {
         _vk_textbox_append_line(textbox, line_start, p - line_start);
     }
+}
+
+/* the textbox has a new size: wrap its text again to fit */
+static int
+_vk_textbox_layout(vk_widget_t *widget)
+{
+    _vk_textbox_reflow(VK_TEXTBOX(widget));
+
+    return 0;
 }

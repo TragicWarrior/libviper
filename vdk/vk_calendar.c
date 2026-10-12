@@ -17,7 +17,7 @@ static int
 _vk_calendar_dtor(vk_object_t *object);
 
 static int
-_vk_calendar_update(vk_calendar_t *calendar);
+_vk_calendar_redraw(vk_object_t *object);
 
 require_klass(VK_WIDGET_KLASS);
 
@@ -27,6 +27,8 @@ declare_klass(VK_CALENDAR_KLASS)
     .name = KLASS_NAME(vk_calendar_t),
     .ctor = _vk_calendar_ctor,
     .dtor = _vk_calendar_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_calendar_redraw,
 };
 
 static int
@@ -202,11 +204,11 @@ vk_calendar_set_header_attrs(vk_calendar_t *calendar, attr_t attrs)
 }
 
 inline int
-vk_calendar_update(vk_calendar_t *calendar)
+vk_calendar_redraw(vk_calendar_t *calendar)
 {
     if(calendar == NULL) return -1;
 
-    return calendar->_update(calendar);
+    return vk_widget_redraw(VK_WIDGET(calendar));
 }
 
 inline int
@@ -217,6 +219,9 @@ vk_calendar_destroy(vk_calendar_t *calendar)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(calendar, vk_calendar_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(calendar));
 
     calendar->dtor(VK_OBJECT(calendar));
 
@@ -252,7 +257,6 @@ _vk_calendar_ctor(vk_object_t *object, va_list *argp, ...)
 
     calendar->ctor = _vk_calendar_ctor;
     calendar->dtor = _vk_calendar_dtor;
-    calendar->_update = _vk_calendar_update;
 
     return 0;
 }
@@ -271,8 +275,9 @@ _vk_calendar_dtor(vk_object_t *object)
 }
 
 static int
-_vk_calendar_update(vk_calendar_t *calendar)
+_vk_calendar_redraw(vk_object_t *object)
 {
+    vk_calendar_t *calendar = (vk_calendar_t *)object;
     vk_widget_t     *widget;
     WINDOW          *canvas;
     short           normal_pair;

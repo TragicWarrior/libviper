@@ -37,7 +37,7 @@ main(void)
     vk_graph_set_colors(graph1, COLOR_GREEN, COLOR_BLACK);
     vk_graph_set_unit_label(graph1, "W");
     vk_graph_set_x_labels(graph1, xlabels, 20);
-    vk_graph_update(graph1);
+    vk_graph_redraw(graph1);
 
     graph2 = vk_graph_create(74, 6);
     vk_graph_set_y_range(graph2, 0.0, 100.0);
@@ -46,7 +46,7 @@ main(void)
     vk_graph_set_colors(graph2, COLOR_CYAN, COLOR_BLACK);
     vk_graph_set_unit_label(graph2, "W");
     vk_graph_set_x_labels(graph2, xlabels, 20);
-    vk_graph_update(graph2);
+    vk_graph_redraw(graph2);
 
     graph3 = vk_graph_create(74, 6);
     vk_graph_set_y_range(graph3, 0.0, 100.0);
@@ -55,22 +55,22 @@ main(void)
     vk_graph_set_colors(graph3, COLOR_YELLOW, COLOR_BLACK);
     vk_graph_set_unit_label(graph3, "W");
     vk_graph_set_x_labels(graph3, xlabels, 20);
-    vk_graph_update(graph3);
+    vk_graph_redraw(graph3);
 
     label1 = vk_label_create(34);
     vk_label_set_text(label1, "block  (VK_GRAPH_BAR_BLOCK)");
     vk_widget_set_colors(VK_WIDGET(label1), COLOR_WHITE, COLOR_BLACK);
-    vk_label_update(label1);
+    vk_label_redraw(label1);
 
     label2 = vk_label_create(34);
     vk_label_set_text(label2, "braille  (VK_GRAPH_BAR_BRAILLE)");
     vk_widget_set_colors(VK_WIDGET(label2), COLOR_WHITE, COLOR_BLACK);
-    vk_label_update(label2);
+    vk_label_redraw(label2);
 
     label3 = vk_label_create(34);
     vk_label_set_text(label3, "ascii  (VK_GRAPH_BAR_ASCII)");
     vk_widget_set_colors(VK_WIDGET(label3), COLOR_WHITE, COLOR_BLACK);
-    vk_label_update(label3);
+    vk_label_redraw(label3);
 
     vk_screen_attach_widget(screen, 0, VK_WIDGET(label1));
     vk_widget_move(VK_WIDGET(label1), 1, 1);

@@ -23,12 +23,17 @@ _popup_button_pressed(vk_widget_t *widget, void *anything);
 
 require_klass(VK_WINDOW_KLASS);
 
+static int
+_vk_popup_redraw(vk_object_t *object);
+
 declare_klass(VK_POPUP_KLASS)
 {
     .size = KLASS_SIZE(vk_popup_t),
     .name = KLASS_NAME(vk_popup_t),
     .ctor = _vk_popup_ctor,
     .dtor = _vk_popup_dtor,
+    .parent = &VK_WINDOW_KLASS,
+    .redraw = _vk_popup_redraw,
 };
 
 static void
@@ -321,22 +326,11 @@ vk_popup_set_button_attrs(vk_popup_t *popup, attr_t attrs)
 }
 
 inline int
-vk_popup_update(vk_popup_t *popup)
+vk_popup_redraw(vk_popup_t *popup)
 {
-    int i;
-
     if(popup == NULL) return -1;
 
-    for(i = 0; i < popup->button_count; i++)
-        vk_button_update(popup->buttons[i]);
-
-    if(popup->button_bar != NULL)
-        vk_box_update(popup->button_bar);
-
-    vk_box_update(popup->layout);
-    vk_window_update(VK_WINDOW(popup));
-
-    return 0;
+    return vk_widget_redraw(VK_WIDGET(popup));
 }
 
 inline int
@@ -347,6 +341,9 @@ vk_popup_destroy(vk_popup_t *popup)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(popup, vk_popup_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(popup));
 
     popup->dtor(VK_OBJECT(popup));
 
@@ -403,7 +400,7 @@ _vk_popup_dtor(vk_object_t *object)
     /* everything a popup shows is inside its layout box -- the client
        and the button bar with its buttons -- and the layout is the
        window's child, so destroying the window below destroys all of
-       it (see _vk_container_on_destroy).  That includes a client the caller
+       it (see _vk_container_dtor).  That includes a client the caller
        set: one that should outlive the popup has to be taken out first
        with vk_popup_set_client(popup, NULL).
 
@@ -434,4 +431,29 @@ _popup_button_pressed(vk_widget_t *widget, void *anything)
     vk_popup_close(ctx->popup, ctx->index);
 
     return 0;
+}
+
+/*
+    A popup's redraw.  The popup's own parts are widgets it holds -- the
+    buttons, the bar they sit in, the layout box -- and each paints onto
+    a canvas of its own.  They go first: the window's painting, which
+    comes last, is what copies them into place.
+*/
+static int
+_vk_popup_redraw(vk_object_t *object)
+{
+    vk_popup_t  *popup = VK_POPUP(object);
+    int         i;
+
+    for(i = 0; i < popup->button_count; i++)
+        vk_button_redraw(popup->buttons[i]);
+
+    if(popup->button_bar != NULL)
+        vk_box_redraw(popup->button_bar);
+
+    if(popup->layout != NULL)
+        vk_box_redraw(popup->layout);
+
+    /* the border, the title, and the layout box copied in */
+    return VK_WINDOW_KLASS->redraw(object);
 }

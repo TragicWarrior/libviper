@@ -25,13 +25,7 @@ static int
 _vk_menubar_exec_item(vk_menubar_t *menubar);
 
 static int
-_vk_menubar_update(vk_menubar_t *menubar);
-
-static int
-_vk_menubar_on_recreate(vk_object_t *object, int event, void *anything);
-
-static int
-_vk_menubar_on_resize(vk_object_t *object, int event, void *anything);
+_vk_menubar_redraw(vk_object_t *object);
 
 static int
 _vk_menubar_reset(vk_menubar_t *menubar);
@@ -44,6 +38,8 @@ declare_klass(VK_MENUBAR_KLASS)
     .name = KLASS_NAME(vk_menubar_t),
     .ctor = _vk_menubar_ctor,
     .dtor = _vk_menubar_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_menubar_redraw,
 };
 
 inline vk_menubar_t*
@@ -99,7 +95,7 @@ vk_menubar_set_item_label(vk_menubar_t *menubar, int idx, char *name)
             if(item->name != NULL) free(item->name);
             item->name = dup;
 
-            menubar->_update(menubar);
+            vk_widget_redraw(VK_WIDGET(menubar));
 
             return 0;
         }
@@ -275,11 +271,11 @@ vk_menubar_get_item_position(vk_menubar_t *menubar, int idx, int *x)
 }
 
 inline int
-vk_menubar_update(vk_menubar_t *menubar)
+vk_menubar_redraw(vk_menubar_t *menubar)
 {
     if(menubar == NULL) return -1;
 
-    menubar->_update(menubar);
+    vk_widget_redraw(VK_WIDGET(menubar));
 
     return 0;
 }
@@ -300,6 +296,9 @@ vk_menubar_destroy(vk_menubar_t *menubar)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(menubar, vk_menubar_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(menubar));
 
     menubar->dtor(VK_OBJECT(menubar));
 
@@ -339,13 +338,8 @@ _vk_menubar_ctor(vk_object_t *object, va_list *argp, ...)
     menubar->_add_item = _vk_menubar_add_item;
     menubar->_get_item_count = _vk_menubar_get_item_count;
     menubar->_exec_item = _vk_menubar_exec_item;
-    menubar->_update = _vk_menubar_update;
     menubar->_reset = _vk_menubar_reset;
 
-    vk_object_register_event(VK_OBJECT(menubar),
-        VK_EVENT_ON_RECREATE, _vk_menubar_on_recreate, NULL);
-    vk_object_register_event(VK_OBJECT(menubar),
-        VK_EVENT_ON_RESIZE, _vk_menubar_on_resize, NULL);
 
     INIT_LIST_HEAD(&menubar->item_list);
 
@@ -420,26 +414,9 @@ _vk_menubar_exec_item(vk_menubar_t *menubar)
 }
 
 static int
-_vk_menubar_on_recreate(vk_object_t *object, int event, void *anything)
+_vk_menubar_redraw(vk_object_t *object)
 {
-    (void)event;
-    (void)anything;
-
-    return _vk_menubar_update(VK_MENUBAR(object));
-}
-
-static int
-_vk_menubar_on_resize(vk_object_t *object, int event, void *anything)
-{
-    (void)event;
-    (void)anything;
-
-    return _vk_menubar_update(VK_MENUBAR(object));
-}
-
-static int
-_vk_menubar_update(vk_menubar_t *menubar)
-{
+    vk_menubar_t *menubar = (vk_menubar_t *)object;
     vk_widget_t         *widget;
     vk_item_t           *item;
     struct list_head    *pos;

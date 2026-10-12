@@ -20,7 +20,7 @@ static int
 _vk_dropdown_dtor(vk_object_t *object);
 
 static int
-_vk_dropdown_update(vk_listbox_t *listbox);
+_vk_dropdown_redraw(vk_object_t *object);
 
 require_klass(VK_LISTBOX_KLASS);
 
@@ -30,6 +30,8 @@ declare_klass(VK_DROPDOWN_KLASS)
     .name = KLASS_NAME(vk_dropdown_t),
     .ctor = _vk_dropdown_ctor,
     .dtor = _vk_dropdown_dtor,
+    .parent = &VK_LISTBOX_KLASS,
+    .redraw = _vk_dropdown_redraw,
 };
 
 inline vk_dropdown_t*
@@ -122,15 +124,15 @@ vk_dropdown_set_expanded(vk_dropdown_t *dropdown, bool expanded)
         }
 
         vk_listbox_set_curr(popup_lb, listbox->curr_item);
-        vk_listbox_update(popup_lb);
+        vk_listbox_redraw(popup_lb);
 
         vk_window_set_child(dropdown->popup, VK_WIDGET(popup_lb), VK_INHERIT_NONE);
         dropdown->popup_listbox = popup_lb;
 
-        vk_window_update(dropdown->popup);
+        vk_window_redraw(dropdown->popup);
     }
 
-    VK_LISTBOX(dropdown)->_update(VK_LISTBOX(dropdown));
+    vk_widget_redraw(VK_WIDGET(VK_LISTBOX(dropdown)));
 
     return 0;
 }
@@ -162,8 +164,8 @@ vk_dropdown_popup_navigate(vk_dropdown_t *dropdown, int direction)
     else
         vk_listbox_set_next(dropdown->popup_listbox);
 
-    vk_listbox_update(dropdown->popup_listbox);
-    vk_window_update(dropdown->popup);
+    vk_listbox_redraw(dropdown->popup_listbox);
+    vk_window_redraw(dropdown->popup);
 
     return 0;
 }
@@ -188,11 +190,11 @@ vk_dropdown_popup_select(vk_dropdown_t *dropdown)
 }
 
 inline int
-vk_dropdown_update(vk_dropdown_t *dropdown)
+vk_dropdown_redraw(vk_dropdown_t *dropdown)
 {
     if(dropdown == NULL) return -1;
 
-    return VK_LISTBOX(dropdown)->_update(VK_LISTBOX(dropdown));
+    return vk_widget_redraw(VK_WIDGET(VK_LISTBOX(dropdown)));
 }
 
 inline int
@@ -203,6 +205,9 @@ vk_dropdown_destroy(vk_dropdown_t *dropdown)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(dropdown, vk_dropdown_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(dropdown));
 
     dropdown->dtor(VK_OBJECT(dropdown));
 
@@ -239,7 +244,6 @@ _vk_dropdown_ctor(vk_object_t *object, va_list *argp, ...)
     dropdown->ctor = _vk_dropdown_ctor;
     dropdown->dtor = _vk_dropdown_dtor;
 
-    VK_LISTBOX(dropdown)->_update = _vk_dropdown_update;
 
     return 0;
 }
@@ -271,8 +275,9 @@ _vk_dropdown_dtor(vk_object_t *object)
 }
 
 static int
-_vk_dropdown_update(vk_listbox_t *listbox)
+_vk_dropdown_redraw(vk_object_t *object)
 {
+    vk_listbox_t *listbox = (vk_listbox_t *)object;
     vk_dropdown_t       *dropdown;
     vk_widget_t         *widget;
     vk_item_t           *item;
