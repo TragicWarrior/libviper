@@ -252,8 +252,7 @@ vk_histogram_destroy(vk_histogram_t *hist)
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
-        in vk_widget_destroy(), which frees the object; vk_object_destroy()
-        here would free it a second time (double free / abort).
+        in vk_widget_destroy(), which frees the object.
     */
     hist->dtor(VK_OBJECT(hist));
 }

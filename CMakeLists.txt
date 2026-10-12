@@ -32,7 +32,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
 # leave the support out.
 
-set(PROJECT_VERSION 10.1.0)
+set(PROJECT_VERSION 10.1.1)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 

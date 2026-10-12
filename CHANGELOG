@@ -1,3 +1,26 @@
+Version 10.1.1
+
+vdk
+* [Bryan Christ] vk_object_destroy() on a widget freed it twice.
+
+  Called on an object that was still a derived type, it ran the object's
+  destructor -- whose chain ends by freeing the object -- and then
+  carried on: it walked the freed handler list and called free() on the
+  object again.  It now returns once the destructor has run, as
+  vk_object_dispose() always has.
+
+  Nothing in the library took that path: every destructor demotes to
+  vk_object_t before calling it.  It was there for any program that
+  called vk_object_destroy() on a widget, and four widgets (graph,
+  meter, histogram, progress) carried a comment warning against doing
+  so.  Those comments are corrected.  A NULL object is now refused
+  instead of dereferenced.
+
+* [Bryan Christ] test/test_destroy, run by ctest: vk_object_destroy()
+  and vk_object_dispose() on derived objects, and the destroy cascade
+  -- each widget in a tree told once, children before the parent's own
+  handlers, a child destroyed first, a child taken out and kept.
+
 Version 10.1.0
 
 vdk

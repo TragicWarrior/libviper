@@ -714,8 +714,7 @@ vk_graph_destroy(vk_graph_t *graph)
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
-        in vk_widget_destroy(), which frees the object; vk_object_destroy()
-        here would free it a second time (double free / abort).
+        in vk_widget_destroy(), which frees the object.
     */
     graph->dtor(VK_OBJECT(graph));
 }
