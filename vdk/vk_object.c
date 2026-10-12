@@ -15,6 +15,32 @@ declare_klass(VK_OBJECT_KLASS)
     .name = KLASS_NAME(vk_object_t),
     .size = KLASS_SIZE(vk_object_t),
 };
+/*
+    Fill in what a klass inherits.  A descriptor that names no redraw
+    gets its nearest ancestor's, found by walking the parent links.
+
+    The ancestors are settled first, every time, whether or not this
+    klass has a redraw of its own: a klass that does may still call
+    PARENT_KLASS->redraw, and that must be there even if no object of
+    the parent klass itself was ever made.  The walk is as long as the
+    klass is deep -- a handful of steps -- and changes nothing once the
+    descriptors are complete.
+*/
+static void
+_vk_klass_resolve(vk_object_t *klass)
+{
+    vk_object_t *parent;
+
+    if(klass == NULL) return;
+    if(klass->parent == NULL || *klass->parent == NULL) return;
+
+    parent = *klass->parent;
+
+    _vk_klass_resolve(parent);
+
+    if(klass->redraw == NULL) klass->redraw = parent->redraw;
+}
+
 
 inline vk_object_t*
 vk_object_construct(const void *klass, ...)
@@ -25,6 +51,11 @@ vk_object_construct(const void *klass, ...)
     if(klass == NULL) return NULL;
 
     object = calloc(1, VK_OBJECT(klass)->size);
+
+    /* a klass that names no redraw of its own takes its parent's.  it
+       is settled in the descriptor, before the copy below, so the
+       object and anything that later calls  KLASS->redraw  both get it */
+    _vk_klass_resolve((vk_object_t *)klass);
 
     // copy template to newly alloced object
     memcpy(object, klass, sizeof(vk_object_t));
@@ -142,6 +173,19 @@ vk_object_emit(vk_object_t *object, int event)
     return 0;
 }
 
+/* see vk_object.h */
+void
+_vk_object_announce_destroy(vk_object_t *object)
+{
+    if(object == NULL || object->destroying) return;
+
+    /* marked first: a handler that somehow comes back here for the
+       same object finds the announcement already made */
+    object->destroying = true;
+
+    vk_object_emit(object, VK_EVENT_ON_DESTROY);
+}
+
 inline int
 vk_object_destroy(vk_object_t *object)
 {
@@ -150,6 +194,9 @@ vk_object_destroy(vk_object_t *object)
     struct list_head        *n;
 
     if(object == NULL) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(object);
 
     /*
         still a derived type: its own destructor does the whole job.
@@ -203,6 +250,9 @@ inline void
 vk_object_dispose(vk_object_t *object)
 {
     if(object == NULL) return;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(object);
 
     /* a plain object has no destructor of its own to run first */
     if(vk_object_assert(object, vk_object_t))

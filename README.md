@@ -40,16 +40,16 @@ Widgets
 Ownership
 
   - A container owns what it holds: destroying a window, frame, box
-    or grid destroys everything inside it, to any depth, carried by
-    VK_EVENT_ON_DESTROY.  Tear a dialog down with one destroy call.
+    or grid destroys everything inside it, to any depth.  Tear a
+    dialog down with one destroy call.
 
 Screen
 
   - vk_screen_t with virtual surfaces (multi-desktop), wallpaper
     callback, per-surface background, and screen overlay
   - Terminal migration via vk_screen_adopt (move the UI to another
-    terminal, of another type if need be); widgets auto-repaint
-    through the _on_recreate hook
+    terminal, of another type if need be); every widget repaints
+    itself on the new one
   - Detached screens: vk_screen_detach leaves the terminal and keeps
     running on none, vk_screen_create_detached starts that way -- for
     programs that outlive the terminal they are shown on

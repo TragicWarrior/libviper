@@ -15,12 +15,17 @@ static void     _vk_histogram_rebin(vk_histogram_t *hist);
 
 require_klass(VK_GRAPH_KLASS);
 
+static int
+_vk_histogram_redraw(vk_object_t *object);
+
 declare_klass(VK_HISTOGRAM_KLASS)
 {
     .size = KLASS_SIZE(vk_histogram_t),
     .name = KLASS_NAME(vk_histogram_t),
     .ctor = _vk_histogram_ctor,
     .dtor = _vk_histogram_dtor,
+    .parent = &VK_GRAPH_KLASS,
+    .redraw = _vk_histogram_redraw,
 };
 
 vk_histogram_t*
@@ -219,12 +224,45 @@ vk_histogram_set_range(vk_histogram_t *hist, double min, double max)
     render.  Call after changing the samples, bin count or range.
 */
 int
-vk_histogram_update(vk_histogram_t *hist)
+vk_histogram_redraw(vk_histogram_t *hist)
 {
-    int     i;
-    double  maxcount;
-
     if(hist == NULL) return -1;
+
+    return vk_widget_redraw(VK_WIDGET(hist));
+}
+
+int
+vk_histogram_destroy(vk_histogram_t *hist)
+{
+    if(hist == NULL) return -1;
+
+    /* strictly this type: an object of any other, a derived one
+       included, is refused, and the caller is told */
+    if(!vk_object_assert(hist, vk_histogram_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(hist));
+
+    /*
+        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
+        in vk_widget_destroy(), which frees the object.
+    */
+    hist->dtor(VK_OBJECT(hist));
+
+    return 0;
+}
+
+/*
+    A histogram's redraw.  It is a graph with one more step in front:
+    the samples are counted into bins and the y axis scaled to the
+    tallest of them.  The graph then paints what that produced.
+*/
+static int
+_vk_histogram_redraw(vk_object_t *object)
+{
+    vk_histogram_t  *hist = VK_HISTOGRAM(object);
+    int             i;
+    double          maxcount;
 
     _vk_histogram_rebin(hist);
 
@@ -240,23 +278,6 @@ vk_histogram_update(vk_histogram_t *hist)
 
     vk_graph_set_y_range(VK_GRAPH(hist), 0.0, maxcount);
 
-    return vk_graph_update(VK_GRAPH(hist));
-}
-
-int
-vk_histogram_destroy(vk_histogram_t *hist)
-{
-    if(hist == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(hist, vk_histogram_t)) return -1;
-
-    /*
-        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
-        in vk_widget_destroy(), which frees the object.
-    */
-    hist->dtor(VK_OBJECT(hist));
-
-    return 0;
+    /* the rest is the graph's */
+    return VK_GRAPH_KLASS->redraw(object);
 }

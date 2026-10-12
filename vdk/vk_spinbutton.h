@@ -52,7 +52,6 @@ struct _vk_spinbutton_s
     int                 (*ctor)         (vk_object_t *, va_list *, ...);
     int                 (*dtor)         (vk_object_t *);
 
-    int                 (*_update)      (vk_spinbutton_t *);
 };
 
 #endif

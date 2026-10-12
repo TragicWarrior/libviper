@@ -47,7 +47,7 @@ static int
 _vk_listbox_add_separator(vk_listbox_t *listbox, int style);
 
 static int
-_vk_listbox_update(vk_listbox_t *listbox);
+_vk_listbox_redraw(vk_object_t *object);
 
 /* paint_height available for list items (widget height minus chrome). */
 static int
@@ -56,12 +56,6 @@ _vk_listbox_paint_height(vk_listbox_t *listbox);
 /* keep curr_item inside the visible window by adjusting scroll_top */
 static void
 _vk_listbox_ensure_visible(vk_listbox_t *listbox);
-
-static int
-_vk_listbox_on_recreate(vk_object_t *object, int event, void *anything);
-
-static int
-_vk_listbox_on_resize(vk_object_t *object, int event, void *anything);
 
 static int
 _vk_listbox_reset(vk_listbox_t *listbox);
@@ -74,6 +68,8 @@ declare_klass(VK_LISTBOX_KLASS)
     .name = KLASS_NAME(vk_listbox_t),
     .ctor = _vk_listbox_ctor,
     .dtor = _vk_listbox_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_listbox_redraw,
 };
 
 // create a new widget from scratch
@@ -407,13 +403,13 @@ vk_listbox_add_item(vk_listbox_t *listbox, char *name,
 }
 
 inline int
-vk_listbox_update(vk_listbox_t *listbox)
+vk_listbox_redraw(vk_listbox_t *listbox)
 {
     if(listbox == NULL) return -1;
 
     // make sure the item is actually a listbox widget
 
-    listbox->_update(listbox);
+    vk_widget_redraw(VK_WIDGET(listbox));
 
     return 0;
 }
@@ -450,7 +446,7 @@ vk_listbox_get_scroll_pos(vk_listbox_t *listbox)
 /*
     Pan the viewport without moving the selection (curr_item).  pos is
     clamped to [0, max(0, item_count - paint_height)].  Caller must
-    vk_listbox_update() to repaint.
+    vk_listbox_redraw() to repaint.
 */
 int
 vk_listbox_set_scroll_pos(vk_listbox_t *listbox, int pos)
@@ -715,6 +711,9 @@ vk_listbox_destroy(vk_listbox_t *listbox)
        included, is refused, and the caller is told */
     if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(listbox));
+
     listbox->dtor(VK_OBJECT(listbox));
 
     return 0;
@@ -772,13 +771,8 @@ _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
     listbox->_remove_item = _vk_listbox_remove_item;
     listbox->_exec_item = _vk_listbox_exec_item;
     listbox->_add_separator = _vk_listbox_add_separator;
-    listbox->_update = _vk_listbox_update;
     listbox->_reset = _vk_listbox_reset;
 
-    vk_object_register_event(VK_OBJECT(listbox),
-        VK_EVENT_ON_RECREATE, _vk_listbox_on_recreate, NULL);
-    vk_object_register_event(VK_OBJECT(listbox),
-        VK_EVENT_ON_RESIZE, _vk_listbox_on_resize, NULL);
 
     INIT_LIST_HEAD(&listbox->item_list);
 
@@ -982,32 +976,6 @@ _vk_listbox_exec_item(vk_listbox_t *listbox)
 }
 
 static int
-_vk_listbox_on_recreate(vk_object_t *object, int event, void *anything)
-{
-    vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)anything;
-
-    vdk_scroller_recreate(widget);
-
-    return _vk_listbox_update(VK_LISTBOX(widget));
-}
-
-static int
-_vk_listbox_on_resize(vk_object_t *object, int event, void *anything)
-{
-    vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)anything;
-
-    vdk_scroller_reflow(widget);
-
-    return _vk_listbox_update(VK_LISTBOX(widget));
-}
-
-static int
 _vk_listbox_paint_height(vk_listbox_t *listbox)
 {
     vk_widget_t *widget;
@@ -1064,8 +1032,9 @@ _vk_listbox_ensure_visible(vk_listbox_t *listbox)
 }
 
 static int
-_vk_listbox_update(vk_listbox_t *listbox)
+_vk_listbox_redraw(vk_object_t *object)
 {
+    vk_listbox_t *listbox = (vk_listbox_t *)object;
     vk_widget_t         *widget;
     vk_item_t           *item;
     struct list_head    *pos;

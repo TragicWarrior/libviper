@@ -13,7 +13,7 @@ static int
 _vk_scroller_dtor(vk_object_t *object);
 
 static int
-_vk_scroller_update(vk_scroller_t *scroller);
+_vk_scroller_redraw(vk_object_t *object);
 
 static int
 _vk_scroller_draw_scrollbar(vk_scroller_t *scroller);
@@ -46,6 +46,8 @@ declare_klass(VK_SCROLLER_KLASS)
     .name = KLASS_NAME(vk_scroller_t),
     .ctor = _vk_scroller_ctor,
     .dtor = _vk_scroller_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_scroller_redraw,
 };
 
 inline vk_scroller_t*
@@ -191,11 +193,11 @@ vk_widget_get_hscroller(vk_widget_t *widget)
 }
 
 inline int
-vk_scroller_update(vk_scroller_t *scroller)
+vk_scroller_redraw(vk_scroller_t *scroller)
 {
     if(scroller == NULL) return -1;
 
-    return scroller->_update(scroller);
+    return vk_widget_redraw(VK_WIDGET(scroller));
 }
 
 inline int
@@ -206,6 +208,9 @@ vk_scroller_destroy(vk_scroller_t *scroller)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(scroller));
 
     scroller->dtor(VK_OBJECT(scroller));
 
@@ -311,7 +316,6 @@ _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
     scroller->ctor = _vk_scroller_ctor;
     scroller->dtor = _vk_scroller_dtor;
 
-    scroller->_update = _vk_scroller_update;
     scroller->_draw_scrollbar = _vk_scroller_draw_scrollbar;
 
     return 0;
@@ -344,8 +348,9 @@ _vk_scroller_dtor(vk_object_t *object)
 }
 
 static int
-_vk_scroller_update(vk_scroller_t *scroller)
+_vk_scroller_redraw(vk_object_t *object)
 {
+    vk_scroller_t *scroller = (vk_scroller_t *)object;
     vk_widget_t *sw;
 
     if(scroller == NULL) return -1;

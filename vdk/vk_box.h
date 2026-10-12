@@ -22,7 +22,6 @@ struct _vk_box_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_box_t *);
 };
 
 #endif

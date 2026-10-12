@@ -36,7 +36,34 @@ struct _vk_object_s
     int                 (*ctor)         (vk_object_t *, va_list *, ...);
     int                 (*dtor)         (vk_object_t *);
     int                 (*kmio)         (vk_object_t *, int32_t);
+
+    /*
+        paint the object's contents onto its own canvas.  A klass that
+        names none takes its parent's (vk_object_construct works that
+        out through `parent`), so every widget has one.  A klass reaches
+        its parent's with  PARENT_KLASS->redraw(object)  -- first, and
+        then paints its own on top.
+    */
+    int                 (*redraw)       (vk_object_t *);
+
+    /* the klass this one is built on: the address of that klass's
+       descriptor pointer (&VK_WIDGET_KLASS).  NULL for vk_object_t */
+    vk_object_t         **parent;
+
+    /* set once VK_EVENT_ON_DESTROY has been emitted for this object,
+       so that it is emitted only once however the teardown is entered */
+    bool                destroying;
 };
+
+/*
+    Tell whoever is listening that `object` is about to be destroyed:
+    VK_EVENT_ON_DESTROY, once per object, before anything of it has been
+    taken apart -- a handler sees the whole object, and what it holds.
+    Every destroy call makes this its first step; calling it again for
+    the same object (as the destructor chain does, layer by layer) does
+    nothing.
+*/
+void            _vk_object_announce_destroy(vk_object_t *object);
 
 static inline int
 _assert_klass(char *kn1, char *kn2, int ks1, int ks2)

@@ -19,7 +19,7 @@ static int
 _vk_widget_move(vk_widget_t *widget, int x, int y);
 
 static int
-_vk_widget_draw(vk_widget_t *widget);
+_vk_widget_blit(vk_widget_t *widget);
 
 static int
 _vk_widget_resize(vk_widget_t *widget, int width, int height);
@@ -29,6 +29,9 @@ _vk_widget_recreate(vk_widget_t *widget);
 
 static int
 _vk_widget_erase(vk_widget_t *widget);
+
+static int
+_vk_widget_redraw(vk_object_t *object);
 
 require_klass(VK_OBJECT_KLASS);
 
@@ -41,6 +44,8 @@ declare_klass(VK_WIDGET_KLASS)
     .name = KLASS_NAME(vk_widget_t),
     .ctor = _vk_widget_ctor,
     .dtor = _vk_widget_dtor,
+    .parent = &VK_OBJECT_KLASS,
+    .redraw = _vk_widget_redraw,
 };
 
 // create a new widget from scratch
@@ -77,14 +82,14 @@ vk_widget_get_surface(vk_widget_t *widget)
 }
 
 inline int
-vk_widget_draw(vk_widget_t *widget)
+vk_widget_blit(vk_widget_t *widget)
 {
     int retval;
 
     if(widget == NULL) return -1;
     if(!(widget->state & VK_STATE_VISIBLE)) return 0;
 
-    retval = widget->_draw(widget);
+    retval = widget->_blit(widget);
 
     return retval;
 }
@@ -178,6 +183,36 @@ vk_widget_get_attrs(vk_widget_t *widget)
     return widget->attrs;
 }
 
+/*
+    Repaint a widget of any type as what it is: whatever its klass (or
+    the nearest ancestor that has one) supplies as its redraw.
+*/
+int
+vk_widget_redraw(vk_widget_t *widget)
+{
+    vk_object_t *object = VK_OBJECT(widget);
+
+    if(widget == NULL) return -1;
+
+    /* nothing to paint with: not a failure */
+    if(object->redraw == NULL) return 0;
+
+    return object->redraw(object);
+}
+
+/*
+    The redraw of a plain widget: it has no contents of its own to
+    paint, so there is nothing to do.  It is here so that every widget
+    klass has a redraw, and a klass can always call its parent's.
+*/
+static int
+_vk_widget_redraw(vk_object_t *object)
+{
+    (void)object;
+
+    return 0;
+}
+
 inline WINDOW*
 vk_widget_get_canvas(vk_widget_t *widget)
 {
@@ -241,11 +276,25 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
     if(width == widget->width && height == widget->height) return 0;
 
     retval = widget->_resize(widget, width, height);
+    if(retval != 0) return retval;
 
-    if(retval == 0)
-        vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RESIZE);
+    /*
+        the canvas has its new size.  what follows is the library's own
+        work, done here so that no widget type has to arrange for it:
+        scroll bars attached to the widget are refitted to it, the type
+        arranges what it holds, and the widget repaints itself.
+    */
+    vdk_scroller_reflow(widget);
 
-    return retval;
+    if(widget->_layout != NULL) widget->_layout(widget);
+
+    /* a widget with no canvas (a deck) has nothing to repaint */
+    if(widget->canvas != NULL) vk_widget_redraw(widget);
+
+    /* only now is anyone else told: the widget is resized and painted */
+    vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RESIZE);
+
+    return 0;
 }
 
 inline int
@@ -331,11 +380,23 @@ vk_widget_recreate(vk_widget_t *widget)
     if(widget == NULL) return -1;
 
     retval = widget->_recreate(widget);
+    if(retval != 0) return retval;
 
-    if(retval == 0)
-        vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RECREATE);
+    /*
+        the widget has a fresh, blank canvas.  the library's own work
+        follows, so that no widget type has to arrange for it: scroll
+        bars attached to the widget are given fresh canvases too, and
+        the widget repaints itself.
+    */
+    vdk_scroller_recreate(widget);
 
-    return retval;
+    /* a widget with no canvas (a deck) has nothing to repaint */
+    if(widget->canvas != NULL) vk_widget_redraw(widget);
+
+    /* only now is anyone else told */
+    vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RECREATE);
+
+    return 0;
 }
 
 inline void
@@ -380,6 +441,9 @@ vk_widget_destroy(vk_widget_t *widget)
         return 0;
     }
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(widget));
+
     widget->dtor(VK_OBJECT(widget));
 
     return 0;
@@ -422,7 +486,7 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     widget->dtor = _vk_widget_dtor;
 
     widget->_move = _vk_widget_move;
-    widget->_draw = _vk_widget_draw;
+    widget->_blit = _vk_widget_blit;
     widget->_resize = _vk_widget_resize;
     widget->_recreate = _vk_widget_recreate;
     widget->_erase = _vk_widget_erase;
@@ -517,7 +581,7 @@ _vk_widget_resize(vk_widget_t *widget, int width, int height)
 }
 
 static int
-_vk_widget_draw(vk_widget_t *widget)
+_vk_widget_blit(vk_widget_t *widget)
 {
     int     retval;
     int     dmincol;
@@ -590,11 +654,6 @@ _vk_widget_dtor(vk_object_t *object)
        has been cleared.) */
     if(widget->list.next != NULL && widget->list.next != &widget->list)
         list_del(&widget->list);
-
-    /* tell whoever is listening that this widget is going.  A widget
-       that hosts others (see _vk_container_on_destroy) destroys them in
-       answer, and each of those emits the same to its own. */
-    vk_object_emit(object, VK_EVENT_ON_DESTROY);
 
     /* scrollers attached to the widget go with it.  One that should
        outlive it has to be detached first (vk_widget_detach_scroller).

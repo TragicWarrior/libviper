@@ -18,7 +18,7 @@ static int
 _vk_spinbutton_dtor(vk_object_t *object);
 
 static int
-_vk_spinbutton_update(vk_spinbutton_t *spin);
+_vk_spinbutton_redraw(vk_object_t *object);
 
 static int
 _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke);
@@ -413,6 +413,8 @@ declare_klass(VK_SPINBUTTON_KLASS)
     .name = KLASS_NAME(vk_spinbutton_t),
     .ctor = _vk_spinbutton_ctor,
     .dtor = _vk_spinbutton_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_spinbutton_redraw,
 };
 
 /* ── public API ──────────────────────────────────────────────────── */
@@ -587,14 +589,14 @@ vk_spinbutton_click(vk_spinbutton_t *spin, int local_x, int local_y)
     if(local_x == up_col)
     {
         vk_spinbutton_step(spin, +1);
-        _vk_spinbutton_update(spin);
+        _vk_spinbutton_redraw(VK_OBJECT(spin));
         return true;
     }
 
     if(local_x == down_col)
     {
         vk_spinbutton_step(spin, -1);
-        _vk_spinbutton_update(spin);
+        _vk_spinbutton_redraw(VK_OBJECT(spin));
         return true;
     }
 
@@ -605,7 +607,7 @@ vk_spinbutton_click(vk_spinbutton_t *spin, int local_x, int local_y)
         if(local_x >= field_start && local_x < _vk_spinbutton_sep_col(spin))
         {
             _vk_spinbutton_begin_edit(spin, true);
-            _vk_spinbutton_update(spin);
+            _vk_spinbutton_redraw(VK_OBJECT(spin));
             return true;
         }
     }
@@ -614,11 +616,11 @@ vk_spinbutton_click(vk_spinbutton_t *spin, int local_x, int local_y)
 }
 
 inline int
-vk_spinbutton_update(vk_spinbutton_t *spin)
+vk_spinbutton_redraw(vk_spinbutton_t *spin)
 {
     if(spin == NULL) return -1;
 
-    return spin->_update(spin);
+    return vk_widget_redraw(VK_WIDGET(spin));
 }
 
 inline int
@@ -629,6 +631,9 @@ vk_spinbutton_destroy(vk_spinbutton_t *spin)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(spin, vk_spinbutton_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(spin));
 
     spin->dtor(VK_OBJECT(spin));
 
@@ -682,7 +687,6 @@ _vk_spinbutton_ctor(vk_object_t *object, va_list *argp, ...)
 
     spin->ctor = _vk_spinbutton_ctor;
     spin->dtor = _vk_spinbutton_dtor;
-    spin->_update = _vk_spinbutton_update;
 
     /* self-contained keyboard handling (Up/Down + the inline editor) */
     vk_object_set_kmio(object, _vk_spinbutton_kmio);
@@ -708,8 +712,9 @@ _vk_spinbutton_dtor(vk_object_t *object)
 /* ── draw ────────────────────────────────────────────────────────── */
 
 static int
-_vk_spinbutton_update(vk_spinbutton_t *spin)
+_vk_spinbutton_redraw(vk_object_t *object)
 {
+    vk_spinbutton_t *spin = (vk_spinbutton_t *)object;
     vk_widget_t *widget;
     short       fg, bg;
     short       face_pair;
@@ -828,14 +833,14 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke)
     if(keystroke == KEY_UP)
     {
         vk_spinbutton_step(spin, +1);
-        _vk_spinbutton_update(spin);
+        _vk_spinbutton_redraw(VK_OBJECT(spin));
         return 0;
     }
 
     if(keystroke == KEY_DOWN)
     {
         vk_spinbutton_step(spin, -1);
-        _vk_spinbutton_update(spin);
+        _vk_spinbutton_redraw(VK_OBJECT(spin));
         return 0;
     }
 
@@ -847,7 +852,7 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke)
         if(spin->editing)
         {
             _vk_spinbutton_commit(spin);
-            _vk_spinbutton_update(spin);
+            _vk_spinbutton_redraw(VK_OBJECT(spin));
             return 0;
         }
         return keystroke;
@@ -859,7 +864,7 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke)
         {
             spin->editing = false;
             spin->edit_scroll = 0;
-            _vk_spinbutton_update(spin);
+            _vk_spinbutton_redraw(VK_OBJECT(spin));
             return 0;
         }
         return keystroke;
@@ -871,7 +876,7 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke)
         if(!spin->editing)
             _vk_spinbutton_begin_edit(spin, false);
         _vk_spinbutton_edit_insert(spin, (char)keystroke);
-        _vk_spinbutton_update(spin);
+        _vk_spinbutton_redraw(VK_OBJECT(spin));
         return 0;
     }
 
@@ -905,7 +910,7 @@ _vk_spinbutton_kmio(vk_object_t *object, int32_t keystroke)
                 return keystroke;
         }
 
-        _vk_spinbutton_update(spin);
+        _vk_spinbutton_redraw(VK_OBJECT(spin));
         return 0;
     }
 

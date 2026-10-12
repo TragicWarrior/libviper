@@ -71,15 +71,15 @@ int     vdk_put_text_cols(WINDOW *win, int y, int x, const char *text,
     Edge-scrollbar wiring, shared by every widget that hosts a vscroller /
     hscroller (vk_frame, vk_listbox, vk_textbox, vk_selectbox).  The vertical
     bar runs down the right column, the horizontal bar along the bottom row; a
-    NULL scroller is skipped.  Each helper mirrors one lifecycle step so the
-    host's _on_resize / _recreate / _update just calls the matching one instead
-    of hand-wiring both bars identically in every widget:
+    NULL scroller is skipped.  Each helper is one lifecycle step:
 
-      vdk_scroller_reflow    -- size + place the bars at the edges (_on_resize)
+      vdk_scroller_reflow    -- size + place the bars at the edges.  called
+                                by vk_widget_resize for every widget
       vdk_scroller_recreate  -- re-point the bars at the rebuilt canvas and
-                                recreate theirs (_recreate)
+                                recreate theirs.  called by
+                                vk_widget_recreate for every widget
       vdk_scroller_draw      -- refresh each bar and composite it if it wants to
-                                be shown (_update)
+                                be shown.  called by the host's redraw
 */
 void    vdk_scroller_reflow(vk_widget_t *widget);
 void    vdk_scroller_recreate(vk_widget_t *widget);

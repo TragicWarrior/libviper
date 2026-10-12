@@ -20,7 +20,6 @@ struct _vk_selectbox_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_selectbox_t *);
 };
 
 #endif

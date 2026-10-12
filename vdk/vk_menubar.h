@@ -32,7 +32,6 @@ struct _vk_menubar_s
                                                 VkWidgetFunc, void *);
     int                 (*_get_item_count)  (vk_menubar_t *);
     int                 (*_exec_item)       (vk_menubar_t *);
-    int                 (*_update)          (vk_menubar_t *);
     int                 (*_reset)           (vk_menubar_t *);
 };
 

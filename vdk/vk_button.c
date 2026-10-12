@@ -16,7 +16,7 @@ static int
 _vk_button_dtor(vk_object_t *object);
 
 static int
-_vk_button_update(vk_button_t *button);
+_vk_button_redraw(vk_object_t *object);
 
 
 static int
@@ -44,6 +44,8 @@ declare_klass(VK_BUTTON_KLASS)
     .name = KLASS_NAME(vk_button_t),
     .ctor = _vk_button_ctor,
     .dtor = _vk_button_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_button_redraw,
 };
 
 inline vk_button_t*
@@ -164,11 +166,11 @@ vk_button_release(vk_button_t *button)
 }
 
 inline int
-vk_button_update(vk_button_t *button)
+vk_button_redraw(vk_button_t *button)
 {
     if(button == NULL) return -1;
 
-    return button->_update(button);
+    return vk_widget_redraw(VK_WIDGET(button));
 }
 
 inline int
@@ -179,6 +181,9 @@ vk_button_destroy(vk_button_t *button)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(button, vk_button_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(button));
 
     button->dtor(VK_OBJECT(button));
 
@@ -215,7 +220,6 @@ _vk_button_ctor(vk_object_t *object, va_list *argp, ...)
 
     button->ctor = _vk_button_ctor;
     button->dtor = _vk_button_dtor;
-    button->_update = _vk_button_update;
 
     return 0;
 }
@@ -245,8 +249,9 @@ _vk_button_dtor(vk_object_t *object)
 
 
 static int
-_vk_button_update(vk_button_t *button)
+_vk_button_redraw(vk_object_t *object)
 {
+    vk_button_t *button = (vk_button_t *)object;
     vk_widget_t *widget;
     short       fg, bg;
     short       face_pair;

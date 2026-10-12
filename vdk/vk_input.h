@@ -23,7 +23,6 @@ struct _vk_input_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_input_t *);
 };
 
 #endif

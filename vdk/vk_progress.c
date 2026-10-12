@@ -11,7 +11,7 @@
 static int      _vk_progress_ctor(vk_object_t *object, va_list *argp, ...);
 static int      _vk_progress_dtor(vk_object_t *object);
 static int      _vk_progress_render(vk_widget_t *widget);
-static int      _vk_progress_recreate(vk_widget_t *widget);
+static int      _vk_progress_redraw(vk_object_t *object);
 static void     _vk_progress_default_fill_color(vk_progress_t *progress,
                     short *fg, short *bg);
 
@@ -23,6 +23,8 @@ declare_klass(VK_PROGRESS_KLASS)
     .name = KLASS_NAME(vk_progress_t),
     .ctor = _vk_progress_ctor,
     .dtor = _vk_progress_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_progress_redraw,
 };
 
 /*
@@ -103,11 +105,9 @@ _vk_progress_ctor(vk_object_t *object, va_list *argp, ...)
     progress->dtor = _vk_progress_dtor;
     progress->_fill_color = _vk_progress_default_fill_color;
 
-    /* Follow the toolkit convention: _update-style rendering draws the bar
-       into the widget's own canvas; the inherited base _draw composites that
-       canvas onto the surface.  _recreate re-renders after a teleport/resize
-       rebuilds the canvas (mirrors vk_label). */
-    VK_WIDGET(object)->_recreate = _vk_progress_recreate;
+    /* the bar is rendered into the widget's own canvas by the klass's
+       redraw, which the base calls again after a resize or a move to
+       another terminal; the base blit copies the canvas to the surface */
 
     return 0;
 }
@@ -331,16 +331,12 @@ _vk_progress_render(vk_widget_t *widget)
     return 0;
 }
 
-/*
-    After a teleport/resize rebuilds the canvas it is empty -- re-render the
-    bar so the new SCREEN shows current state instead of a blank slot.
-*/
+/* a progress bar's redraw: render its current state into the canvas.  a
+   meter, which is a progress bar with its own colours, uses this too */
 static int
-_vk_progress_recreate(vk_widget_t *widget)
+_vk_progress_redraw(vk_object_t *object)
 {
-    if(vdk_widget_reset_canvas(widget) < 0) return -1;
-
-    return _vk_progress_render(widget);
+    return _vk_progress_render(VK_WIDGET(object));
 }
 
 int
@@ -499,13 +495,11 @@ vk_progress_set_thickness(vk_progress_t *progress, int thickness)
 }
 
 int
-vk_progress_update(vk_progress_t *progress)
+vk_progress_redraw(vk_progress_t *progress)
 {
     if(progress == NULL) return -1;
 
-    /* render current state into the canvas; vk_screen_refresh's base _draw
-       composites it onto the surface (mirrors vk_label_update). */
-    return _vk_progress_render(VK_WIDGET(progress));
+    return vk_widget_redraw(VK_WIDGET(progress));
 }
 
 int
@@ -516,6 +510,9 @@ vk_progress_destroy(vk_progress_t *progress)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(progress, vk_progress_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(progress));
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends

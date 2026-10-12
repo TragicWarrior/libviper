@@ -13,7 +13,7 @@ static int
 _vk_filler_dtor(vk_object_t *object);
 
 static int
-_vk_filler_on_repaint(vk_object_t *object, int event, void *data);
+_vk_filler_redraw(vk_object_t *object);
 
 require_klass(VK_WIDGET_KLASS);
 
@@ -23,6 +23,8 @@ declare_klass(VK_FILLER_KLASS)
     .name = KLASS_NAME(vk_filler_t),
     .ctor = _vk_filler_ctor,
     .dtor = _vk_filler_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_filler_redraw,
 };
 
 inline vk_filler_t*
@@ -46,6 +48,9 @@ vk_filler_destroy(vk_filler_t *filler)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(filler, vk_filler_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(filler));
 
     filler->dtor(VK_OBJECT(filler));
 
@@ -75,10 +80,7 @@ _vk_filler_ctor(vk_object_t *object, va_list *argp, ...)
     filler->ctor = _vk_filler_ctor;
     filler->dtor = _vk_filler_dtor;
 
-    vk_object_register_event(VK_OBJECT(filler),
-        VK_EVENT_ON_RESIZE, _vk_filler_on_repaint, NULL);
-    vk_object_register_event(VK_OBJECT(filler),
-        VK_EVENT_ON_RECREATE, _vk_filler_on_repaint, NULL);
+
 
     return 0;
 }
@@ -96,13 +98,11 @@ _vk_filler_dtor(vk_object_t *object)
     return 0;
 }
 
+/* a filler paints itself as a blank in its own colours */
 static int
-_vk_filler_on_repaint(vk_object_t *object, int event, void *data)
+_vk_filler_redraw(vk_object_t *object)
 {
     vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)data;
 
     if(widget->fg >= 0 && widget->bg >= 0)
     {

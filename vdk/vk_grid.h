@@ -59,12 +59,11 @@ struct _vk_grid_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_grid_t *);
 };
 
 /* internal: vk_grid's default layout routine, exposed so subclasses
    (vk_table, etc.) can chain through it before overlaying decorations */
-int     _vk_grid_update(vk_grid_t *grid);
+int     _vk_grid_redraw(vk_object_t *object);
 
 /* internal: writes per-column and per-row sizes into the provided
    arrays (length grid->cols / grid->rows).  used by subclasses that

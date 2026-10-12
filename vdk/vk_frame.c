@@ -25,13 +25,13 @@ static int
 _vk_frame_draw_border(vk_frame_t *frame);
 
 static int
-_vk_frame_on_resize(vk_object_t *object, int event, void *anything);
+_vk_frame_layout(vk_widget_t *widget);
 
 static int
 _vk_frame_recreate(vk_widget_t *widget);
 
 static int
-_vk_frame_update(vk_frame_t *frame);
+_vk_frame_redraw(vk_object_t *object);
 
 static int
 _vk_frame_kmio(vk_object_t *object, int32_t keystroke);
@@ -48,6 +48,8 @@ declare_klass(VK_FRAME_KLASS)
     .name = KLASS_NAME(vk_frame_t),
     .ctor = _vk_frame_ctor,
     .dtor = _vk_frame_dtor,
+    .parent = &VK_CONTAINER_KLASS,
+    .redraw = _vk_frame_redraw,
 };
 
 inline vk_frame_t*
@@ -132,11 +134,11 @@ vk_frame_get_child(vk_frame_t *frame)
 }
 
 inline int
-vk_frame_update(vk_frame_t *frame)
+vk_frame_redraw(vk_frame_t *frame)
 {
     if(frame == NULL) return -1;
 
-    return frame->_update(frame);
+    return vk_widget_redraw(VK_WIDGET(frame));
 }
 
 inline int
@@ -147,6 +149,9 @@ vk_frame_destroy(vk_frame_t *frame)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(frame, vk_frame_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(frame));
 
     frame->dtor(VK_OBJECT(frame));
 
@@ -188,11 +193,9 @@ _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
     frame->_set_border_style = _vk_frame_set_border_style;
     frame->_set_child = _vk_frame_set_child;
     frame->_draw_border = _vk_frame_draw_border;
-    frame->_update = _vk_frame_update;
 
-    vk_object_register_event(VK_OBJECT(frame),
-        VK_EVENT_ON_RESIZE, _vk_frame_on_resize, NULL);
     VK_WIDGET(frame)->_recreate = _vk_frame_recreate;
+    VK_WIDGET(frame)->_layout = _vk_frame_layout;
 
     object->kmio = _vk_frame_kmio;
 
@@ -211,7 +214,7 @@ _vk_frame_dtor(vk_object_t *object)
     frame = VK_FRAME(object);
 
     /* the child is on the container's list and is destroyed with it
-       (see _vk_container_on_destroy) */
+       (see _vk_container_dtor) */
     frame->child = NULL;
 
     vk_object_demote(object, vk_container_t);
@@ -392,20 +395,16 @@ _vk_frame_draw_border(vk_frame_t *frame)
 }
 
 static int
-_vk_frame_on_resize(vk_object_t *object, int event, void *anything)
+_vk_frame_layout(vk_widget_t *widget)
 {
-    vk_widget_t *widget = VK_WIDGET(object);
     vk_frame_t  *frame;
-
-    (void)event;
-    (void)anything;
 
     frame = VK_FRAME(widget);
 
+    /* a child that expands fills the frame, inside its border.  (the
+       frame's scroll bars are refitted by vk_widget_resize itself) */
     if(frame->child != NULL && (frame->child->state & VK_STATE_EXPAND))
         vk_widget_resize(frame->child, widget->width - 2, widget->height - 2);
-
-    vdk_scroller_reflow(widget);
 
     return 0;
 }
@@ -441,8 +440,9 @@ _vk_frame_kmio(vk_object_t *object, int32_t keystroke)
 }
 
 static int
-_vk_frame_update(vk_frame_t *frame)
+_vk_frame_redraw(vk_object_t *object)
 {
+    vk_frame_t *frame = (vk_frame_t *)object;
     vk_widget_t *widget;
 
     if(frame == NULL) return -1;
@@ -464,7 +464,7 @@ _vk_frame_update(vk_frame_t *frame)
 
     if(frame->child != NULL)
     {
-        vk_widget_draw(frame->child);
+        vk_widget_blit(frame->child);
     }
 
     /*

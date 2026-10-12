@@ -16,7 +16,7 @@ static int
 _vk_input_dtor(vk_object_t *object);
 
 static int
-_vk_input_update(vk_input_t *input);
+_vk_input_redraw(vk_object_t *object);
 
 
 static int
@@ -59,6 +59,8 @@ declare_klass(VK_INPUT_KLASS)
     .name = KLASS_NAME(vk_input_t),
     .ctor = _vk_input_ctor,
     .dtor = _vk_input_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_input_redraw,
 };
 
 inline vk_input_t*
@@ -278,11 +280,11 @@ vk_input_show_cursor(vk_input_t *input, bool visible)
 }
 
 inline int
-vk_input_update(vk_input_t *input)
+vk_input_redraw(vk_input_t *input)
 {
     if(input == NULL) return -1;
 
-    return input->_update(input);
+    return vk_widget_redraw(VK_WIDGET(input));
 }
 
 inline int
@@ -293,6 +295,9 @@ vk_input_destroy(vk_input_t *input)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(input, vk_input_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(input));
 
     input->dtor(VK_OBJECT(input));
 
@@ -330,7 +335,6 @@ _vk_input_ctor(vk_object_t *object, va_list *argp, ...)
 
     input->ctor = _vk_input_ctor;
     input->dtor = _vk_input_dtor;
-    input->_update = _vk_input_update;
 
     return 0;
 }
@@ -360,8 +364,9 @@ _vk_input_dtor(vk_object_t *object)
 
 
 static int
-_vk_input_update(vk_input_t *input)
+_vk_input_redraw(vk_object_t *object)
 {
+    vk_input_t *input = (vk_input_t *)object;
     vk_widget_t *widget;
     short       fg, bg;
     short       face_pair;

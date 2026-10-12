@@ -17,7 +17,7 @@ static int
 _vk_window_dtor(vk_object_t *object);
 
 static int
-_vk_window_update(vk_frame_t *frame);
+_vk_window_redraw(vk_object_t *object);
 
 static int
 _vk_window_draw_title(vk_window_t *window);
@@ -33,6 +33,8 @@ declare_klass(VK_WINDOW_KLASS)
     .name = KLASS_NAME(vk_window_t),
     .ctor = _vk_window_ctor,
     .dtor = _vk_window_dtor,
+    .parent = &VK_FRAME_KLASS,
+    .redraw = _vk_window_redraw,
 };
 
 inline vk_window_t*
@@ -101,6 +103,9 @@ vk_window_destroy(vk_window_t *window)
        included, is refused, and the caller is told */
     if(!vk_object_assert(window, vk_window_t)) return -1;
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(window));
+
     window->dtor(VK_OBJECT(window));
 
     return 0;
@@ -139,7 +144,6 @@ _vk_window_ctor(vk_object_t *object, va_list *argp, ...)
 
     window->_draw_title = _vk_window_draw_title;
 
-    VK_FRAME(window)->_update = _vk_window_update;
     VK_WIDGET(window)->_recreate = _vk_window_recreate;
 
     return 0;
@@ -171,8 +175,9 @@ _vk_window_dtor(vk_object_t *object)
 }
 
 static int
-_vk_window_update(vk_frame_t *frame)
+_vk_window_redraw(vk_object_t *object)
 {
+    vk_frame_t *frame = (vk_frame_t *)object;
     vk_window_t *window;
     vk_widget_t *widget;
 
@@ -192,19 +197,19 @@ _vk_window_update(vk_frame_t *frame)
 
     if(widget->vscroller != NULL)
     {
-        if(vk_scroller_update(widget->vscroller) > 0)
-            vk_widget_draw(VK_WIDGET(widget->vscroller));
+        if(vk_scroller_redraw(widget->vscroller) > 0)
+            vk_widget_blit(VK_WIDGET(widget->vscroller));
     }
 
     if(widget->hscroller != NULL)
     {
-        if(vk_scroller_update(widget->hscroller) > 0)
-            vk_widget_draw(VK_WIDGET(widget->hscroller));
+        if(vk_scroller_redraw(widget->hscroller) > 0)
+            vk_widget_blit(VK_WIDGET(widget->hscroller));
     }
 
     if(frame->child != NULL)
     {
-        vk_widget_draw(frame->child);
+        vk_widget_blit(frame->child);
     }
 
     return 0;

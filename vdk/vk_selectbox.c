@@ -18,13 +18,7 @@ static int
 _vk_selectbox_dtor(vk_object_t *object);
 
 static int
-_vk_selectbox_update(vk_listbox_t *listbox);
-
-static int
-_vk_selectbox_on_resize(vk_object_t *object, int event, void *anything);
-
-static int
-_vk_selectbox_on_recreate(vk_object_t *object, int event, void *anything);
+_vk_selectbox_redraw(vk_object_t *object);
 
 static vk_item_t*
 _vk_selectbox_get_item_at(vk_selectbox_t *sb, int idx);
@@ -40,6 +34,8 @@ declare_klass(VK_SELECTBOX_KLASS)
     .name = KLASS_NAME(vk_selectbox_t),
     .ctor = _vk_selectbox_ctor,
     .dtor = _vk_selectbox_dtor,
+    .parent = &VK_LISTBOX_KLASS,
+    .redraw = _vk_selectbox_redraw,
 };
 
 inline vk_selectbox_t*
@@ -177,6 +173,9 @@ vk_selectbox_destroy(vk_selectbox_t *selectbox)
        included, is refused, and the caller is told */
     if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
 
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(selectbox));
+
     selectbox->dtor(VK_OBJECT(selectbox));
 
     return 0;
@@ -208,12 +207,7 @@ _vk_selectbox_ctor(vk_object_t *object, va_list *argp, ...)
     selectbox->ctor = _vk_selectbox_ctor;
     selectbox->dtor = _vk_selectbox_dtor;
 
-    VK_LISTBOX(selectbox)->_update = _vk_selectbox_update;
 
-    vk_object_register_event(VK_OBJECT(selectbox),
-        VK_EVENT_ON_RESIZE, _vk_selectbox_on_resize, NULL);
-    vk_object_register_event(VK_OBJECT(selectbox),
-        VK_EVENT_ON_RECREATE, _vk_selectbox_on_recreate, NULL);
 
     return 0;
 }
@@ -233,8 +227,9 @@ _vk_selectbox_dtor(vk_object_t *object)
 }
 
 static int
-_vk_selectbox_update(vk_listbox_t *listbox)
+_vk_selectbox_redraw(vk_object_t *object)
 {
+    vk_listbox_t *listbox = (vk_listbox_t *)object;
     vk_selectbox_t      *selectbox;
     vk_widget_t         *widget;
     vk_item_t           *item;
@@ -357,32 +352,6 @@ _vk_selectbox_update(vk_listbox_t *listbox)
     vdk_scroller_draw(widget);
 
     return 0;
-}
-
-static int
-_vk_selectbox_on_resize(vk_object_t *object, int event, void *anything)
-{
-    vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)anything;
-
-    vdk_scroller_reflow(widget);
-
-    return VK_LISTBOX(widget)->_update(VK_LISTBOX(widget));
-}
-
-static int
-_vk_selectbox_on_recreate(vk_object_t *object, int event, void *anything)
-{
-    vk_widget_t *widget = VK_WIDGET(object);
-
-    (void)event;
-    (void)anything;
-
-    vdk_scroller_recreate(widget);
-
-    return VK_LISTBOX(widget)->_update(VK_LISTBOX(widget));
 }
 
 static vk_item_t*

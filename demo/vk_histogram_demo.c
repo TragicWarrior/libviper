@@ -38,12 +38,12 @@ main(void)
     vk_graph_set_colors(VK_GRAPH(hist), COLOR_MAGENTA, COLOR_BLACK);
     vk_graph_set_unit_label(VK_GRAPH(hist), "items");
     vk_graph_set_x_labels(VK_GRAPH(hist), bin_labels, 10);
-    vk_histogram_update(hist);
+    vk_histogram_redraw(hist);
 
     lab = vk_label_create(44);
     vk_label_set_text(lab, "histogram: 32 samples, 10 bins over [0,100]");
     vk_widget_set_colors(VK_WIDGET(lab), COLOR_WHITE, COLOR_BLACK);
-    vk_label_update(lab);
+    vk_label_redraw(lab);
 
     vk_screen_attach_widget(screen, 0, VK_WIDGET(lab));
     vk_widget_move(VK_WIDGET(lab), 1, 1);

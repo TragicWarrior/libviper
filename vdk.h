@@ -223,16 +223,18 @@ int             vdk_cells_read_row(WINDOW *win, int y, vdk_cell_t *cells,
 enum
 {
     /* lifecycle */
+    /* a widget has been resized (1) or given a fresh canvas on another
+       terminal (2).  Emitted last: the widget is already laid out and
+       repainted, so a handler has only its own business to do. */
     VK_EVENT_ON_RESIZE      = 1,
     VK_EVENT_ON_RECREATE    = 2,
     VK_EVENT_ON_TELEPORT    = 3,
-    /* the widget is being destroyed.  Emitted once on every widget,
-       from the widget layer of its teardown: the layers of its own
-       type have already been taken down, so a handler may use what
-       every widget has (its id, its user pointer) and nothing that
-       belongs to the particular type.  Containers answer it by
-       destroying their children, which is how destroying a window
-       reaches everything inside it. */
+    /* the object is about to be destroyed.  Emitted once, by the
+       destroy call made on it, before anything is taken down: a
+       handler sees the object whole.  A container is announced before
+       its children, which are still alive.  The handler must not
+       destroy the object.  The library itself does not listen for
+       this; a container destroys its children in its destructor. */
     VK_EVENT_ON_DESTROY     = 4,
 
     /* interaction */
@@ -477,7 +479,7 @@ void            vk_widget_fill(vk_widget_t *widget, chtype ch);
    an 8-bit pair in the attribute word). */
 void            vk_widget_fill_pair(vk_widget_t *widget, wchar_t wch,
                     attr_t attrs, short pair);
-int             vk_widget_draw(vk_widget_t *widget);
+int             vk_widget_blit(vk_widget_t *widget);
 uint32_t        vk_widget_get_state(vk_widget_t *widget);
 void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
 #define         vk_widget_freeze(w) \
@@ -512,8 +514,24 @@ uint32_t        vk_widget_get_id(vk_widget_t *widget);
     and vk_object_dispose() destroy an object as whatever it really is.
 */
 
+/*
+    Two different things put a widget on the screen.
+
+    Redraw: the widget paints its contents onto its own canvas -- a
+    label writes its text, a frame its border.  Every vk_<type>_redraw()
+    does this, and the library does it by itself whenever the canvas
+    has changed under the widget (a resize, or a move to another
+    terminal), so nothing is left stale.
+
+    Blit: the finished canvas is copied to where the widget sits, on the
+    surface it is attached to.  It paints nothing.
+
+    vk_widget_redraw() repaints a widget of any type as what it is.
+*/
+int             vk_widget_redraw(vk_widget_t *widget);
+
 /* destroy a widget of any type: one of a derived type (a window, a
-   button) is destroyed as what it is.  Emits VK_EVENT_ON_DESTROY.
+   button) is destroyed as what it is.  Emits VK_EVENT_ON_DESTROY first.
    Returns 0, or -1 for NULL. */
 int             vk_widget_destroy(vk_widget_t *widget);
 
@@ -565,7 +583,7 @@ int             vk_listbox_get_scroll_pos(vk_listbox_t *listbox);
 /* View-port-only scroll: clamp pos to valid range but leave curr_item
    (cursor/highlight) untouched.  Useful for mouse-wheel panning where
    the consumer wants to move the viewport without moving the selection.
-   Caller must invoke vk_listbox_update() afterwards to re-render. */
+   Caller must invoke vk_listbox_redraw() afterwards to re-render. */
 int             vk_listbox_set_scroll_pos(vk_listbox_t *listbox, int pos);
 int             vk_listbox_get_curr(vk_listbox_t *listbox);
 int             vk_listbox_set_curr(vk_listbox_t *listbox, int idx);
@@ -587,7 +605,7 @@ int             vk_listbox_set_inactive_colors(vk_listbox_t *listbox,
                     int fg, int bg, attr_t attrs);
 int             vk_listbox_get_metrics(vk_listbox_t *listbox,
                     int *width, int *height);
-int             vk_listbox_update(vk_listbox_t *listbox);
+int             vk_listbox_redraw(vk_listbox_t *listbox);
 int             vk_listbox_reset(vk_listbox_t *listbox);
 int             vk_listbox_add_separator(vk_listbox_t *listbox, int style);
 int             vk_listbox_destroy(vk_listbox_t *listbox);
@@ -629,8 +647,8 @@ bool            vk_selectbox_item_is_checked(vk_selectbox_t *selectbox,
 int             vk_selectbox_check_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_uncheck_item(vk_selectbox_t *selectbox, int idx);
 int             vk_selectbox_uncheck_all(vk_selectbox_t *selectbox);
-#define         vk_selectbox_update(sb) \
-                    vk_listbox_update(VK_LISTBOX(sb))
+#define         vk_selectbox_redraw(sb) \
+                    vk_listbox_redraw(VK_LISTBOX(sb))
 int             vk_selectbox_destroy(vk_selectbox_t *selectbox);
 
 /* vk_dropdown */
@@ -664,7 +682,7 @@ int             vk_dropdown_popup_select(vk_dropdown_t *dropdown);
                     vk_listbox_set_next(VK_LISTBOX(dd))
 #define         vk_dropdown_set_prev(dd) \
                     vk_listbox_set_prev(VK_LISTBOX(dd))
-int             vk_dropdown_update(vk_dropdown_t *dropdown);
+int             vk_dropdown_redraw(vk_dropdown_t *dropdown);
 int             vk_dropdown_destroy(vk_dropdown_t *dropdown);
 
 /* vk_frame */
@@ -679,7 +697,7 @@ short           vk_frame_get_border_bg(vk_frame_t *frame);
 int             vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child,
                     uint32_t flags);
 vk_widget_t*    vk_frame_get_child(vk_frame_t *frame);
-int             vk_frame_update(vk_frame_t *frame);
+int             vk_frame_redraw(vk_frame_t *frame);
 int             vk_frame_destroy(vk_frame_t *frame);
 
 /* vk_scroller */
@@ -709,7 +727,7 @@ int vk_listbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
 int vk_textbox_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
 int vk_viewport_scroll_apply(vk_widget_t *source, int scroll_y, int scroll_x);
 
-int             vk_scroller_update(vk_scroller_t *scroller);
+int             vk_scroller_redraw(vk_scroller_t *scroller);
 int             vk_scroller_destroy(vk_scroller_t *scroller);
 
 /* vk_progress */
@@ -735,7 +753,7 @@ int             vk_progress_set_trough_attrs(vk_progress_t *progress,
                     attr_t attrs);
 int             vk_progress_set_thickness(vk_progress_t *progress,
                     int thickness);
-int             vk_progress_update(vk_progress_t *progress);
+int             vk_progress_redraw(vk_progress_t *progress);
 int             vk_progress_destroy(vk_progress_t *progress);
 
 /* vk_meter -- derives from vk_progress; use vk_progress_* via VK_PROGRESS() for
@@ -761,7 +779,7 @@ int             vk_graph_set_data(vk_graph_t *graph, const double *values,
                     int count);
 int             vk_graph_set_colors(vk_graph_t *graph, short fg, short bg);
 int             vk_graph_set_attrs(vk_graph_t *graph, attr_t attrs);
-int             vk_graph_update(vk_graph_t *graph);
+int             vk_graph_redraw(vk_graph_t *graph);
 int             vk_graph_destroy(vk_graph_t *graph);
 
 /* vk_histogram -- derives from vk_graph; bins raw samples into frequency
@@ -772,7 +790,7 @@ int             vk_histogram_set_samples(vk_histogram_t *hist,
 int             vk_histogram_set_bins(vk_histogram_t *hist, int nbins);
 int             vk_histogram_set_range(vk_histogram_t *hist,
                     double min, double max);
-int             vk_histogram_update(vk_histogram_t *hist);
+int             vk_histogram_redraw(vk_histogram_t *hist);
 int             vk_histogram_destroy(vk_histogram_t *hist);
 
 int             vk_widget_attach_scroller(vk_widget_t *host,
@@ -803,8 +821,8 @@ int             vk_window_set_title_justify(vk_window_t *window, int justify);
                     vk_frame_get_child(VK_FRAME(w))
 int             vk_window_set_decorate(vk_window_t *window,
                     VkWindowDecorateFunc func, void *anything);
-#define         vk_window_update(w) \
-                    vk_frame_update(VK_FRAME(w))
+#define         vk_window_redraw(w) \
+                    vk_frame_redraw(VK_FRAME(w))
 int             vk_window_destroy(vk_window_t *window);
 
 /* vk_box */
@@ -817,7 +835,7 @@ vk_widget_t*    vk_box_get_widget(vk_box_t *box, int slot);
 int             vk_box_get_slot_count(vk_box_t *box);
 int             vk_box_set_subfocus(vk_box_t *box, int slot);
 int             vk_box_get_subfocus(vk_box_t *box);
-int             vk_box_update(vk_box_t *box);
+int             vk_box_redraw(vk_box_t *box);
 int             vk_box_destroy(vk_box_t *box);
 
 /* vk_grid -- 2D layout container; cells can be widget slots or paint areas */
@@ -839,7 +857,7 @@ int             vk_grid_get_rows(vk_grid_t *grid);
 int             vk_grid_set_subfocus(vk_grid_t *grid, int col, int row);
 int             vk_grid_get_subfocus_col(vk_grid_t *grid);
 int             vk_grid_get_subfocus_row(vk_grid_t *grid);
-int             vk_grid_update(vk_grid_t *grid);
+int             vk_grid_redraw(vk_grid_t *grid);
 int             vk_grid_destroy(vk_grid_t *grid);
 
 /* vk_table -- vk_grid with rendered dividers (single/double/ascii) */
@@ -850,7 +868,7 @@ int             vk_table_get_divider_style(vk_table_t *table);
 int             vk_table_set_border_colors(vk_table_t *table,
                     short fg, short bg);
 int             vk_table_set_border_attrs(vk_table_t *table, attr_t attrs);
-int             vk_table_update(vk_table_t *table);
+int             vk_table_redraw(vk_table_t *table);
 int             vk_table_destroy(vk_table_t *table);
 
 /* vk_color -- 16-cell ANSI-color picker (vk_table subclass) */
@@ -861,7 +879,7 @@ short           vk_color_get_selected(vk_color_t *color);
 int             vk_color_set_focus_colors(vk_color_t *color,
                     short fg, short bg);
 int             vk_color_set_focus_attrs(vk_color_t *color, attr_t attrs);
-int             vk_color_update(vk_color_t *color);
+int             vk_color_redraw(vk_color_t *color);
 int             vk_color_destroy(vk_color_t *color);
 
 /* vk_label */
@@ -869,7 +887,7 @@ vk_label_t*     vk_label_create(int width);
 int             vk_label_set_text(vk_label_t *label, const char *text);
 const char*     vk_label_get_text(vk_label_t *label);
 int             vk_label_set_justify(vk_label_t *label, int justify);
-int             vk_label_update(vk_label_t *label);
+int             vk_label_redraw(vk_label_t *label);
 int             vk_label_destroy(vk_label_t *label);
 
 /* vk_textbox */
@@ -885,7 +903,7 @@ int             vk_textbox_scroll_pgup(vk_textbox_t *textbox);
 int             vk_textbox_scroll_pgdn(vk_textbox_t *textbox);
 int             vk_textbox_scroll_home(vk_textbox_t *textbox);
 int             vk_textbox_scroll_end(vk_textbox_t *textbox);
-int             vk_textbox_update(vk_textbox_t *textbox);
+int             vk_textbox_redraw(vk_textbox_t *textbox);
 int             vk_textbox_destroy(vk_textbox_t *textbox);
 
 /* vk_marquee */
@@ -915,7 +933,7 @@ int             vk_deck_finalize(vk_deck_t *deck);
 int             vk_deck_set_shadow(vk_deck_t *deck, bool enabled);
 int             vk_deck_set_shadow_colors(vk_deck_t *deck,
                     short fg, short bg);
-int             vk_deck_update(vk_deck_t *deck);
+int             vk_deck_redraw(vk_deck_t *deck);
 vk_widget_t*    vk_deck_hit_test(vk_deck_t *deck, int x, int y);
 int             vk_deck_destroy(vk_deck_t *deck);
 
@@ -930,7 +948,7 @@ int             vk_button_set_on_press(vk_button_t *button,
                     VkWidgetFunc func, void *anything);
 int             vk_button_press(vk_button_t *button);
 int             vk_button_release(vk_button_t *button);
-int             vk_button_update(vk_button_t *button);
+int             vk_button_redraw(vk_button_t *button);
 int             vk_button_destroy(vk_button_t *button);
 
 /* vk_filler */
@@ -949,7 +967,7 @@ int             vk_viewport_scroll_by(vk_viewport_t *vp,
                     int drow, int dcol);
 int             vk_viewport_pgup(vk_viewport_t *vp);
 int             vk_viewport_pgdn(vk_viewport_t *vp);
-int             vk_viewport_update(vk_viewport_t *vp);
+int             vk_viewport_redraw(vk_viewport_t *vp);
 void            vk_viewport_scroll_info(vk_widget_t *child,
                     int *content_h, int *content_w,
                     int *scroll_y, int *scroll_x);
@@ -977,7 +995,7 @@ int             vk_spinbutton_set_on_change(vk_spinbutton_t *spin,
 int             vk_spinbutton_step(vk_spinbutton_t *spin, int n);
 bool            vk_spinbutton_click(vk_spinbutton_t *spin,
                     int local_x, int local_y);
-int             vk_spinbutton_update(vk_spinbutton_t *spin);
+int             vk_spinbutton_redraw(vk_spinbutton_t *spin);
 int             vk_spinbutton_destroy(vk_spinbutton_t *spin);
 
 /* vk_input */
@@ -994,7 +1012,7 @@ int             vk_input_home(vk_input_t *input);
 int             vk_input_end(vk_input_t *input);
 int             vk_input_clear(vk_input_t *input);
 void            vk_input_show_cursor(vk_input_t *input, bool visible);
-int             vk_input_update(vk_input_t *input);
+int             vk_input_redraw(vk_input_t *input);
 int             vk_input_destroy(vk_input_t *input);
 
 /* vk_activity */
@@ -1027,7 +1045,7 @@ bool            vk_menubar_get_focused(vk_menubar_t *menubar);
 int             vk_menubar_hit_test(vk_menubar_t *menubar, int x);
 int             vk_menubar_get_item_position(vk_menubar_t *menubar,
                     int idx, int *x);
-int             vk_menubar_update(vk_menubar_t *menubar);
+int             vk_menubar_redraw(vk_menubar_t *menubar);
 int             vk_menubar_reset(vk_menubar_t *menubar);
 int             vk_menubar_destroy(vk_menubar_t *menubar);
 
@@ -1051,7 +1069,7 @@ int             vk_filedialog_set_button_colors(vk_filedialog_t *dialog,
 int             vk_filedialog_set_button_attrs(vk_filedialog_t *dialog,
                     attr_t attrs);
 vk_listbox_t*   vk_filedialog_get_file_list(vk_filedialog_t *dialog);
-int             vk_filedialog_update(vk_filedialog_t *dialog);
+int             vk_filedialog_redraw(vk_filedialog_t *dialog);
 int             vk_filedialog_destroy(vk_filedialog_t *dialog);
 
 /* vk_calendar */
@@ -1074,7 +1092,7 @@ int             vk_calendar_set_header_colors(vk_calendar_t *calendar,
                     short fg, short bg);
 int             vk_calendar_set_header_attrs(vk_calendar_t *calendar,
                     attr_t attrs);
-int             vk_calendar_update(vk_calendar_t *calendar);
+int             vk_calendar_redraw(vk_calendar_t *calendar);
 int             vk_calendar_destroy(vk_calendar_t *calendar);
 
 /* vk_popup */
@@ -1104,7 +1122,39 @@ int             vk_popup_set_button_attrs(vk_popup_t *popup,
                     vk_window_set_border_colors(VK_WINDOW(p), (fg), (bg))
 #define         vk_popup_set_border_attrs(p, a) \
                     vk_window_set_border_attrs(VK_WINDOW(p), (a))
-int             vk_popup_update(vk_popup_t *popup);
+int             vk_popup_redraw(vk_popup_t *popup);
 int             vk_popup_destroy(vk_popup_t *popup);
+
+/*
+    Names from before 11.0.0, kept so that existing programs build
+    unchanged.  "update" was the old word for redraw, and "draw" the old
+    word for blit.  New code should use the names on the right; these
+    will be withdrawn in a later release.
+*/
+#define vk_widget_draw              vk_widget_blit
+#define vk_listbox_update           vk_listbox_redraw
+#define vk_selectbox_update         vk_selectbox_redraw
+#define vk_dropdown_update          vk_dropdown_redraw
+#define vk_frame_update             vk_frame_redraw
+#define vk_scroller_update          vk_scroller_redraw
+#define vk_progress_update          vk_progress_redraw
+#define vk_graph_update             vk_graph_redraw
+#define vk_histogram_update         vk_histogram_redraw
+#define vk_window_update            vk_window_redraw
+#define vk_box_update               vk_box_redraw
+#define vk_grid_update              vk_grid_redraw
+#define vk_table_update             vk_table_redraw
+#define vk_color_update             vk_color_redraw
+#define vk_label_update             vk_label_redraw
+#define vk_textbox_update           vk_textbox_redraw
+#define vk_deck_update              vk_deck_redraw
+#define vk_button_update            vk_button_redraw
+#define vk_viewport_update          vk_viewport_redraw
+#define vk_spinbutton_update        vk_spinbutton_redraw
+#define vk_input_update             vk_input_redraw
+#define vk_menubar_update           vk_menubar_redraw
+#define vk_filedialog_update        vk_filedialog_redraw
+#define vk_calendar_update          vk_calendar_redraw
+#define vk_popup_update             vk_popup_redraw
 
 #endif

@@ -15,7 +15,7 @@ static int
 _vk_marquee_dtor(vk_object_t *object);
 
 static int
-_vk_marquee_update(vk_label_t *label);
+_vk_marquee_redraw(vk_object_t *object);
 
 require_klass(VK_LABEL_KLASS);
 
@@ -25,6 +25,8 @@ declare_klass(VK_MARQUEE_KLASS)
     .name = KLASS_NAME(vk_marquee_t),
     .ctor = _vk_marquee_ctor,
     .dtor = _vk_marquee_dtor,
+    .parent = &VK_LABEL_KLASS,
+    .redraw = _vk_marquee_redraw,
 };
 
 inline vk_marquee_t*
@@ -127,7 +129,7 @@ vk_marquee_run(vk_marquee_t *marquee)
 {
     if(marquee == NULL) return -1;
 
-    return VK_LABEL(marquee)->_update(VK_LABEL(marquee));
+    return vk_widget_redraw(VK_WIDGET(VK_LABEL(marquee)));
 }
 
 inline int
@@ -138,6 +140,9 @@ vk_marquee_destroy(vk_marquee_t *marquee)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(marquee));
 
     marquee->dtor(VK_OBJECT(marquee));
 
@@ -177,7 +182,6 @@ _vk_marquee_ctor(vk_object_t *object, va_list *argp, ...)
     marquee->ctor = _vk_marquee_ctor;
     marquee->dtor = _vk_marquee_dtor;
 
-    VK_LABEL(marquee)->_update = _vk_marquee_update;
 
     return 0;
 }
@@ -206,8 +210,9 @@ _vk_marquee_dtor(vk_object_t *object)
 }
 
 static int
-_vk_marquee_update(vk_label_t *label)
+_vk_marquee_redraw(vk_object_t *object)
 {
+    vk_label_t *label = (vk_label_t *)object;
     vk_marquee_t    *marquee;
     vk_widget_t     *widget;
     int             text_len;

@@ -45,11 +45,16 @@ struct _vk_widget_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_draw)            (vk_widget_t *);
+    int                 (*_blit)            (vk_widget_t *);
     int                 (*_move)            (vk_widget_t *, int, int);
     int                 (*_resize)          (vk_widget_t *, int, int);
     int                 (*_recreate)        (vk_widget_t *);
     int                 (*_erase)           (vk_widget_t *);
+
+    /* arrange what is inside the widget for the size it now has: a
+       box its slots, a frame its child.  NULL when there is nothing to
+       arrange.  called by vk_widget_resize once the canvas is resized */
+    int                 (*_layout)          (vk_widget_t *);
 
     uint32_t            id;                 // process-lifetime identity
                                             // (0 = unset / not a widget)

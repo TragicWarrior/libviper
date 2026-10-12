@@ -133,12 +133,17 @@ _vk_filedialog_set_child(vk_filedialog_t *dialog, int slot,
 
 require_klass(VK_BOX_KLASS);
 
+static int
+_vk_filedialog_redraw(vk_object_t *object);
+
 declare_klass(VK_FILEDIALOG_KLASS)
 {
     .size = KLASS_SIZE(vk_filedialog_t),
     .name = KLASS_NAME(vk_filedialog_t),
     .ctor = _vk_filedialog_ctor,
     .dtor = _vk_filedialog_dtor,
+    .parent = &VK_BOX_KLASS,
+    .redraw = _vk_filedialog_redraw,
 };
 
 inline vk_filedialog_t*
@@ -387,35 +392,11 @@ vk_filedialog_get_file_list(vk_filedialog_t *dialog)
 }
 
 inline int
-vk_filedialog_update(vk_filedialog_t *dialog)
+vk_filedialog_redraw(vk_filedialog_t *dialog)
 {
     if(dialog == NULL) return -1;
 
-    vk_input_update(dialog->path_input);
-
-    /*
-        Render the file_list content into its own canvas FIRST, then run
-        the frame update.  vk_frame_update erases the frame canvas and
-        draws the sunken border on it, then blits the child's pre-
-        rendered canvas inside.  Swap the order and the listbox content
-        gets wiped by the frame's erase.
-    */
-    dialog->file_list->_update(dialog->file_list);
-    if(dialog->list_frame != NULL)
-        vk_frame_update(dialog->list_frame);
-
-    if(dialog->scroller != NULL)
-    {
-        if(vk_scroller_update(dialog->scroller) > 0)
-            vk_widget_draw(VK_WIDGET(dialog->scroller));
-    }
-
-    vk_button_update(dialog->btn_ok);
-    vk_button_update(dialog->btn_cancel);
-    vk_box_update(dialog->button_bar);
-    VK_BOX(dialog)->_update(VK_BOX(dialog));
-
-    return 0;
+    return vk_widget_redraw(VK_WIDGET(dialog));
 }
 
 inline int
@@ -426,6 +407,9 @@ vk_filedialog_destroy(vk_filedialog_t *dialog)
     /* strictly this type: an object of any other, a derived one
        included, is refused, and the caller is told */
     if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
+
+    /* first of all, and once: tell anyone listening that it is going */
+    _vk_object_announce_destroy(VK_OBJECT(dialog));
 
     dialog->dtor(VK_OBJECT(dialog));
 
@@ -491,7 +475,7 @@ _vk_filedialog_dtor(vk_object_t *object)
     /* the dialog is a box, and all of its parts sit in the box's slots:
        the path input, the frame around the file list, the button bar
        with its two buttons.  Destroying the box destroys them (see
-       _vk_container_on_destroy), and the list takes its scroller with it. */
+       _vk_container_dtor), and the list takes its scroller with it. */
     vk_object_demote(object, vk_box_t);
     vk_box_destroy(VK_BOX(object));
 
@@ -682,7 +666,7 @@ _vk_filedialog_input_key(vk_filedialog_t *dialog, int32_t keystroke)
             break;
     }
 
-    vk_input_update(input);
+    vk_input_redraw(input);
     return 0;
 }
 
@@ -725,7 +709,7 @@ _vk_filedialog_list_key(vk_filedialog_t *dialog, int32_t keystroke)
             return 0;
     }
 
-    lb->_update(lb);
+    vk_widget_redraw(VK_WIDGET(lb));
     return 0;
 }
 
@@ -745,4 +729,48 @@ _vk_filedialog_kmio(vk_object_t *object, int32_t keystroke)
     }
 
     return _vk_filedialog_list_key(dialog, keystroke);
+}
+
+/*
+    A file dialog's redraw.  Its own parts are widgets it holds -- the
+    path input, the file list in its frame, the buttons -- each painting
+    onto a canvas of its own.  They go first; the box's painting, which
+    comes last, copies them into place.
+*/
+static int
+_vk_filedialog_redraw(vk_object_t *object)
+{
+    vk_filedialog_t *dialog = VK_FILEDIALOG(object);
+
+    /* the dialog is still being built, or is being taken apart: its
+       parts are not all there to paint */
+    if(dialog->path_input == NULL || dialog->file_list == NULL
+        || dialog->btn_ok == NULL || dialog->btn_cancel == NULL
+        || dialog->button_bar == NULL)
+        return VK_BOX_KLASS->redraw(object);
+
+    vk_input_redraw(dialog->path_input);
+
+    /*
+        Render the file_list content into its own canvas FIRST, then run
+        the frame update.  vk_frame_redraw erases the frame canvas and
+        draws the sunken border on it, then blits the child's pre-
+        rendered canvas inside.  Swap the order and the listbox content
+        gets wiped by the frame's erase.
+    */
+    vk_widget_redraw(VK_WIDGET(dialog->file_list));
+    if(dialog->list_frame != NULL)
+        vk_frame_redraw(dialog->list_frame);
+
+    if(dialog->scroller != NULL)
+    {
+        if(vk_scroller_redraw(dialog->scroller) > 0)
+            vk_widget_blit(VK_WIDGET(dialog->scroller));
+    }
+
+    vk_button_redraw(dialog->btn_ok);
+    vk_button_redraw(dialog->btn_cancel);
+    vk_box_redraw(dialog->button_bar);
+    /* the box copies its slots into place */
+    return VK_BOX_KLASS->redraw(object);
 }

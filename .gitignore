@@ -19,6 +19,7 @@ demo/vk_graph_demo
 demo/vk_histogram_demo
 test/test_cells
 test/test_destroy
+test/test_redraw
 
 # ctest
 CTestTestfile.cmake

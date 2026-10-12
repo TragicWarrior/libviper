@@ -34,7 +34,6 @@ struct _vk_scroller_s
     int                 (*ctor)             (vk_object_t *, va_list *, ...);
     int                 (*dtor)             (vk_object_t *);
 
-    int                 (*_update)          (vk_scroller_t *);
     int                 (*_draw_scrollbar)  (vk_scroller_t *);
 };
 
