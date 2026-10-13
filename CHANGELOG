@@ -1,3 +1,23 @@
+Version 12.1.0
+
+vdk
+* [Bryan Christ] The activity indicator repaints itself like every
+  other widget.
+
+  vk_activity_t was the one type with no redraw: it painted only
+  inside vk_activity_run(), its tick.  After a resize, a change of
+  style or a move to another terminal it was blank until the next tick,
+  and a container that redrew what it held had nothing to ask it for.
+
+  It now has a redraw, which paints the frame it is on, and the tick
+  is separate: vk_activity_run() moves the indicator on and then
+  repaints.  Only vk_activity_run() moves it, as with the marquee, so
+  redrawing a container above it does not.  vk_activity_redraw() is
+  new, for repainting it where it is.
+
+  A program that calls vk_activity_run() on its tick, as before, sees
+  no difference.  test_redraw covers it.
+
 Version 12.0.0
 
 vdk

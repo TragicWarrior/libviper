@@ -1908,6 +1908,14 @@ application calls `vk_activity_run()` each iteration of the event loop.
 A `speed` parameter controls how many ticks elapse before advancing to
 the next frame (default 1 = advance every tick).
 
+Each call to `vk_activity_run()` is one tick: the indicator moves on,
+then repaints. Only that moves it (since 12.1.0). Like every other
+widget it has a redraw, which paints the frame it is on: it repaints
+itself after a resize, a change of style or a move to another terminal,
+and when a container it sits in is redrawn, without moving. Before
+12.1.0 it painted only inside `vk_activity_run()`, so it was blank
+after any of those until the next tick.
+
 | API | Description |
 |-----|-------------|
 | `vk_activity_create()` | Create a 1x1 activity indicator (default: spinner, stopped) |
@@ -1918,6 +1926,7 @@ the next frame (default 1 = advance every tick).
 | `vk_activity_stop(a)` | Stop animating (clears to blank) |
 | `vk_activity_is_running(a)` | Return whether the indicator is active |
 | `vk_activity_run(a)` | Tick function — call once per event loop iteration |
+| `vk_activity_redraw(a)` | Repaint the frame it is on, without moving |
 | `vk_activity_destroy(a)` | Destroy the indicator |
 
 ## File Dialogs

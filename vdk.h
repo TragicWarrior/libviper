@@ -29,9 +29,9 @@
     error in itself where the macro does not exist.
 */
 #define VDK_VERSION_MAJOR           12
-#define VDK_VERSION_MINOR           0
+#define VDK_VERSION_MINOR           1
 #define VDK_VERSION_PATCH           0
-#define VDK_VERSION                 "12.0.0"
+#define VDK_VERSION                 "12.1.0"
 
 #define VDK_VERSION_AT_LEAST(major, minor, patch) \
     ((VDK_VERSION_MAJOR > (major)) \
@@ -1132,7 +1132,10 @@ int             vk_activity_set_speed(vk_activity_t *activity, int interval);
 int             vk_activity_start(vk_activity_t *activity);
 int             vk_activity_stop(vk_activity_t *activity);
 bool            vk_activity_is_running(vk_activity_t *activity);
+/* one tick: move the indicator on, then show it.  only this moves it */
 int             vk_activity_run(vk_activity_t *activity);
+/* repaint the indicator where it is */
+int             vk_activity_redraw(vk_activity_t *activity);
 int             vk_activity_destroy(vk_activity_t *activity);
 
 /* vk_menubar */
