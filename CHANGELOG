@@ -1,3 +1,21 @@
+Version 11.1.1
+
+vdk
+* [Bryan Christ] A resize lost the last column and the last row.
+
+  vk_widget_resize() keeps what is on the canvas by copying it aside,
+  resizing, and copying it back.  The copy was made one row and one
+  column smaller than the canvas, so the last of each was dropped on
+  every resize.  The copy is now the size of the canvas.
+
+  Since 11.0.0 a widget repaints itself after a resize, which painted
+  over the gap for every type that has a redraw.  It still showed on a
+  plain widget a program paints by hand, and before 11.0.0 it showed
+  on anything that was resized and not repainted: an expanded widget
+  in a box lost its right-hand column.
+
+  test_redraw checks it.
+
 Version 11.1.0
 
 vdk
