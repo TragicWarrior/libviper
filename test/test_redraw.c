@@ -696,6 +696,109 @@ main(void)
         vk_widget_destroy(plain);
     }
 
+    /* ---- arranging without painting ---- */
+    {
+        static vdk_cell_t   blank[40 * 10];
+        static vdk_cell_t   after[40 * 10];
+        vk_box_t            *col;
+        vk_box_t            *row;
+        vk_grid_t           *cells;
+        vk_frame_t          *border;
+        vk_label_t          *top;
+        vk_label_t          *middle;
+        vk_label_t          *bottom;
+        vk_label_t          *left;
+        vk_label_t          *right;
+        vk_label_t          *cell;
+        vk_label_t          *framed;
+        int                 x = -1, y = -1, w = 0, h = 0;
+        int                 x2 = -1, y2 = -1;
+
+        /* a column packed to natural sizes: one row, the rest, one row */
+        col = vk_box_create(30, 8, VK_BOX_VERTICAL, 3);
+        vk_box_set_homogeneous(col, false);
+        top = vk_label_create(30);
+        middle = vk_label_create(30);
+        bottom = vk_label_create(30);
+        vk_label_set_text(top, "top");
+        vk_label_set_text(middle, "middle");
+        vk_label_set_text(bottom, "bottom");
+        vk_widget_set_expand(VK_WIDGET(middle));
+        vk_box_set_widget(col, 0, VK_WIDGET(top), VK_INHERIT_AUTO);
+        vk_box_set_widget(col, 1, VK_WIDGET(middle), VK_INHERIT_AUTO);
+        vk_box_set_widget(col, 2, VK_WIDGET(bottom), VK_INHERIT_AUTO);
+
+        snapshot(VK_WIDGET(col), blank);
+        check("layout", "vk_box_layout returns 0", vk_box_layout(col) == 0);
+
+        vk_widget_get_position(VK_WIDGET(middle), &x, &y);
+        vk_widget_get_metrics(VK_WIDGET(middle), &w, &h);
+        check("layout", "the child that expands has its place and its size",
+            x == 0 && y == 1 && w == 30 && h == 6);
+        vk_widget_get_position(VK_WIDGET(bottom), &x, &y);
+        check("layout", "the child after it is placed below it",
+            x == 0 && y == 7);
+
+        snapshot(VK_WIDGET(col), after);
+        check("layout", "and nothing was painted on the box",
+            memcmp(blank, after, 30 * 8 * sizeof(vdk_cell_t)) == 0);
+
+        /* a redraw afterwards puts nothing anywhere else */
+        vk_box_redraw(col);
+        vk_widget_get_position(VK_WIDGET(bottom), &x2, &y2);
+        check("layout", "a redraw agrees with where the layout put things",
+            x2 == x && y2 == y && shows(VK_WIDGET(col), "bottom"));
+        vk_box_destroy(col);
+
+        /* a row of equal shares: each child centred in its half */
+        row = vk_box_create(40, 3, VK_BOX_HORIZONTAL, 2);
+        left = vk_label_create(10);
+        right = vk_label_create(10);
+        vk_box_set_widget(row, 0, VK_WIDGET(left), VK_INHERIT_AUTO);
+        vk_box_set_widget(row, 1, VK_WIDGET(right), VK_INHERIT_AUTO);
+        vk_box_layout(row);
+        vk_widget_get_position(VK_WIDGET(left), &x, &y);
+        vk_widget_get_position(VK_WIDGET(right), &x2, &y2);
+        check("layout", "a box of equal shares centres each child in its slot",
+            x == 5 && y == 1 && x2 == 25 && y2 == 1);
+        vk_box_destroy(row);
+
+        /* a grid: the child of the second column, second row */
+        cells = vk_grid_create(40, 6, 2, 2);
+        cell = vk_label_create(10);
+        vk_grid_set_widget(cells, 1, 1, VK_WIDGET(cell), VK_INHERIT_AUTO);
+        vk_widget_get_position(VK_WIDGET(cell), &x, &y);
+        check("layout", "before a grid is arranged its child is at the origin",
+            x == 0 && y == 0);
+        check("layout", "vk_grid_layout returns 0", vk_grid_layout(cells) == 0);
+        vk_widget_get_position(VK_WIDGET(cell), &x, &y);
+        check("layout", "afterwards it is in its cell",
+            x >= 20 && y >= 3);
+        vk_grid_redraw(cells);
+        vk_widget_get_position(VK_WIDGET(cell), &x2, &y2);
+        check("layout", "and a redraw agrees", x2 == x && y2 == y);
+        vk_grid_destroy(cells);
+
+        /* a frame fits a child that expands inside its border */
+        border = vk_frame_create(20, 6);
+        framed = vk_label_create(4);
+        vk_frame_set_child(border, VK_WIDGET(framed), VK_INHERIT_AUTO);
+        vk_widget_set_expand(VK_WIDGET(framed));
+        vk_frame_layout(border);
+        vk_widget_get_metrics(VK_WIDGET(framed), &w, &h);
+        check("layout", "a frame fits its child inside the border",
+            w == 18 && h == 4);
+        vk_frame_destroy(border);
+
+        /* nothing to arrange, and nothing there at all */
+        top = vk_label_create(10);
+        check("layout", "a widget that holds nothing has nothing to do",
+            vk_widget_layout(VK_WIDGET(top)) == 0);
+        check("layout", "a NULL widget is refused",
+            vk_widget_layout(NULL) == -1);
+        vk_label_destroy(top);
+    }
+
     vk_screen_destroy(screen);
 
     printf("%d of %d passed\n", passed, passed + failed);

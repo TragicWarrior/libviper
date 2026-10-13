@@ -296,6 +296,21 @@ vk_widget_redraw(vk_widget_t *widget)
 }
 
 /*
+    Arrange what a widget holds for the size it has, painting nothing.
+    A type that holds other widgets supplies the arranging (_layout); a
+    type that holds none has nothing to do.
+*/
+int
+vk_widget_layout(vk_widget_t *widget)
+{
+    if(widget == NULL) return -1;
+
+    if(widget->_layout == NULL) return 0;
+
+    return widget->_layout(widget);
+}
+
+/*
     Repaint a widget whose children are known to be current.  A resize
     and a recreate both end with this: each child has just been through
     the same and repainted itself, so a container among them copies its

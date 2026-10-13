@@ -24,6 +24,9 @@ _vk_box_recreate(vk_widget_t *widget);
 static int
 _vk_box_redraw(vk_object_t *object);
 
+static void
+_vk_box_place(vk_box_t *box);
+
 static int
 _vk_box_kmio(vk_object_t *object, int32_t keystroke);
 
@@ -365,6 +368,10 @@ _vk_box_layout(vk_widget_t *widget)
         }
     }
 
+    /* and each child to its place, so that where things are can be
+       read before anything is painted */
+    _vk_box_place(box);
+
     return 0;
 }
 
@@ -405,30 +412,28 @@ _vk_box_kmio(vk_object_t *object, int32_t keystroke)
     return vk_object_push_keystroke(VK_OBJECT(child), keystroke);
 }
 
-static int
-_vk_box_redraw(vk_object_t *object)
+/*
+    Put every child of the box in its place: its position in the box,
+    and for a child that expands in a box packed to natural sizes, its
+    size.  Nothing is painted.
+
+    A homogeneous box gives each slot an equal share and centres the
+    child in it.  Otherwise each child gets its natural size along the
+    box, the ones that expand share what is left over, and a hidden
+    child is left out.
+
+    The box's redraw calls this and then copies the children in; its
+    layout (vk_widget_layout, and after every resize) calls it too, so
+    a program can read where things are without painting anything.
+*/
+static void
+_vk_box_place(vk_box_t *box)
 {
-    vk_box_t *box = (vk_box_t *)object;
-    vk_widget_t     *widget;
+    vk_widget_t     *widget = VK_WIDGET(box);
     vk_widget_t     *child;
     int             i;
     int             pos;
     bool            horiz;
-
-    if(box == NULL) return -1;
-
-    /* what it holds repaints itself first, so that what is copied in
-       below is current */
-    VK_CONTAINER_KLASS->redraw(object);
-
-    widget = VK_WIDGET(box);
-    widget->_erase(widget);
-
-    if(widget->fg >= 0 && widget->bg >= 0)
-    {
-        vk_widget_fill_pair(widget, L' ', widget->attrs,
-            vdk_color_pair(widget->fg, widget->bg));
-    }
 
     horiz = (box->orientation == VK_BOX_HORIZONTAL);
 
@@ -480,7 +485,6 @@ _vk_box_redraw(vk_object_t *object)
                 else
                     vk_widget_move(child, xoff, pos + yoff);
 
-                vk_widget_blit(child);
             }
 
             pos += slot_size;
@@ -552,9 +556,47 @@ _vk_box_redraw(vk_object_t *object)
             else
                 vk_widget_move(child, 0, pos);
 
-            vk_widget_blit(child);
             pos += slot_size;
         }
+    }
+}
+
+static int
+_vk_box_redraw(vk_object_t *object)
+{
+    vk_box_t *box = (vk_box_t *)object;
+    vk_widget_t     *widget;
+    vk_widget_t     *child;
+    int             i;
+
+    if(box == NULL) return -1;
+
+    /* what it holds repaints itself first, so that what is copied in
+       below is current */
+    VK_CONTAINER_KLASS->redraw(object);
+
+    widget = VK_WIDGET(box);
+    widget->_erase(widget);
+
+    if(widget->fg >= 0 && widget->bg >= 0)
+    {
+        vk_widget_fill_pair(widget, L' ', widget->attrs,
+            vdk_color_pair(widget->fg, widget->bg));
+    }
+
+    /* every child to its place and size, then copied in, slot by slot */
+    _vk_box_place(box);
+
+    for(i = 0; i < box->slots; i++)
+    {
+        child = box->slot_widgets[i];
+        if(child == NULL) continue;
+
+        /* a box that packs to natural sizes leaves a hidden child out
+           of the arrangement altogether */
+        if(!box->homogeneous && !(child->state & VK_STATE_VISIBLE)) continue;
+
+        vk_widget_blit(child);
     }
 
     return 0;

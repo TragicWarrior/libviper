@@ -1,3 +1,28 @@
+Version 12.2.0
+
+vdk
+* [Bryan Christ] A box or grid can be arranged without being painted.
+
+  A box or a grid put its children in their places only as part of its
+  redraw.  A program that needed to know where a child had ended up, or
+  how big a child that expands had become, before anything was shown
+  had to redraw the box and read the result.
+
+  vk_widget_layout() arranges what a widget holds for the size it has
+  and paints nothing: a box puts each child in its slot, a grid in its
+  cell, and a frame fits its child inside the border.  vk_box_layout(),
+  vk_grid_layout(), vk_frame_layout() and vk_window_layout() are names
+  for it.  A widget that holds nothing does nothing.
+
+  Inside the library the placing is one function per type, called by
+  both the redraw and the layout, where it was written out in the
+  redraw alone.  A redraw paints exactly what it did.
+
+  The library already arranged after every resize and still does; that
+  now places the children as well as sizing them.
+
+  test_redraw covers it.
+
 Version 12.1.0
 
 vdk
