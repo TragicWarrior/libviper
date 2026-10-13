@@ -32,7 +32,23 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
 # leave the support out.
 
-set(PROJECT_VERSION 11.2.0)
+set(PROJECT_VERSION 12.0.0)
+
+# vdk.h tells programs which libviper they are building against
+# (VDK_VERSION_*).  It has to say what is set here: stop if it does not.
+file(STRINGS "${PROJECT_SOURCE_DIR}/vdk.h" _vdk_h_version
+     REGEX "^#define VDK_VERSION +\"[0-9]+\\.[0-9]+\\.[0-9]+\"")
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" _vdk_h_version "${_vdk_h_version}")
+file(STRINGS "${PROJECT_SOURCE_DIR}/vdk.h" _vdk_h_parts
+     REGEX "^#define VDK_VERSION_(MAJOR|MINOR|PATCH) +[0-9]+")
+string(REGEX REPLACE "#define VDK_VERSION_MAJOR +([0-9]+);#define VDK_VERSION_MINOR +([0-9]+);#define VDK_VERSION_PATCH +([0-9]+)"
+       "\\1.\\2.\\3" _vdk_h_parts "${_vdk_h_parts}")
+if(NOT "${_vdk_h_version}" STREQUAL "${PROJECT_VERSION}"
+   OR NOT "${_vdk_h_parts}" STREQUAL "${PROJECT_VERSION}")
+    message(FATAL_ERROR
+        "vdk.h says VDK_VERSION \"${_vdk_h_version}\" (${_vdk_h_parts}) but "
+        "PROJECT_VERSION is ${PROJECT_VERSION}.  Change both together.")
+endif()
 
 include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/vdk ${CMAKE_SOURCE_DIR}/vkmio)
 
@@ -92,7 +108,7 @@ add_library(vdk-shared SHARED $<TARGET_OBJECTS:vdk.o>)
 target_link_libraries(vdk-shared ${CURSES_LIBRARIES})
 
 SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
-SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION 11)
+SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION 12)
 
 set(PKG_CONFIG_LIBS
     "-lvdk"

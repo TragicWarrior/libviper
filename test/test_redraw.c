@@ -632,13 +632,6 @@ main(void)
         vk_widget_destroy(plain);
     }
 
-    /* ---- the names from before 11.0.0 still build and still work ---- */
-
-    label = vk_label_create(10);
-    vk_label_set_text(label, "old names");
-    check("compat", "vk_label_update is vk_label_redraw",
-        vk_label_update(label) == 0 && has_content(VK_WIDGET(label)));
-
     vk_screen_destroy(screen);
 
     printf("%d of %d passed\n", passed, passed + failed);

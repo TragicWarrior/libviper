@@ -44,7 +44,7 @@ Ownership
     dialog down with one destroy call.
   - Redrawing a container redraws everything inside it: change what
     you like in a dialog and redraw the window once.
-  - A widget can follow its container's colors (VK_INHERIT_AUTO):
+  - A widget follows its container's colors by default (VK_INHERIT_AUTO):
     color the window and what is inside follows, unless given colors
     of its own.
 

@@ -10,6 +10,35 @@
 #define NCURSES_OPAQUE 0
 #include <ncursesw/curses.h>
 
+/*
+    The version of the library this header belongs to.
+
+    VDK_VERSION is the three numbers as text.  VDK_VERSION_AT_LEAST()
+    is for a program that needs a release or newer and would sooner
+    stop with a clear message than fail on a missing name:
+
+        #ifndef VDK_VERSION_MAJOR
+        #error "this program needs libviper 12.0.0 or newer"
+        #elif !VDK_VERSION_AT_LEAST(12, 2, 0)
+        #error "this program needs libviper 12.2.0 or newer"
+        #endif
+
+    A header from before 12.0.0 defines none of these, so the #ifndef
+    comes first and on its own line: the preprocessor reads the whole
+    of an #if, and  !defined(...) || !VDK_VERSION_AT_LEAST(...)  is an
+    error in itself where the macro does not exist.
+*/
+#define VDK_VERSION_MAJOR           12
+#define VDK_VERSION_MINOR           0
+#define VDK_VERSION_PATCH           0
+#define VDK_VERSION                 "12.0.0"
+
+#define VDK_VERSION_AT_LEAST(major, minor, patch) \
+    ((VDK_VERSION_MAJOR > (major)) \
+    || (VDK_VERSION_MAJOR == (major) && VDK_VERSION_MINOR > (minor)) \
+    || (VDK_VERSION_MAJOR == (major) && VDK_VERSION_MINOR == (minor) \
+        && VDK_VERSION_PATCH >= (patch)))
+
 #define VDK_COLOR_COUNT             8
 
 void            vdk_color_init(void);
@@ -146,27 +175,34 @@ int             vdk_cells_read_row(WINDOW *win, int y, vdk_cell_t *cells,
     They say which of the container's colours and text attributes the
     child is to follow.
 
-    Following is live (since 11.2.0): the container hands the values on
-    each time it is redrawn, so the order widgets are built in does not
-    matter and a later change to the container reaches the child.  A
-    child that follows is given the container's values at attach too.
+    Following is live: the container hands the values on each time it
+    is redrawn, so the order widgets are built in does not matter and
+    a later change to the container reaches the child.  A child that
+    follows is given the container's values at attach too.
 
-    VK_INHERIT_NONE     the child is left as it is
+    VK_INHERIT_AUTO     the default, and 0: the child follows whichever
+                        of the two colours it has not been given itself
+                        (vk_widget_set_colors).  Colour the outermost
+                        widget and what is inside follows.
+    VK_INHERIT_NONE     the child is left as it is: it stands alone
     VK_INHERIT_FG       it follows the foreground
     VK_INHERIT_BG       it follows the background
     VK_INHERIT_ATTRS    it follows the text attributes
-    VK_INHERIT_AUTO     it follows whichever of the two colours it has
-                        not been given itself (vk_widget_set_colors)
+
+    Naming FG, BG or ATTRS says exactly what is followed, and nothing
+    else is.  AUTO does not follow text attributes.
 
     vk_widget_set_colors() makes both colours the widget's own again,
     and vk_widget_set_attrs() its attributes.  The same choices are the
     properties VK_PROP_INHERIT_*, for changing them after the attach.
+
+    Before 12.0.0, VK_INHERIT_NONE was 0 and AUTO had to be asked for.
 */
-#define VK_INHERIT_NONE             0u
+#define VK_INHERIT_AUTO             0u
 #define VK_INHERIT_FG               (1u << 0)
 #define VK_INHERIT_BG               (1u << 1)
 #define VK_INHERIT_ATTRS            (1u << 2)
-#define VK_INHERIT_AUTO             (1u << 3)       // 8
+#define VK_INHERIT_NONE             (1u << 3)       // 8
 #define VK_INHERIT_COLOR            (VK_INHERIT_FG | VK_INHERIT_BG)
 #define VK_INHERIT_ALL              (VK_INHERIT_FG | VK_INHERIT_BG | VK_INHERIT_ATTRS)
 
@@ -1197,37 +1233,5 @@ int             vk_popup_set_button_attrs(vk_popup_t *popup,
                     vk_window_set_border_attrs(VK_WINDOW(p), (a))
 int             vk_popup_redraw(vk_popup_t *popup);
 int             vk_popup_destroy(vk_popup_t *popup);
-
-/*
-    Names from before 11.0.0, kept so that existing programs build
-    unchanged.  "update" was the old word for redraw, and "draw" the old
-    word for blit.  New code should use the names on the right; these
-    will be withdrawn in a later release.
-*/
-#define vk_widget_draw              vk_widget_blit
-#define vk_listbox_update           vk_listbox_redraw
-#define vk_selectbox_update         vk_selectbox_redraw
-#define vk_dropdown_update          vk_dropdown_redraw
-#define vk_frame_update             vk_frame_redraw
-#define vk_scroller_update          vk_scroller_redraw
-#define vk_progress_update          vk_progress_redraw
-#define vk_graph_update             vk_graph_redraw
-#define vk_histogram_update         vk_histogram_redraw
-#define vk_window_update            vk_window_redraw
-#define vk_box_update               vk_box_redraw
-#define vk_grid_update              vk_grid_redraw
-#define vk_table_update             vk_table_redraw
-#define vk_color_update             vk_color_redraw
-#define vk_label_update             vk_label_redraw
-#define vk_textbox_update           vk_textbox_redraw
-#define vk_deck_update              vk_deck_redraw
-#define vk_button_update            vk_button_redraw
-#define vk_viewport_update          vk_viewport_redraw
-#define vk_spinbutton_update        vk_spinbutton_redraw
-#define vk_input_update             vk_input_redraw
-#define vk_menubar_update           vk_menubar_redraw
-#define vk_filedialog_update        vk_filedialog_redraw
-#define vk_calendar_update          vk_calendar_redraw
-#define vk_popup_update             vk_popup_redraw
 
 #endif
