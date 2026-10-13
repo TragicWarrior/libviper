@@ -32,7 +32,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
 # leave the support out.
 
-set(PROJECT_VERSION 12.0.0)
+set(PROJECT_VERSION 12.1.0)
 
 # vdk.h tells programs which libviper they are building against
 # (VDK_VERSION_*).  It has to say what is set here: stop if it does not.

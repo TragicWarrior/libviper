@@ -13,6 +13,12 @@ _vk_activity_ctor(vk_object_t *object, va_list *argp, ...);
 static int
 _vk_activity_dtor(vk_object_t *object);
 
+static int
+_vk_activity_redraw(vk_object_t *object);
+
+static void
+_vk_activity_advance(vk_activity_t *activity);
+
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_ACTIVITY_KLASS)
@@ -22,6 +28,7 @@ declare_klass(VK_ACTIVITY_KLASS)
     .ctor = _vk_activity_ctor,
     .dtor = _vk_activity_dtor,
     .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_activity_redraw,
 };
 
 static const char *spinner_frames[] =
@@ -138,81 +145,28 @@ vk_activity_is_running(vk_activity_t *activity)
     return activity->running;
 }
 
+/*
+    One tick: move the indicator on, then show it.  Only this moves it.
+*/
 inline int
 vk_activity_run(vk_activity_t *activity)
 {
-    vk_widget_t     *widget;
-    short           pair;
-    int             frame_count;
-
     if(activity == NULL) return -1;
 
-    widget = VK_WIDGET(activity);
+    _vk_activity_advance(activity);
 
-    widget->_erase(widget);
+    return vk_widget_redraw(VK_WIDGET(activity));
+}
 
-    /* apply the pair via the pair-safe path so bright (8-15) colors,
-       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
-       8-bit pair field. */
-    pair = vdk_color_pair(widget->fg, widget->bg);
+/*
+    Repaint the indicator where it is, without moving it on.
+*/
+inline int
+vk_activity_redraw(vk_activity_t *activity)
+{
+    if(activity == NULL) return -1;
 
-    if(!activity->running)
-    {
-        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
-        return 0;
-    }
-
-    activity->tick_count++;
-
-    if(activity->tick_count >= activity->speed)
-    {
-        activity->tick_count = 0;
-
-        switch(activity->style)
-        {
-            case VK_ACTIVITY_SPINNER:   frame_count = spinner_count;    break;
-            case VK_ACTIVITY_DOTS:      frame_count = dots_count;       break;
-            case VK_ACTIVITY_CIRCLES:   frame_count = circles_count;    break;
-            case VK_ACTIVITY_BAR:       frame_count = bar_count;        break;
-            case VK_ACTIVITY_MOON:      frame_count = moon_count;       break;
-            default:                    frame_count = spinner_count;     break;
-        }
-
-        activity->frame = (activity->frame + 1) % frame_count;
-    }
-
-    wattr_set(widget->canvas, widget->attrs, pair, NULL);
-
-    if(activity->style == VK_ACTIVITY_SPINNER)
-    {
-        mvwprintw(widget->canvas, 0, 0, "%s",
-            spinner_frames[activity->frame]);
-    }
-    else
-    {
-        const wchar_t   *frames;
-        cchar_t         wch;
-        wchar_t         wstr[2];
-
-        switch(activity->style)
-        {
-            case VK_ACTIVITY_DOTS:      frames = dots_frames;       break;
-            case VK_ACTIVITY_CIRCLES:   frames = circles_frames;    break;
-            case VK_ACTIVITY_BAR:       frames = bar_frames;        break;
-            case VK_ACTIVITY_MOON:      frames = moon_frames;       break;
-            default:                    frames = dots_frames;        break;
-        }
-
-        wstr[0] = frames[activity->frame];
-        wstr[1] = 0;
-
-        setcchar(&wch, wstr, widget->attrs, pair, NULL);
-        mvwadd_wch(widget->canvas, 0, 0, &wch);
-    }
-
-    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
-
-    return 0;
+    return vk_widget_redraw(VK_WIDGET(activity));
 }
 
 inline int
@@ -273,6 +227,109 @@ _vk_activity_dtor(vk_object_t *object)
 
     vk_object_demote(object, vk_widget_t);
     vk_widget_destroy(VK_WIDGET(object));
+
+    return 0;
+}
+
+/*
+    How many frames a style has.
+*/
+static int
+_vk_activity_frame_count(int style)
+{
+    switch(style)
+    {
+        case VK_ACTIVITY_SPINNER:   return spinner_count;
+        case VK_ACTIVITY_DOTS:      return dots_count;
+        case VK_ACTIVITY_CIRCLES:   return circles_count;
+        case VK_ACTIVITY_BAR:       return bar_count;
+        case VK_ACTIVITY_MOON:      return moon_count;
+        default:                    return spinner_count;
+    }
+}
+
+/*
+    Move the indicator on by one tick: count the tick, and when enough
+    have gone by, step to the next frame.
+
+    This is what vk_activity_run() does before it repaints.  It is kept
+    out of the redraw so that a repaint for any other reason -- a
+    resize, a container above the indicator being redrawn -- shows the
+    indicator where it is and does not move it.
+*/
+static void
+_vk_activity_advance(vk_activity_t *activity)
+{
+    /* a stopped indicator stays where it is */
+    if(!activity->running) return;
+
+    activity->tick_count++;
+
+    if(activity->tick_count >= activity->speed)
+    {
+        activity->tick_count = 0;
+        activity->frame = (activity->frame + 1)
+            % _vk_activity_frame_count(activity->style);
+    }
+}
+
+/*
+    The indicator's redraw: the frame it is on, or a blank while it is
+    stopped.  It only paints; see _vk_activity_advance.
+*/
+static int
+_vk_activity_redraw(vk_object_t *object)
+{
+    vk_activity_t   *activity = VK_ACTIVITY(object);
+    vk_widget_t     *widget = VK_WIDGET(object);
+    short           pair;
+    int             frame;
+
+    widget->_erase(widget);
+
+    /* apply the pair via the pair-safe path so bright (8-15) colors,
+       whose pair numbers exceed 255, are not truncated by COLOR_PAIR's
+       8-bit pair field. */
+    pair = vdk_color_pair(widget->fg, widget->bg);
+
+    if(!activity->running)
+    {
+        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
+        return 0;
+    }
+
+    /* the frame may be left over from a style with more of them */
+    frame = activity->frame % _vk_activity_frame_count(activity->style);
+
+    wattr_set(widget->canvas, widget->attrs, pair, NULL);
+
+    if(activity->style == VK_ACTIVITY_SPINNER)
+    {
+        mvwprintw(widget->canvas, 0, 0, "%s", spinner_frames[frame]);
+    }
+    else
+    {
+        const wchar_t   *frames;
+        cchar_t         wch;
+        wchar_t         wstr[2];
+
+        switch(activity->style)
+        {
+            case VK_ACTIVITY_DOTS:      frames = dots_frames;       break;
+            case VK_ACTIVITY_CIRCLES:   frames = circles_frames;    break;
+            case VK_ACTIVITY_BAR:       frames = bar_frames;        break;
+            case VK_ACTIVITY_MOON:      frames = moon_frames;       break;
+            default:                    frames = dots_frames;        break;
+        }
+
+        wstr[0] = frames[frame];
+        wstr[1] = 0;
+
+        setcchar(&wch, wstr, widget->attrs, pair, NULL);
+        mvwadd_wch(widget->canvas, 0, 0, &wch);
+    }
+
+    wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;
 }

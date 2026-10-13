@@ -391,6 +391,70 @@ main(void)
         vk_box_destroy(holder);
     }
 
+    /* an activity indicator is the same: it moves only when it is run */
+    {
+        static vdk_cell_t   was[2];
+        static vdk_cell_t   now[2];
+        vk_activity_t       *activity;
+        vk_box_t            *holder;
+        int                 i;
+
+        activity = vk_activity_create();
+        check("activity", "registers no event handlers of its own",
+            !has_handlers(activity));
+
+        vk_activity_set_style(activity, VK_ACTIVITY_SPINNER);
+        vk_activity_start(activity);
+        vk_activity_run(activity);
+        check("activity", "shows a frame once it is running",
+            has_content(VK_WIDGET(activity)));
+        snapshot(VK_WIDGET(activity), was);
+
+        for(i = 0; i < 5; i++) vk_activity_redraw(activity);
+        snapshot(VK_WIDGET(activity), now);
+        check("activity", "a redraw does not move it",
+            memcmp(was, now, sizeof(vdk_cell_t)) == 0);
+        check("activity", "and a redraw of a current one changes nothing",
+            is_current(VK_WIDGET(activity)));
+
+        /* its canvas is thrown away and made again: it repaints the
+           frame it was on, unasked */
+        vk_widget_recreate(VK_WIDGET(activity));
+        snapshot(VK_WIDGET(activity), now);
+        check("activity", "shows the same frame after a recreate, unasked",
+            memcmp(was, now, sizeof(vdk_cell_t)) == 0);
+
+        /* a change of style resizes it, and it paints the new style's
+           first frame without being run */
+        vk_activity_set_style(activity, VK_ACTIVITY_BAR);
+        check("activity", "paints itself after a change of style",
+            has_content(VK_WIDGET(activity)));
+        vk_activity_set_style(activity, VK_ACTIVITY_SPINNER);
+        vk_activity_run(activity);
+        snapshot(VK_WIDGET(activity), was);
+
+        /* nor does redrawing a container it sits in */
+        holder = vk_box_create(4, 1, VK_BOX_HORIZONTAL, 1);
+        vk_box_set_widget(holder, 0, VK_WIDGET(activity), VK_INHERIT_NONE);
+        for(i = 0; i < 5; i++) vk_box_redraw(holder);
+        snapshot(VK_WIDGET(activity), now);
+        check("activity", "nor does redrawing the box it is in",
+            memcmp(was, now, sizeof(vdk_cell_t)) == 0);
+
+        vk_activity_run(activity);
+        snapshot(VK_WIDGET(activity), now);
+        check("activity", "running it does",
+            memcmp(was, now, sizeof(vdk_cell_t)) != 0);
+
+        /* stopped, it is a blank, and running it leaves it one */
+        vk_activity_stop(activity);
+        vk_activity_run(activity);
+        check("activity", "stopped, it shows a blank",
+            !has_content(VK_WIDGET(activity)));
+
+        vk_box_destroy(holder);
+    }
+
     /* ---- types that hold others ---- */
 
     frame = vk_frame_create(20, 5);
