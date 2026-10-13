@@ -19,3 +19,10 @@ target_include_directories(test_redraw PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_S
 target_link_libraries(test_redraw vdk-static -lutil ${CURSES_LIBRARIES})
 
 add_test(NAME test_redraw COMMAND test_redraw)
+
+add_executable(test_inherit test_inherit.c)
+
+target_include_directories(test_inherit PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(test_inherit vdk-static -lutil ${CURSES_LIBRARIES})
+
+add_test(NAME test_inherit COMMAND test_inherit)

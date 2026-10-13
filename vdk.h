@@ -95,6 +95,32 @@ int             vdk_cells_read_row(WINDOW *win, int y, vdk_cell_t *cells,
 #define VK_STATE_FROZEN             (1UL << 3)
 #define VK_STATE_NORESIZE           (1UL << 7)
 #define VK_STATE_EXPAND             (1UL << 8)
+/* the widget takes this from the container it is in, each time the
+   container is redrawn, instead of keeping a value of its own */
+#define VK_STATE_INHERIT_FG         (1UL << 16)     // 65536
+#define VK_STATE_INHERIT_BG         (1UL << 17)     // 131072
+#define VK_STATE_INHERIT_ATTRS      (1UL << 18)     // 262144
+
+/*
+    Widget properties: the on / off things about how a widget behaves.
+    One is read or changed at a time with vk_widget_get_prop() and
+    vk_widget_set_prop(), which leave every other property alone.
+
+    VK_PROP_VISIBLE         it is shown
+    VK_PROP_FROZEN          it shows a snapshot and ignores repaints
+    VK_PROP_NORESIZE        requests to resize it are refused
+    VK_PROP_EXPAND          its container may grow it to fill spare room
+    VK_PROP_INHERIT_FG      its foreground follows its container's
+    VK_PROP_INHERIT_BG      its background follows its container's
+    VK_PROP_INHERIT_ATTRS   its text attributes follow its container's
+*/
+#define VK_PROP_VISIBLE             VK_STATE_VISIBLE
+#define VK_PROP_FROZEN              VK_STATE_FROZEN
+#define VK_PROP_NORESIZE            VK_STATE_NORESIZE
+#define VK_PROP_EXPAND              VK_STATE_EXPAND
+#define VK_PROP_INHERIT_FG          VK_STATE_INHERIT_FG
+#define VK_PROP_INHERIT_BG          VK_STATE_INHERIT_BG
+#define VK_PROP_INHERIT_ATTRS       VK_STATE_INHERIT_ATTRS
 
 /* frame / border styles */
 #define VK_BORDER_NONE               0
@@ -114,15 +140,33 @@ int             vdk_cells_read_row(WINDOW *win, int y, vdk_cell_t *cells,
 /* button relief styles (in addition to VK_BORDER_SINGLE / VK_BORDER_ASCII) */
 #define VK_BUTTON_BASIC             4
 
-/* Attach-time inheritance flags -- last arg of vk_box_set_widget,
- * vk_grid_set_widget, vk_frame_set_child, vk_window_set_child.  One-time
- * snapshot at attach: the selected value(s) of the container are copied
- * onto the child.  The container must already hold the desired value(s)
- * at attach time (attach top-down); the caller may override afterward. */
+/*
+    Inheritance flags -- the last argument of vk_box_set_widget,
+    vk_grid_set_widget, vk_frame_set_child and vk_window_set_child.
+    They say which of the container's colours and text attributes the
+    child is to follow.
+
+    Following is live (since 11.2.0): the container hands the values on
+    each time it is redrawn, so the order widgets are built in does not
+    matter and a later change to the container reaches the child.  A
+    child that follows is given the container's values at attach too.
+
+    VK_INHERIT_NONE     the child is left as it is
+    VK_INHERIT_FG       it follows the foreground
+    VK_INHERIT_BG       it follows the background
+    VK_INHERIT_ATTRS    it follows the text attributes
+    VK_INHERIT_AUTO     it follows whichever of the two colours it has
+                        not been given itself (vk_widget_set_colors)
+
+    vk_widget_set_colors() makes both colours the widget's own again,
+    and vk_widget_set_attrs() its attributes.  The same choices are the
+    properties VK_PROP_INHERIT_*, for changing them after the attach.
+*/
 #define VK_INHERIT_NONE             0u
 #define VK_INHERIT_FG               (1u << 0)
 #define VK_INHERIT_BG               (1u << 1)
 #define VK_INHERIT_ATTRS            (1u << 2)
+#define VK_INHERIT_AUTO             (1u << 3)       // 8
 #define VK_INHERIT_COLOR            (VK_INHERIT_FG | VK_INHERIT_BG)
 #define VK_INHERIT_ALL              (VK_INHERIT_FG | VK_INHERIT_BG | VK_INHERIT_ATTRS)
 
@@ -480,20 +524,43 @@ void            vk_widget_fill(vk_widget_t *widget, chtype ch);
 void            vk_widget_fill_pair(vk_widget_t *widget, wchar_t wch,
                     attr_t attrs, short pair);
 int             vk_widget_blit(vk_widget_t *widget);
+/* every property at once, as VK_STATE_* bits.  Prefer the two calls
+   below, which change one property and leave the rest alone. */
 uint32_t        vk_widget_get_state(vk_widget_t *widget);
 void            vk_widget_set_state(vk_widget_t *widget, uint32_t state);
-#define         vk_widget_freeze(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_FROZEN)
-#define         vk_widget_thaw(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) & ~VK_STATE_FROZEN)
+
+/* turn one property (a VK_PROP_* name) on or off.  Returns 0, or -1 for
+   a NULL widget or something that is not one property. */
+int             vk_widget_set_prop(vk_widget_t *widget, uint32_t prop,
+                    bool on);
+/* is the property on?  false for a NULL widget or an unknown property */
+bool            vk_widget_get_prop(vk_widget_t *widget, uint32_t prop);
+
+/* the properties by name */
 #define         vk_widget_show(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_VISIBLE)
+                    vk_widget_set_prop(w, VK_PROP_VISIBLE, true)
 #define         vk_widget_hide(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) & ~VK_STATE_VISIBLE)
+                    vk_widget_set_prop(w, VK_PROP_VISIBLE, false)
 #define         vk_widget_is_visible(w) \
-                    (vk_widget_get_state(w) & VK_STATE_VISIBLE)
+                    vk_widget_get_prop(w, VK_PROP_VISIBLE)
+#define         vk_widget_freeze(w) \
+                    vk_widget_set_prop(w, VK_PROP_FROZEN, true)
+#define         vk_widget_thaw(w) \
+                    vk_widget_set_prop(w, VK_PROP_FROZEN, false)
+#define         vk_widget_is_frozen(w) \
+                    vk_widget_get_prop(w, VK_PROP_FROZEN)
 #define         vk_widget_set_expand(w) \
-                    vk_widget_set_state(w, vk_widget_get_state(w) | VK_STATE_EXPAND)
+                    vk_widget_set_prop(w, VK_PROP_EXPAND, true)
+#define         vk_widget_clear_expand(w) \
+                    vk_widget_set_prop(w, VK_PROP_EXPAND, false)
+#define         vk_widget_is_expand(w) \
+                    vk_widget_get_prop(w, VK_PROP_EXPAND)
+#define         vk_widget_set_noresize(w) \
+                    vk_widget_set_prop(w, VK_PROP_NORESIZE, true)
+#define         vk_widget_clear_noresize(w) \
+                    vk_widget_set_prop(w, VK_PROP_NORESIZE, false)
+#define         vk_widget_is_noresize(w) \
+                    vk_widget_get_prop(w, VK_PROP_NORESIZE)
 int             vk_widget_move(vk_widget_t *widget, int x, int y);
 void            vk_widget_set_userptr(vk_widget_t *widget, void *ptr);
 void*           vk_widget_get_userptr(vk_widget_t *widget);

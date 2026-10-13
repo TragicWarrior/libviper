@@ -114,4 +114,32 @@ void    _vdk_cells_colors_baseline(void);
 */
 #define VDK_STATE_CHILDREN_CURRENT  (1UL << 31)     // 2147483648
 
+/*
+    Two more the library keeps for itself: the widget has been given a
+    foreground / a background of its own (vk_widget_set_colors).  It is
+    what VK_INHERIT_AUTO goes by -- a widget nobody has coloured follows
+    its container, one that has been coloured keeps what it was given.
+*/
+#define VDK_STATE_OWN_FG            (1UL << 29)     // 536870912
+#define VDK_STATE_OWN_BG            (1UL << 30)     // 1073741824
+
+/* every bit a program must not be able to change through
+   vk_widget_set_state */
+#define VDK_STATE_PRIVATE           (VDK_STATE_OWN_FG | VDK_STATE_OWN_BG \
+                                        | VDK_STATE_CHILDREN_CURRENT)
+
+/*
+    Colours and text attributes handed from a container to what it holds.
+
+      vdk_inherit_attach   -- `child` is being put in `container` with the
+                              given VK_INHERIT_* flags: note what it is to
+                              follow, and give it those values now
+      vdk_inherit_apply    -- give `child` whatever it follows.  called by
+                              the container's redraw for each child, so a
+                              change to the container reaches them
+*/
+void    vdk_inherit_attach(vk_widget_t *container, vk_widget_t *child,
+            uint32_t flags);
+void    vdk_inherit_apply(vk_widget_t *container, vk_widget_t *child);
+
 #endif  /* _VDK_PRIVATE_H_ */

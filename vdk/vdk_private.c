@@ -241,3 +241,47 @@ vdk_has_utf8(void)
 
     return true;
 }
+
+/* see vdk_private.h -- hand the container's values to a child that follows them. */
+void
+vdk_inherit_apply(vk_widget_t *container, vk_widget_t *child)
+{
+    if(container == NULL || child == NULL) return;
+
+    if(child->state & VK_STATE_INHERIT_FG) child->fg = container->fg;
+    if(child->state & VK_STATE_INHERIT_BG) child->bg = container->bg;
+    if(child->state & VK_STATE_INHERIT_ATTRS) child->attrs = container->attrs;
+}
+
+/* see vdk_private.h -- note what an attached child is to follow, and apply it. */
+void
+vdk_inherit_attach(vk_widget_t *container, vk_widget_t *child, uint32_t flags)
+{
+    uint32_t    follow = 0;
+
+    if(container == NULL || child == NULL) return;
+
+    /* what the caller asked for by name */
+    if(flags & VK_INHERIT_FG) follow |= VK_STATE_INHERIT_FG;
+    if(flags & VK_INHERIT_BG) follow |= VK_STATE_INHERIT_BG;
+    if(flags & VK_INHERIT_ATTRS) follow |= VK_STATE_INHERIT_ATTRS;
+
+    /* AUTO: each colour the child has not been given itself */
+    if(flags & VK_INHERIT_AUTO)
+    {
+        if(!(child->state & VDK_STATE_OWN_FG)) follow |= VK_STATE_INHERIT_FG;
+        if(!(child->state & VDK_STATE_OWN_BG)) follow |= VK_STATE_INHERIT_BG;
+    }
+
+    /* VK_INHERIT_NONE, or nothing left to follow: the child is left
+       exactly as it is */
+    if(follow == 0) return;
+
+    child->state |= follow;
+
+    /* a colour that follows is no longer the child's own */
+    if(follow & VK_STATE_INHERIT_FG) child->state &= ~VDK_STATE_OWN_FG;
+    if(follow & VK_STATE_INHERIT_BG) child->state &= ~VDK_STATE_OWN_BG;
+
+    vdk_inherit_apply(container, child);
+}

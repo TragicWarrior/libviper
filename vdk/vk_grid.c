@@ -273,18 +273,8 @@ vk_grid_set_widget(vk_grid_t *grid, int col, int row, vk_widget_t *widget, uint3
     {
         vk_widget_t *gw = VK_WIDGET(grid);
 
-        if(flags & VK_INHERIT_FG)
-        {
-            widget->fg = gw->fg;
-        }
-        if(flags & VK_INHERIT_BG)
-        {
-            widget->bg = gw->bg;
-        }
-        if(flags & VK_INHERIT_ATTRS)
-        {
-            widget->attrs = gw->attrs;
-        }
+        /* what the widget is to take from the grid, now and from then on */
+        vdk_inherit_attach(gw, widget, flags);
 
         container->add_widget(container, widget);
         vk_widget_set_surface(widget, gw->canvas);

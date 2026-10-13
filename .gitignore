@@ -37,3 +37,4 @@ Testing/
 
 # generated at configure time (pkg-config.pc.cmake)
 libviper.pc
+test/test_inherit
