@@ -1,3 +1,36 @@
+Version 12.0.0
+
+vdk
+* [Bryan Christ] Following the container's colours is the default; the
+  names from before 11 are gone; the header says its version.
+
+  This release changes what existing source means in two places, so
+  the library is libvdk.so.12 and everything built on it is rebuilt.
+
+  VK_INHERIT_AUTO is the default.  It is now 0, and VK_INHERIT_NONE is
+  a flag of its own.  A widget attached with no flags follows whichever
+  of its container's two colours it has not been given itself; a widget
+  that must stand alone is attached with VK_INHERIT_NONE.  A program
+  that names its flags behaves as before once rebuilt.  One that passes
+  a bare 0 used to get NONE and now gets AUTO: an uncoloured widget
+  attached that way takes its container's colours where it was black
+  on white.  Naming VK_INHERIT_FG, _BG or _ATTRS still says exactly
+  what is followed.
+
+  The names from before 11.0.0 are withdrawn: vk_<type>_update() (use
+  vk_<type>_redraw()) and vk_widget_draw() (use vk_widget_blit()).
+  11.x kept them as macros.  A program that still uses them stops at
+  compile time with an unknown name.
+
+  vdk.h says which release it belongs to: VDK_VERSION_MAJOR, _MINOR,
+  _PATCH, the text VDK_VERSION, and VDK_VERSION_AT_LEAST(major, minor,
+  patch).  A program can now refuse an older libviper with a message
+  of its own instead of failing on a missing name.  The numbers are
+  checked against the build's version at configure time, so the header
+  cannot drift from the library.
+
+  test_inherit covers the default and the version macros.
+
 Version 11.2.0
 
 vdk

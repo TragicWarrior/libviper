@@ -261,20 +261,23 @@ vdk_inherit_attach(vk_widget_t *container, vk_widget_t *child, uint32_t flags)
 
     if(container == NULL || child == NULL) return;
 
+    /* NONE: the child stands alone and is left exactly as it is */
+    if(flags & VK_INHERIT_NONE) return;
+
     /* what the caller asked for by name */
     if(flags & VK_INHERIT_FG) follow |= VK_STATE_INHERIT_FG;
     if(flags & VK_INHERIT_BG) follow |= VK_STATE_INHERIT_BG;
     if(flags & VK_INHERIT_ATTRS) follow |= VK_STATE_INHERIT_ATTRS;
 
-    /* AUTO: each colour the child has not been given itself */
-    if(flags & VK_INHERIT_AUTO)
+    /* AUTO, which is no flags at all: each colour the child has not
+       been given itself */
+    if(flags == VK_INHERIT_AUTO)
     {
         if(!(child->state & VDK_STATE_OWN_FG)) follow |= VK_STATE_INHERIT_FG;
         if(!(child->state & VDK_STATE_OWN_BG)) follow |= VK_STATE_INHERIT_BG;
     }
 
-    /* VK_INHERIT_NONE, or nothing left to follow: the child is left
-       exactly as it is */
+    /* nothing left to follow: the child is left as it is */
     if(follow == 0) return;
 
     child->state |= follow;

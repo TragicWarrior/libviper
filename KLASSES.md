@@ -599,8 +599,8 @@ surface it is attached to. It paints nothing. It is the widget slot
 
 The slots were `_update` (one per type, in each type's own struct) and
 `_draw` before 11.0.0, and the public calls `vk_<type>_update()` and
-`vk_widget_draw()`. Those names still compile: `vdk.h` defines each as
-a macro for the new one. They will be removed in a later release.
+`vk_widget_draw()`. 11.x kept those names as macros for the new ones;
+12.0.0 removed them.
 
 **Which types paint what.** A type either supplies a `redraw` or takes
 the one of the type it is built on. A type that supplies one decides for
@@ -692,7 +692,28 @@ alongside real function declarations so the API reads as a flat list.
 
 `vdk.h` is the single public header for VDK. It declares all VDK types,
 constants, cast macros, callback typedefs, function prototypes, and the
-color system API. VDK source files include `vdk.h` through their private
+color system API.
+
+It also says which release it belongs to (since 12.0.0):
+`VDK_VERSION_MAJOR`, `VDK_VERSION_MINOR`, `VDK_VERSION_PATCH`, the text
+`VDK_VERSION`, and `VDK_VERSION_AT_LEAST(major, minor, patch)` for a
+program that needs a release or newer:
+
+```c
+#ifndef VDK_VERSION_MAJOR
+#error "this program needs libviper 12.0.0 or newer"
+#elif !VDK_VERSION_AT_LEAST(12, 2, 0)
+#error "this program needs libviper 12.2.0 or newer"
+#endif
+```
+
+The `#ifndef` goes first and on its own line. A header from before
+12.0.0 defines none of these names, and the preprocessor reads the whole
+of an `#if`, so `!defined(...) || !VDK_VERSION_AT_LEAST(...)` is an error
+in itself there.
+
+The numbers are checked against the build's version when libviper is
+configured, so the header cannot drift from the library. VDK source files include `vdk.h` through their private
 headers and have no dependency on `viper.h`. Non-public VDK sources live
 in the `vdk/` subdirectory.
 
@@ -1424,15 +1445,21 @@ The last argument of the attach calls says what the child follows:
 
 | Flag | The child |
 |------|-----------|
-| `VK_INHERIT_NONE` | is left as it is |
-| `VK_INHERIT_FG`, `VK_INHERIT_BG`, `VK_INHERIT_COLOR` | follows that color, or both |
+| `VK_INHERIT_AUTO` | follows whichever of the two colors it has not been given itself. **The default**: it is 0 |
+| `VK_INHERIT_NONE` | is left as it is; it stands alone |
+| `VK_INHERIT_FG`, `VK_INHERIT_BG`, `VK_INHERIT_COLOR` | follows that color, or both, and nothing else |
 | `VK_INHERIT_ATTRS`, `VK_INHERIT_ALL` | follows the text attributes, or everything |
-| `VK_INHERIT_AUTO` | follows whichever of the two colors it has not been given itself |
+
+Since 12.0.0 `VK_INHERIT_AUTO` is the default, the value 0. (In 11.2.0
+`VK_INHERIT_NONE` was 0 and `AUTO` had to be asked for.) A program that
+names its flags is unaffected by the change of values once it is
+rebuilt.
 
 Rules:
 
 - **Use `VK_INHERIT_AUTO` unless there is a reason not to.** Color the
-  outermost widget and what is inside follows.
+  outermost widget and what is inside follows. `VK_INHERIT_NONE` is for
+  a widget that must keep the look it has whatever it is put in.
 - **`vk_widget_set_colors()` wins.** It makes both colors the widget's
   own, whether it is called before or after the attach, and
   `vk_widget_set_attrs()` does the same for attributes.

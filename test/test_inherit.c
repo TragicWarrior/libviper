@@ -331,6 +331,53 @@ main(void)
         colours(follower, COLOR_WHITE, COLOR_GREEN));
     vk_box_destroy(outer);
 
+    /* ---- AUTO is the default: it is what no flags at all means ---- */
+
+    outer = vk_box_create(20, 3, VK_BOX_VERTICAL, 3);
+    vk_widget_set_colors(VK_WIDGET(outer), COLOR_WHITE, COLOR_GREEN);
+    follower = vk_label_create(10);
+    loner = vk_label_create(10);
+    deep = vk_label_create(10);
+    vk_box_set_widget(outer, 0, VK_WIDGET(follower), 0);
+    vk_box_set_widget(outer, 1, VK_WIDGET(loner), VK_INHERIT_NONE);
+    vk_box_set_widget(outer, 2, VK_WIDGET(deep), VK_INHERIT_ATTRS);
+    vk_widget_set_attrs(VK_WIDGET(outer), A_BOLD);
+    vk_box_redraw(outer);
+    check("default", "VK_INHERIT_AUTO is 0", VK_INHERIT_AUTO == 0);
+    check("default", "attaching with 0 follows the container's colours",
+        colours(follower, COLOR_WHITE, COLOR_GREEN));
+    check("default", "but not its text attributes",
+        vk_widget_get_attrs(VK_WIDGET(follower)) == 0);
+    check("default", "VK_INHERIT_NONE has to be asked for, and stands alone",
+        VK_INHERIT_NONE != 0 && colours(loner, COLOR_BLACK, COLOR_WHITE));
+    check("default", "naming ATTRS follows attributes and nothing else",
+        vk_widget_get_attrs(VK_WIDGET(deep)) == A_BOLD
+        && colours(deep, COLOR_BLACK, COLOR_WHITE));
+    vk_box_destroy(outer);
+
+    /* ---- the header says which library it belongs to ---- */
+
+    {
+        char    text[32];
+
+        snprintf(text, sizeof(text), "%d.%d.%d", VDK_VERSION_MAJOR,
+            VDK_VERSION_MINOR, VDK_VERSION_PATCH);
+        check("version", "VDK_VERSION is the three numbers as text",
+            strcmp(text, VDK_VERSION) == 0);
+        check("version", "this release is at least itself",
+            VDK_VERSION_AT_LEAST(VDK_VERSION_MAJOR, VDK_VERSION_MINOR,
+                VDK_VERSION_PATCH));
+        check("version", "and at least any earlier one",
+            VDK_VERSION_AT_LEAST(11, 2, 0) && VDK_VERSION_AT_LEAST(12, 0, 0)
+            && VDK_VERSION_AT_LEAST(0, 99, 99));
+        check("version", "but not a later patch, minor or major",
+            !VDK_VERSION_AT_LEAST(VDK_VERSION_MAJOR, VDK_VERSION_MINOR,
+                VDK_VERSION_PATCH + 1)
+            && !VDK_VERSION_AT_LEAST(VDK_VERSION_MAJOR,
+                VDK_VERSION_MINOR + 1, 0)
+            && !VDK_VERSION_AT_LEAST(VDK_VERSION_MAJOR + 1, 0, 0));
+    }
+
     /* ---- a popup's parts follow the popup ---- */
 
     popup = vk_popup_create(40, 9, VK_BORDER_SINGLE, "Okay", "Cancel", NULL);
