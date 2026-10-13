@@ -101,43 +101,17 @@ vk_color_redraw(vk_color_t *color)
     return vk_grid_redraw(VK_GRID(color));
 }
 
-inline int
-vk_color_destroy(vk_color_t *color)
-{
-    if(color == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(color, vk_color_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(color)) != 0) return -1;
-
-    color->dtor(VK_OBJECT(color));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_color_destroy, vk_color_t)
 
 static int
 _vk_color_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_color_t  *color;
-    va_list     args;
-
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
 
     /* table takes (width, height, cols, rows, divider_style) -- no
        additional args here, vk_color is the leaf class */
-    VK_TABLE_KLASS->ctor(object, argp);
-
-    va_end(args);
+    VK_CHAIN_CTOR(object, argp, VK_TABLE_KLASS);
 
     color = VK_COLOR(object);
 

@@ -584,21 +584,13 @@ static int
 _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_widget_t *widget;
-    va_list     args;
     int         width;
     int         height;
 
-    if(object == NULL) return -1;
-
-    /*
-        if argp is set then we're being called by a superclass.
-        otherwise, we're being called directly.
-    */
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
+    /* a constructor is always handed its argument list (see
+       VK_CHAIN_CTOR); the widget's is the last in the chain, with no
+       parent constructor to pass it on to */
+    if(object == NULL || argp == NULL) return -1;
 
     // install our derived klass methods
     widget = VK_WIDGET(object);
@@ -625,8 +617,6 @@ _vk_widget_ctor(vk_object_t *object, va_list *argp, ...)
     // interate through var args after constructing base klass
     width = va_arg(*argp, int);
     height = va_arg(*argp, int);
-    va_end(args);
-
     if (width < 1)
     {
         width = 1;

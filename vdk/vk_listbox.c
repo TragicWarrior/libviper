@@ -702,48 +702,15 @@ vk_listbox_add_separator(vk_listbox_t *listbox, int style)
     return listbox->_add_separator(listbox, style);
 }
 
-inline int
-vk_listbox_destroy(vk_listbox_t *listbox)
-{
-    if(listbox == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(listbox)) != 0) return -1;
-
-    listbox->dtor(VK_OBJECT(listbox));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_listbox_destroy, vk_listbox_t)
 
 static int
 _vk_listbox_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_listbox_t        *listbox;
-    va_list             args;
 
-    if(object == NULL) return -1;
-
-    /*
-        if argp is set then we're being called by a superclass.
-        otherwise, we're being called directly.
-    */
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-
-        VK_WIDGET_KLASS->ctor(object, &args);
-        va_end(args);
-    }
-    else
-    {
-        VK_WIDGET_KLASS->ctor(object, argp);
-    }
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     // install our derived klass methods
     listbox = VK_LISTBOX(object);

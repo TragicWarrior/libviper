@@ -53,24 +53,13 @@ static int
 _vk_meter_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_meter_t  *meter;
-    va_list     args;
-
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
 
     /* the progress base consumes width, height, orientation, thickness */
-    VK_PROGRESS_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_PROGRESS_KLASS);
 
     meter = VK_METER(object);
 
     meter->threshold_count = 0;
-
-    va_end(args);
 
     meter->ctor = _vk_meter_ctor;
     meter->dtor = _vk_meter_dtor;
@@ -163,24 +152,5 @@ vk_meter_clear_thresholds(vk_meter_t *meter)
     return 0;
 }
 
-int
-vk_meter_destroy(vk_meter_t *meter)
-{
-    if(meter == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(meter, vk_meter_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(meter)) != 0) return -1;
-
-    /*
-        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
-        in vk_widget_destroy(), which frees the object.
-    */
-    meter->dtor(VK_OBJECT(meter));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_meter_destroy, vk_meter_t)

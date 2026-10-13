@@ -399,46 +399,20 @@ vk_filedialog_redraw(vk_filedialog_t *dialog)
     return vk_widget_redraw(VK_WIDGET(dialog));
 }
 
-inline int
-vk_filedialog_destroy(vk_filedialog_t *dialog)
-{
-    if(dialog == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(dialog)) != 0) return -1;
-
-    dialog->dtor(VK_OBJECT(dialog));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_filedialog_destroy, vk_filedialog_t)
 
 static int
 _vk_filedialog_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_filedialog_t *dialog;
-    va_list         args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_BOX_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_BOX_KLASS);
 
     dialog = VK_FILEDIALOG(object);
 
     dialog->style = va_arg(*argp, int);
     dialog->multiselect = (bool)va_arg(*argp, int);
-
-    va_end(args);
 
     dialog->path = NULL;
     dialog->exts = NULL;

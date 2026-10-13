@@ -17,6 +17,48 @@
 #define         vk_object_create(klass, ...) \
                     vk_object_construct(klass, __VA_ARGS__)
 
+/*
+    The two pieces of every klass that are the same but for a name.
+
+    VK_CHAIN_CTOR(object, argp, PARENT_KLASS)
+        the first statement of a constructor: refuse a NULL object or a
+        NULL argument list, then run the parent's constructor, which
+        takes the arguments that are its own off the front of the list.
+        What is left on the list afterwards belongs to this type, read
+        in order with  va_arg(*argp, type).
+
+        A constructor is always handed its argument list, by
+        vk_object_construct or by the constructor of a type built on
+        it.  It is never called with the arguments themselves, so it
+        has no va_start or va_end of its own.
+
+    VK_DEFINE_DESTROY(vk_gauge_destroy, vk_gauge_t)
+        the whole of a type's public destroy call: refuse NULL and any
+        object that is not exactly this type, announce the destruction
+        (VK_EVENT_ON_DESTROY, once, and not from one of the object's
+        own destroy handlers), run the destructor.  Returns 0 when the
+        object was destroyed and -1 when it was not.
+*/
+#define         VK_CHAIN_CTOR(object, argp, parent_klass) \
+                    do \
+                    { \
+                        if((object) == NULL || (argp) == NULL) return -1; \
+                        (parent_klass)->ctor((object), (argp)); \
+                    } \
+                    while(0)
+
+#define         VK_DEFINE_DESTROY(func, type) \
+                    inline int \
+                    func(type *object) \
+                    { \
+                        if(object == NULL) return -1; \
+                        if(!vk_object_assert(object, type)) return -1; \
+                        if(_vk_object_announce_destroy(VK_OBJECT(object)) != 0) \
+                            return -1; \
+                        object->dtor(VK_OBJECT(object)); \
+                        return 0; \
+                    }
+
 vk_object_t*    vk_object_construct(const void *klass, ...);
 
 #define         vk_object_assert(klass, type) \

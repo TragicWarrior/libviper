@@ -288,44 +288,15 @@ vk_menubar_reset(vk_menubar_t *menubar)
     return menubar->_reset(menubar);
 }
 
-inline int
-vk_menubar_destroy(vk_menubar_t *menubar)
-{
-    if(menubar == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(menubar, vk_menubar_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(menubar)) != 0) return -1;
-
-    menubar->dtor(VK_OBJECT(menubar));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_menubar_destroy, vk_menubar_t)
 
 static int
 _vk_menubar_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_menubar_t        *menubar;
-    va_list             args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-
-        VK_WIDGET_KLASS->ctor(object, &args);
-        va_end(args);
-    }
-    else
-    {
-        VK_WIDGET_KLASS->ctor(object, argp);
-    }
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     menubar = VK_MENUBAR(object);
 

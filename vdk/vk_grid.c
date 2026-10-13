@@ -407,46 +407,20 @@ vk_grid_redraw(vk_grid_t *grid)
     return vk_widget_redraw(VK_WIDGET(grid));
 }
 
-inline int
-vk_grid_destroy(vk_grid_t *grid)
-{
-    if(grid == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(grid, vk_grid_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(grid)) != 0) return -1;
-
-    grid->dtor(VK_OBJECT(grid));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_grid_destroy, vk_grid_t)
 
 static int
 _vk_grid_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_grid_t   *grid;
-    va_list     args;
     int         cols;
     int         rows;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_CONTAINER_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_CONTAINER_KLASS);
 
     cols = va_arg(*argp, int);
     rows = va_arg(*argp, int);
-
-    va_end(args);
 
     if(cols < 1) cols = 1;
     if(rows < 1) rows = 1;

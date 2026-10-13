@@ -50,20 +50,9 @@ static int
 _vk_graph_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_graph_t  *graph;
-    va_list     args;
-
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
 
     /* the widget base consumes width, height and creates the canvas */
-    VK_WIDGET_KLASS->ctor(object, argp);
-
-    va_end(args);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     graph = VK_GRAPH(object);
 
@@ -715,27 +704,8 @@ vk_graph_redraw(vk_graph_t *graph)
     return vk_widget_redraw(VK_WIDGET(graph));
 }
 
-int
-vk_graph_destroy(vk_graph_t *graph)
-{
-    if(graph == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(graph, vk_graph_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(graph)) != 0) return -1;
-
-    /*
-        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
-        in vk_widget_destroy(), which frees the object.
-    */
-    graph->dtor(VK_OBJECT(graph));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_graph_destroy, vk_graph_t)
 
 /* let go of the x-axis labels the graph holds: each label's text, then
    the array of them */

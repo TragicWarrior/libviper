@@ -831,23 +831,8 @@ _vk_screen_move(vk_screen_t *screen, const char *pty, const char *term,
     return 0;
 }
 
-inline int
-vk_screen_destroy(vk_screen_t *screen)
-{
-    if(screen == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(screen, vk_screen_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(screen)) != 0) return -1;
-
-    screen->dtor(VK_OBJECT(screen));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_screen_destroy, vk_screen_t)
 
 static int
 _vk_screen_ctor(vk_object_t *object, va_list *argp, ...)
