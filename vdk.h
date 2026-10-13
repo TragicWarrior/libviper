@@ -523,6 +523,12 @@ uint32_t        vk_widget_get_id(vk_widget_t *widget);
     has changed under the widget (a resize, or a move to another
     terminal), so nothing is left stale.
 
+    Redrawing a container (a window, frame, box, grid, and anything
+    built on them) redraws everything it holds first, to any depth.
+    After changing widgets inside a window, one vk_window_redraw() is
+    enough.  A redraw does not reach upward: redraw the outermost
+    widget that should show the change.
+
     Blit: the finished canvas is copied to where the widget sits, on the
     surface it is attached to.  It paints nothing.
 

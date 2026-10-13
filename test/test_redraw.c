@@ -11,6 +11,10 @@
     compares its canvas with what an explicit redraw at that size
     produces, then recreates it and compares again.
 
+    It also checks that redrawing a container repaints what it holds, to
+    any depth, without the container knowing what the types are: one of
+    the widgets in the tree is of a type defined here, in the test.
+
     Exit status 0 when every check passes.
 */
 
@@ -91,6 +95,122 @@ has_content(vk_widget_t *widget)
     for(i = 0; i < width * height; i++)
     {
         if(cells[i].ch != ' ' && cells[i].ch != 0) return 1;
+    }
+
+    return 0;
+}
+
+/*
+    A widget type the library has never heard of, written by the recipe
+    in KLASSES.md.  Its redraw writes a mark on its canvas and counts
+    how often it has been asked to paint.
+*/
+typedef struct _probe_s probe_t;
+
+struct _probe_s
+{
+    vk_widget_t     parent_klass;
+
+    int             (*ctor)     (vk_object_t *, va_list *, ...);
+    int             (*dtor)     (vk_object_t *);
+
+    int             redraws;
+};
+
+static int  _probe_ctor(vk_object_t *object, va_list *argp, ...);
+static int  _probe_dtor(vk_object_t *object);
+static int  _probe_redraw(vk_object_t *object);
+
+require_klass(VK_WIDGET_KLASS);
+
+declare_klass(PROBE_KLASS)
+{
+    .size = KLASS_SIZE(probe_t),
+    .name = KLASS_NAME(probe_t),
+    .ctor = _probe_ctor,
+    .dtor = _probe_dtor,
+    .parent = &VK_WIDGET_KLASS,
+    .redraw = _probe_redraw,
+};
+
+/* construct: the widget first, then what is the probe's own */
+static int
+_probe_ctor(vk_object_t *object, va_list *argp, ...)
+{
+    va_list args;
+
+    if(argp == NULL)
+    {
+        va_start(args, argp);
+        argp = &args;
+    }
+
+    VK_WIDGET_KLASS->ctor(object, argp);
+
+    va_end(args);
+
+    ((probe_t *)object)->ctor = _probe_ctor;
+    ((probe_t *)object)->dtor = _probe_dtor;
+
+    return 0;
+}
+
+/* destroy: nothing of its own to free, so demote and hand on */
+static int
+_probe_dtor(vk_object_t *object)
+{
+    if(!vk_object_assert(object, probe_t)) return -1;
+
+    vk_object_demote(object, vk_widget_t);
+    vk_widget_destroy(VK_WIDGET(object));
+
+    return 0;
+}
+
+/* paint: a mark, and count the call */
+static int
+_probe_redraw(vk_object_t *object)
+{
+    probe_t *probe = (probe_t *)object;
+
+    probe->redraws++;
+    mvwaddstr(VK_WIDGET(probe)->canvas, 0, 0, "probe");
+
+    return 0;
+}
+
+/* a new probe, `width` columns by one row */
+static probe_t*
+probe_create(int width)
+{
+    return (probe_t *)vk_object_create(PROBE_KLASS, width, 1);
+}
+
+/* is `text` somewhere on the widget's canvas? */
+static int
+shows(vk_widget_t *widget, const char *text)
+{
+    static vdk_cell_t   cells[200 * 60];
+    static char         line[201];
+    int                 width = 0, height = 0;
+    int                 x, y;
+
+    vk_widget_get_metrics(widget, &width, &height);
+    if(width > 200 || height > 60) return 0;
+
+    snapshot(widget, cells);
+
+    for(y = 0; y < height; y++)
+    {
+        for(x = 0; x < width; x++)
+        {
+            uint32_t ch = cells[y * width + x].ch;
+
+            line[x] = (ch >= ' ' && ch < 127) ? (char)ch : ' ';
+        }
+        line[width] = '\0';
+
+        if(strstr(line, text) != NULL) return 1;
     }
 
     return 0;
@@ -228,8 +348,8 @@ main(void)
     vk_widget_set_colors(VK_WIDGET(filler), COLOR_WHITE, COLOR_BLUE);
     exercise("filler", filler, 6, 3, 0);
 
-    /* a marquee's redraw also moves its text along, so two redraws in
-       a row are not expected to match: it is only checked for running */
+    /* a marquee moves only when it is run: a repaint for any other
+       reason shows it where it is */
     marquee = vk_marquee_create(10);
     vk_marquee_set_text(marquee, "scrolling text that is too long to fit");
     check("marquee", "registers no event handlers of its own",
@@ -239,6 +359,37 @@ main(void)
         && vk_widget_recreate(VK_WIDGET(marquee)) == 0);
     check("marquee", "shows its contents after both, unasked",
         has_content(VK_WIDGET(marquee)));
+    {
+        static vdk_cell_t   was[16];
+        static vdk_cell_t   now[16];
+        vk_box_t            *holder;
+        int                 i;
+
+        vk_marquee_set_direction(marquee, VK_SCROLL_LOOP);
+        vk_marquee_set_speed(marquee, 1);
+        vk_marquee_run(marquee);
+        snapshot(VK_WIDGET(marquee), was);
+
+        for(i = 0; i < 5; i++) vk_widget_redraw(VK_WIDGET(marquee));
+        snapshot(VK_WIDGET(marquee), now);
+        check("marquee", "a redraw does not move it",
+            memcmp(was, now, sizeof(was)) == 0);
+
+        /* nor does redrawing a container it sits in */
+        holder = vk_box_create(16, 1, VK_BOX_HORIZONTAL, 1);
+        vk_box_set_widget(holder, 0, VK_WIDGET(marquee), VK_INHERIT_NONE);
+        for(i = 0; i < 5; i++) vk_box_redraw(holder);
+        snapshot(VK_WIDGET(marquee), now);
+        check("marquee", "nor does redrawing the box it is in",
+            memcmp(was, now, sizeof(was)) == 0);
+
+        vk_marquee_run(marquee);
+        snapshot(VK_WIDGET(marquee), now);
+        check("marquee", "running it does",
+            memcmp(was, now, sizeof(was)) != 0);
+
+        vk_box_destroy(holder);
+    }
 
     /* ---- types that hold others ---- */
 
@@ -313,7 +464,112 @@ main(void)
             && VK_WINDOW_KLASS->redraw != NULL
             && VK_POPUP_KLASS->redraw != NULL);
         check("klass", "one that names none has its parent's",
-            VK_CONTAINER_KLASS->redraw == VK_WIDGET_KLASS->redraw);
+            VK_POPUP_KLASS->redraw == VK_WINDOW_KLASS->redraw);
+        check("klass", "a container has a redraw of its own",
+            VK_CONTAINER_KLASS->redraw != VK_WIDGET_KLASS->redraw);
+        vk_popup_destroy(popup);
+    }
+
+    /* ---- redrawing a container repaints what it holds ---- */
+    {
+        vk_window_t *top;
+        vk_box_t    *outer;
+        vk_box_t    *inner_box;
+        vk_frame_t  *border;
+        vk_grid_t   *cells;
+        vk_label_t  *deep;
+        vk_label_t  *in_grid;
+        vk_listbox_t *list;
+        probe_t     *probe;
+        vk_popup_t  *popup;
+        vk_label_t  *message;
+        int         before;
+
+        /* window > box > (label, box > (frame > listbox, probe)) */
+        top = vk_window_create(50, 14);
+        outer = vk_box_create(48, 12, VK_BOX_VERTICAL, 2);
+        inner_box = vk_box_create(48, 8, VK_BOX_HORIZONTAL, 2);
+        border = vk_frame_create(20, 6);
+        list = vk_listbox_create(18, 4);
+        deep = vk_label_create(20);
+        probe = probe_create(10);
+
+        vk_listbox_add_item(list, "one", NULL, NULL);
+        vk_label_set_text(deep, "before");
+        vk_frame_set_child(border, VK_WIDGET(list), VK_INHERIT_NONE);
+        vk_box_set_widget(inner_box, 0, VK_WIDGET(border), VK_INHERIT_NONE);
+        vk_box_set_widget(inner_box, 1, VK_WIDGET(probe), VK_INHERIT_NONE);
+        vk_box_set_widget(outer, 0, VK_WIDGET(deep), VK_INHERIT_NONE);
+        vk_box_set_widget(outer, 1, VK_WIDGET(inner_box), VK_INHERIT_NONE);
+        vk_window_set_child(top, VK_WIDGET(outer), VK_INHERIT_NONE);
+
+        /* nothing below the window has been painted by hand */
+        vk_window_redraw(top);
+        check("tree", "one redraw of the window paints the whole tree",
+            shows(VK_WIDGET(top), "before") && shows(VK_WIDGET(top), "one")
+            && shows(VK_WIDGET(top), "probe"));
+
+        /* change two widgets at different depths; repaint only the top */
+        vk_label_set_text(deep, "after");
+        vk_listbox_add_item(list, "two", NULL, NULL);
+        vk_window_redraw(top);
+        check("tree", "a changed child shows after redrawing only the window",
+            shows(VK_WIDGET(top), "after") && !shows(VK_WIDGET(top), "before"));
+        check("tree", "so does one three containers down",
+            shows(VK_WIDGET(top), "two"));
+
+        /* the container never learned what a probe is */
+        before = probe->redraws;
+        vk_window_redraw(top);
+        check("tree", "a type the library does not know is repainted too",
+            probe->redraws == before + 1);
+
+        /* a resize reaches the probe through three containers, each of
+           which is resized and repainted in turn: the probe is painted
+           for its own resize and not once more for every level */
+        before = probe->redraws;
+        vk_widget_resize(VK_WIDGET(top), 60, 16);
+        check("tree", "a resize paints a deep widget once, not once a level",
+            probe->redraws - before <= 1);
+        check("tree", "and the tree is current afterwards",
+            shows(VK_WIDGET(top), "after") && shows(VK_WIDGET(top), "two")
+            && is_current(VK_WIDGET(top)));
+
+        /* a redraw part of the way down reaches only what is below it */
+        before = probe->redraws;
+        vk_frame_redraw(border);
+        check("tree", "redrawing a sibling branch leaves the others alone",
+            probe->redraws == before);
+
+        /* a redraw of something already current changes nothing */
+        check("tree", "redrawing a current tree changes nothing",
+            is_current(VK_WIDGET(top)));
+
+        vk_window_destroy(top);
+
+        /* a grid, and a table through it */
+        cells = vk_grid_create(40, 6, 2, 2);
+        in_grid = vk_label_create(12);
+        vk_label_set_text(in_grid, "old cell");
+        vk_grid_set_widget(cells, 0, 0, VK_WIDGET(in_grid), VK_INHERIT_NONE);
+        vk_grid_redraw(cells);
+        vk_label_set_text(in_grid, "new cell");
+        vk_grid_redraw(cells);
+        check("tree", "a grid repaints what is in its cells",
+            shows(VK_WIDGET(cells), "new cell"));
+        vk_grid_destroy(cells);
+
+        /* a popup's parts are ordinary children now */
+        popup = vk_popup_create(40, 9, VK_BORDER_SINGLE, "Okay", NULL);
+        message = vk_label_create(30);
+        vk_label_set_text(message, "first message");
+        vk_popup_set_client(popup, VK_WIDGET(message));
+        vk_popup_redraw(popup);
+        vk_label_set_text(message, "second message");
+        vk_popup_redraw(popup);
+        check("tree", "a popup repaints its client and its buttons",
+            shows(VK_WIDGET(popup), "second message")
+            && shows(VK_WIDGET(popup), "Okay"));
         vk_popup_destroy(popup);
     }
 

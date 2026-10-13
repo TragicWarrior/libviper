@@ -33,6 +33,9 @@ _vk_widget_erase(vk_widget_t *widget);
 static int
 _vk_widget_redraw(vk_object_t *object);
 
+static int
+_vk_widget_redraw_self(vk_widget_t *widget);
+
 require_klass(VK_OBJECT_KLASS);
 
 /* process-lifetime widget ids.  0 is reserved (null getter / unset). */
@@ -201,6 +204,25 @@ vk_widget_redraw(vk_widget_t *widget)
 }
 
 /*
+    Repaint a widget whose children are known to be current.  A resize
+    and a recreate both end with this: each child has just been through
+    the same and repainted itself, so a container among them copies its
+    children in without repainting them all again (which, down a deep
+    tree, would paint the innermost widget once per level).
+*/
+static int
+_vk_widget_redraw_self(vk_widget_t *widget)
+{
+    int retval;
+
+    widget->state |= VDK_STATE_CHILDREN_CURRENT;
+    retval = vk_widget_redraw(widget);
+    widget->state &= ~VDK_STATE_CHILDREN_CURRENT;
+
+    return retval;
+}
+
+/*
     The redraw of a plain widget: it has no contents of its own to
     paint, so there is nothing to do.  It is here so that every widget
     klass has a redraw, and a klass can always call its parent's.
@@ -288,8 +310,9 @@ vk_widget_resize(vk_widget_t *widget, int width, int height)
 
     if(widget->_layout != NULL) widget->_layout(widget);
 
-    /* a widget with no canvas (a deck) has nothing to repaint */
-    if(widget->canvas != NULL) vk_widget_redraw(widget);
+    /* a widget with no canvas (a deck) has nothing to repaint.  what
+       the widget holds was resized, and so repainted, by _layout */
+    if(widget->canvas != NULL) _vk_widget_redraw_self(widget);
 
     /* only now is anyone else told: the widget is resized and painted */
     vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RESIZE);
@@ -390,8 +413,9 @@ vk_widget_recreate(vk_widget_t *widget)
     */
     vdk_scroller_recreate(widget);
 
-    /* a widget with no canvas (a deck) has nothing to repaint */
-    if(widget->canvas != NULL) vk_widget_redraw(widget);
+    /* a widget with no canvas (a deck) has nothing to repaint.  what
+       the widget holds was recreated, and so repainted, by _recreate */
+    if(widget->canvas != NULL) _vk_widget_redraw_self(widget);
 
     /* only now is anyone else told */
     vk_object_emit(VK_OBJECT(widget), VK_EVENT_ON_RECREATE);

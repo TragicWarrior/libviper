@@ -17,6 +17,9 @@ _vk_marquee_dtor(vk_object_t *object);
 static int
 _vk_marquee_redraw(vk_object_t *object);
 
+static void
+_vk_marquee_advance(vk_marquee_t *marquee);
+
 require_klass(VK_LABEL_KLASS);
 
 declare_klass(VK_MARQUEE_KLASS)
@@ -129,6 +132,9 @@ vk_marquee_run(vk_marquee_t *marquee)
 {
     if(marquee == NULL) return -1;
 
+    /* one tick on, then show it.  only this moves the marquee */
+    _vk_marquee_advance(marquee);
+
     return vk_widget_redraw(VK_WIDGET(VK_LABEL(marquee)));
 }
 
@@ -209,6 +215,123 @@ _vk_marquee_dtor(vk_object_t *object)
     return 0;
 }
 
+/*
+    Move the marquee on by one tick: count the tick, and when enough
+    have gone by, step the text one column (or come out of a pause).
+
+    This is what vk_marquee_run() does before it repaints.  It is kept
+    out of the redraw so that a repaint for any other reason -- a
+    resize, a container above the marquee being redrawn -- shows the
+    marquee where it is and does not move it.
+*/
+static void
+_vk_marquee_advance(vk_marquee_t *marquee)
+{
+    vk_label_t  *label = VK_LABEL(marquee);
+    vk_widget_t *widget = VK_WIDGET(marquee);
+    int         text_len;
+
+    if(label->text == NULL) return;
+
+    text_len = strlen(label->text);
+
+    /* text that fits does not scroll */
+    if(text_len <= widget->width) return;
+
+    if(marquee->direction == VK_SCROLL_LOOP)
+    {
+        wchar_t *wtext;
+        int     wlen;
+        int     period;
+
+        /* the loop runs over characters, not bytes, plus a gap of 3 */
+        wtext = malloc((text_len + 1) * sizeof(wchar_t));
+        if(wtext == NULL) return;
+
+        wlen = mbstowcs(wtext, label->text, text_len + 1);
+        free(wtext);
+
+        if(wlen < 0) wlen = 0;
+
+        period = wlen + 3;
+
+        marquee->tick_count++;
+
+        if(marquee->tick_count >= marquee->scroll_interval)
+        {
+            marquee->tick_count = 0;
+            marquee->scroll_offset++;
+
+            if(marquee->scroll_offset >= period)
+                marquee->scroll_offset = 0;
+        }
+
+        return;
+    }
+
+    if(!marquee->stopped)
+    {
+        if(marquee->paused)
+        {
+            marquee->tick_count++;
+
+            if(marquee->tick_count >= marquee->pause_duration)
+            {
+                marquee->paused = false;
+                marquee->tick_count = 0;
+            }
+        }
+        else
+        {
+            marquee->tick_count++;
+
+            if(marquee->tick_count >= marquee->scroll_interval)
+            {
+                marquee->tick_count = 0;
+
+                if(marquee->direction == VK_SCROLL_LEFT)
+                {
+                    marquee->scroll_offset++;
+
+                    if(marquee->scroll_offset > text_len - widget->width)
+                    {
+                        if(marquee->repeat)
+                        {
+                            marquee->scroll_offset = 0;
+                            marquee->paused = true;
+                            marquee->tick_count = 0;
+                        }
+                        else
+                        {
+                            marquee->scroll_offset = text_len - widget->width;
+                            marquee->stopped = true;
+                        }
+                    }
+                }
+                else
+                {
+                    marquee->scroll_offset--;
+
+                    if(marquee->scroll_offset < 0)
+                    {
+                        if(marquee->repeat)
+                        {
+                            marquee->scroll_offset = text_len - widget->width;
+                            marquee->paused = true;
+                            marquee->tick_count = 0;
+                        }
+                        else
+                        {
+                            marquee->scroll_offset = 0;
+                            marquee->stopped = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 static int
 _vk_marquee_redraw(vk_object_t *object)
 {
@@ -276,17 +399,6 @@ _vk_marquee_redraw(vk_object_t *object)
 
         period = wlen + 3;
 
-        marquee->tick_count++;
-
-        if(marquee->tick_count >= marquee->scroll_interval)
-        {
-            marquee->tick_count = 0;
-            marquee->scroll_offset++;
-
-            if(marquee->scroll_offset >= period)
-                marquee->scroll_offset = 0;
-        }
-
         wattr_set(widget->canvas, widget->attrs, pair, NULL);
 
         for(i = 0; i < widget->width; i++)
@@ -310,71 +422,15 @@ _vk_marquee_redraw(vk_object_t *object)
         return 0;
     }
 
-    if(!marquee->stopped)
-    {
-        if(marquee->paused)
-        {
-            marquee->tick_count++;
-
-            if(marquee->tick_count >= marquee->pause_duration)
-            {
-                marquee->paused = false;
-                marquee->tick_count = 0;
-            }
-        }
-        else
-        {
-            marquee->tick_count++;
-
-            if(marquee->tick_count >= marquee->scroll_interval)
-            {
-                marquee->tick_count = 0;
-
-                if(marquee->direction == VK_SCROLL_LEFT)
-                {
-                    marquee->scroll_offset++;
-
-                    if(marquee->scroll_offset > text_len - widget->width)
-                    {
-                        if(marquee->repeat)
-                        {
-                            marquee->scroll_offset = 0;
-                            marquee->paused = true;
-                            marquee->tick_count = 0;
-                        }
-                        else
-                        {
-                            marquee->scroll_offset = text_len - widget->width;
-                            marquee->stopped = true;
-                        }
-                    }
-                }
-                else
-                {
-                    marquee->scroll_offset--;
-
-                    if(marquee->scroll_offset < 0)
-                    {
-                        if(marquee->repeat)
-                        {
-                            marquee->scroll_offset = text_len - widget->width;
-                            marquee->paused = true;
-                            marquee->tick_count = 0;
-                        }
-                        else
-                        {
-                            marquee->scroll_offset = 0;
-                            marquee->stopped = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
+    /* the position may be left over from a wider text or a narrower
+       canvas: never start past the last full window of text */
+    x = marquee->scroll_offset;
+    if(x > text_len - widget->width) x = text_len - widget->width;
+    if(x < 0) x = 0;
 
     wattr_set(widget->canvas, widget->attrs, pair, NULL);
     mvwprintw(widget->canvas, 0, 0, "%.*s",
-        widget->width, label->text + marquee->scroll_offset);
+        widget->width, label->text + x);
     wattr_set(widget->canvas, A_NORMAL, 0, NULL);
 
     return 0;

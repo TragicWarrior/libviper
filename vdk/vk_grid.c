@@ -611,6 +611,10 @@ _vk_grid_redraw(vk_object_t *object)
 
     if(grid == NULL) return -1;
 
+    /* what it holds repaints itself first, so that what is copied in
+       below is current */
+    VK_CONTAINER_KLASS->redraw(object);
+
     widget = VK_WIDGET(grid);
     widget->_erase(widget);
 

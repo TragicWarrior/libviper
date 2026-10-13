@@ -1,3 +1,45 @@
+Version 11.1.0
+
+vdk
+* [Bryan Christ] Redrawing a container redraws what it holds.
+
+  A window, frame, box or grid only copied its children's canvases in
+  when it was redrawn.  A widget that had changed had to be redrawn by
+  hand first, then each container above it in turn, innermost first;
+  redrawing just the window showed the old contents.
+
+  Now a container's redraw repaints everything it holds, to any depth,
+  and then itself.  Change any number of widgets in a window and call
+  vk_window_redraw() once.
+
+  It is done in one place: vk_container_t has a redraw that walks its
+  child list and calls vk_widget_redraw() on each child.  A container
+  knows nothing about the types it holds, so a new widget type needs no
+  mention anywhere.  Frame, window, box and grid call it first, then
+  paint themselves.  The popup and the file dialog no longer repaint
+  their parts by hand and have no redraw of their own.
+
+  The repaint that follows a resize or a recreate does not walk down a
+  second time, since every child has just repainted itself.  A widget
+  six containers down is painted once per resize, as before.
+
+  What a program may notice:
+  - Nothing breaks.  Redrawing a child and then its container still
+    works; the child is painted twice, and the extra calls can go.
+  - A redraw of a window now costs a repaint of the whole tree in it.
+    Measured on a window holding nested boxes: 0.01 ms before, 0.14 to
+    0.41 ms at one to six levels.  A resize costs what it did.
+  - Only vk_marquee_run() moves a marquee.  Every redraw used to count
+    as a tick, so a marquee also moved when it was resized, and would
+    now have moved each time a container above it was redrawn.  The
+    step is separate from the painting; a redraw shows the marquee
+    where it is.
+
+  No rebuild is needed: the library is still libvdk.so.11.
+
+  test_redraw covers it, with a widget type defined in the test that
+  the library has never seen.
+
 Version 11.0.0
 
 vdk
