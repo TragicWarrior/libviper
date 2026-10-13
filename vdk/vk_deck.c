@@ -244,40 +244,16 @@ vk_deck_hit_test(vk_deck_t *deck, int x, int y)
     return NULL;
 }
 
-inline int
-vk_deck_destroy(vk_deck_t *deck)
-{
-    if(deck == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(deck, vk_deck_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(deck)) != 0) return -1;
-
-    deck->dtor(VK_OBJECT(deck));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_deck_destroy, vk_deck_t)
 
 static int
 _vk_deck_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_deck_t   *deck;
     vk_widget_t *widget;
-    va_list     args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WIDGET_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     deck = VK_DECK(object);
     widget = VK_WIDGET(deck);

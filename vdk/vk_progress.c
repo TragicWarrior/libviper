@@ -62,25 +62,14 @@ static int
 _vk_progress_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_progress_t   *progress;
-    va_list         args;
-
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
 
     /* the widget base consumes width, height and creates the canvas */
-    VK_WIDGET_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     progress = VK_PROGRESS(object);
 
     progress->orientation = va_arg(*argp, int);
     progress->thickness   = va_arg(*argp, int);
-
-    va_end(args);
 
     progress->style        = VK_PROGRESS_UNICODE;
     progress->relief       = 0;
@@ -502,24 +491,5 @@ vk_progress_redraw(vk_progress_t *progress)
     return vk_widget_redraw(VK_WIDGET(progress));
 }
 
-int
-vk_progress_destroy(vk_progress_t *progress)
-{
-    if(progress == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(progress, vk_progress_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(progress)) != 0) return -1;
-
-    /*
-        run the class dtor, as vk_label_destroy() does.  the dtor chain ends
-        in vk_widget_destroy(), which frees the object.
-    */
-    progress->dtor(VK_OBJECT(progress));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_progress_destroy, vk_progress_t)

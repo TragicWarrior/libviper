@@ -197,39 +197,15 @@ vk_dropdown_redraw(vk_dropdown_t *dropdown)
     return vk_widget_redraw(VK_WIDGET(VK_LISTBOX(dropdown)));
 }
 
-inline int
-vk_dropdown_destroy(vk_dropdown_t *dropdown)
-{
-    if(dropdown == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(dropdown, vk_dropdown_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(dropdown)) != 0) return -1;
-
-    dropdown->dtor(VK_OBJECT(dropdown));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_dropdown_destroy, vk_dropdown_t)
 
 static int
 _vk_dropdown_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_dropdown_t   *dropdown;
-    va_list         args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_LISTBOX_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_LISTBOX_KLASS);
 
     dropdown = VK_DROPDOWN(object);
 
@@ -239,8 +215,6 @@ _vk_dropdown_ctor(vk_object_t *object, va_list *argp, ...)
     dropdown->collapsed_height = 1;
     dropdown->popup = NULL;
     dropdown->popup_listbox = NULL;
-
-    va_end(args);
 
     dropdown->ctor = _vk_dropdown_ctor;
     dropdown->dtor = _vk_dropdown_dtor;

@@ -29,9 +29,9 @@
     error in itself where the macro does not exist.
 */
 #define VDK_VERSION_MAJOR           12
-#define VDK_VERSION_MINOR           2
-#define VDK_VERSION_PATCH           1
-#define VDK_VERSION                 "12.2.1"
+#define VDK_VERSION_MINOR           3
+#define VDK_VERSION_PATCH           0
+#define VDK_VERSION                 "12.3.0"
 
 #define VDK_VERSION_AT_LEAST(major, minor, patch) \
     ((VDK_VERSION_MAJOR > (major)) \

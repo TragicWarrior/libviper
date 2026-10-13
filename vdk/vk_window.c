@@ -95,44 +95,15 @@ vk_window_set_decorate(vk_window_t *window, VkWindowDecorateFunc func,
     return 0;
 }
 
-inline int
-vk_window_destroy(vk_window_t *window)
-{
-    if(window == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(window, vk_window_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(window)) != 0) return -1;
-
-    window->dtor(VK_OBJECT(window));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_window_destroy, vk_window_t)
 
 static int
 _vk_window_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_window_t *window;
-    va_list     args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-
-        VK_FRAME_KLASS->ctor(object, &args);
-        va_end(args);
-    }
-    else
-    {
-        VK_FRAME_KLASS->ctor(object, argp);
-    }
+    VK_CHAIN_CTOR(object, argp, VK_FRAME_KLASS);
 
     window = VK_WINDOW(object);
 

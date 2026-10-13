@@ -164,46 +164,20 @@ vk_selectbox_uncheck_all(vk_selectbox_t *selectbox)
     return 0;
 }
 
-inline int
-vk_selectbox_destroy(vk_selectbox_t *selectbox)
-{
-    if(selectbox == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(selectbox, vk_selectbox_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(selectbox)) != 0) return -1;
-
-    selectbox->dtor(VK_OBJECT(selectbox));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_selectbox_destroy, vk_selectbox_t)
 
 static int
 _vk_selectbox_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_selectbox_t  *selectbox;
-    va_list         args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_LISTBOX_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_LISTBOX_KLASS);
 
     selectbox = VK_SELECTBOX(object);
 
     selectbox->mode = va_arg(*argp, int);
     selectbox->style = VK_BORDER_SINGLE;
-
-    va_end(args);
 
     selectbox->ctor = _vk_selectbox_ctor;
     selectbox->dtor = _vk_selectbox_dtor;

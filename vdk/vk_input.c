@@ -287,41 +287,15 @@ vk_input_redraw(vk_input_t *input)
     return vk_widget_redraw(VK_WIDGET(input));
 }
 
-inline int
-vk_input_destroy(vk_input_t *input)
-{
-    if(input == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(input, vk_input_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(input)) != 0) return -1;
-
-    input->dtor(VK_OBJECT(input));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_input_destroy, vk_input_t)
 
 static int
 _vk_input_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_input_t  *input;
-    va_list     args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WIDGET_KLASS->ctor(object, argp);
-
-    va_end(args);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     input = VK_INPUT(object);
 

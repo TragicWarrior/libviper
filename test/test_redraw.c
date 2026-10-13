@@ -137,17 +137,7 @@ declare_klass(PROBE_KLASS)
 static int
 _probe_ctor(vk_object_t *object, va_list *argp, ...)
 {
-    va_list args;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WIDGET_KLASS->ctor(object, argp);
-
-    va_end(args);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     ((probe_t *)object)->ctor = _probe_ctor;
     ((probe_t *)object)->dtor = _probe_dtor;
@@ -178,6 +168,9 @@ _probe_redraw(vk_object_t *object)
 
     return 0;
 }
+
+/* the probe's public destroy call, whole */
+static VK_DEFINE_DESTROY(probe_destroy, probe_t)
 
 /* a new probe, `width` columns by one row */
 static probe_t*
@@ -694,6 +687,28 @@ main(void)
             cells[0].ch == (uint32_t)'a');
 
         vk_widget_destroy(plain);
+    }
+
+    /* ---- the two klass macros, on a type the library does not know ---- */
+    {
+        probe_t     *made;
+        vk_label_t  *other;
+
+        made = probe_create(8);
+        check("macros", "VK_CHAIN_CTOR built a working widget",
+            made != NULL && vk_widget_redraw(VK_WIDGET(made)) == 0
+            && made->redraws == 1);
+        check("macros", "a constructor refuses a NULL argument list",
+            VK_OBJECT(made)->ctor(VK_OBJECT(made), NULL) == -1);
+
+        other = vk_label_create(8);
+        check("macros", "VK_DEFINE_DESTROY refuses NULL",
+            probe_destroy(NULL) == -1);
+        check("macros", "and an object of another type",
+            probe_destroy((probe_t *)other) == -1);
+        check("macros", "and destroys its own",
+            probe_destroy(made) == 0);
+        vk_label_destroy(other);
     }
 
     /* ---- arranging without painting ---- */

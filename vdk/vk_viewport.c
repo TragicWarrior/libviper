@@ -142,23 +142,8 @@ vk_viewport_redraw(vk_viewport_t *vp)
     return vk_widget_redraw(VK_WIDGET(vp));
 }
 
-inline int
-vk_viewport_destroy(vk_viewport_t *vp)
-{
-    if(vp == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(vp, vk_viewport_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(vp)) != 0) return -1;
-
-    vp->dtor(VK_OBJECT(vp));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_viewport_destroy, vk_viewport_t)
 
 /*
     Clamp scroll_row / scroll_col into [0, max] given the source
@@ -282,22 +267,8 @@ static int
 _vk_viewport_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_viewport_t   *vp;
-    va_list         args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-
-        VK_WIDGET_KLASS->ctor(object, &args);
-        va_end(args);
-    }
-    else
-    {
-        VK_WIDGET_KLASS->ctor(object, argp);
-    }
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     vp = VK_VIEWPORT(object);
 

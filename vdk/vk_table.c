@@ -107,46 +107,20 @@ vk_table_redraw(vk_table_t *table)
     return vk_grid_redraw(VK_GRID(table));
 }
 
-inline int
-vk_table_destroy(vk_table_t *table)
-{
-    if(table == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(table, vk_table_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(table)) != 0) return -1;
-
-    table->dtor(VK_OBJECT(table));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_table_destroy, vk_table_t)
 
 static int
 _vk_table_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_table_t  *table;
     vk_grid_t   *grid;
-    va_list     args;
     int         divider_style;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
     /* grid takes (width, height, cols, rows) -- we add divider_style */
-    VK_GRID_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_GRID_KLASS);
 
     divider_style = va_arg(*argp, int);
-
-    va_end(args);
 
     table = VK_TABLE(object);
     grid = VK_GRID(object);

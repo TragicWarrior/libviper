@@ -40,41 +40,15 @@ vk_filler_create(void)
     return filler;
 }
 
-inline int
-vk_filler_destroy(vk_filler_t *filler)
-{
-    if(filler == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(filler, vk_filler_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(filler)) != 0) return -1;
-
-    filler->dtor(VK_OBJECT(filler));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_filler_destroy, vk_filler_t)
 
 static int
 _vk_filler_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_filler_t *filler;
-    va_list     args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WIDGET_KLASS->ctor(object, argp);
-
-    va_end(args);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     filler = VK_FILLER(object);
 

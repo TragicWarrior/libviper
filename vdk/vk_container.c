@@ -88,43 +88,16 @@ vk_container_vacate(vk_container_t *container)
     return 0;
 }
 
-inline int
-vk_container_destroy(vk_container_t *container)
-{
-    if(container == NULL) return -1;
-
-    if(!vk_object_assert(container, vk_container_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(container)) != 0) return -1;
-
-    container->dtor(VK_OBJECT(container));
-
-    /* destroyed: this used to report -1, the same as a refusal */
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_container_destroy, vk_container_t)
 
 static int
 _vk_container_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_container_t  *container;
-    va_list         args;
-
-    if(object == NULL) return -1;
-
-    /*
-        if argp is set then we're being called by a superclass.
-        otherwise, we're being called directly.
-    */
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
 
     // call the base klass constructor
-    VK_WIDGET_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     // install our derived klass methods
     container = VK_CONTAINER(object);

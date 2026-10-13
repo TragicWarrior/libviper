@@ -227,8 +227,18 @@ _vk_graph_ctor      -> VK_WIDGET_KLASS->ctor(object, argp)
 _vk_histogram_ctor  -> VK_GRAPH_KLASS->ctor(object, argp)
 ```
 
-The `(argp == NULL)` check in each ctor distinguishes "called directly" from
-"called by a superclass" for `va_list` forwarding.
+Each does it with one line, `VK_CHAIN_CTOR(object, argp, PARENT_KLASS)`
+(since 12.3.0): refuse a NULL object or argument list, then run the
+parent's constructor. A constructor is always handed its argument list,
+by `vk_object_construct()` or by the constructor of a type built on it.
+The parent takes its own arguments off the front; what is left belongs
+to this type and is read in order with `va_arg(*argp, type)`.
+
+(Before 12.3.0 every constructor also allowed for being called directly
+with the arguments themselves, and carried a `va_start` / `va_end` block
+for it. Nothing called one that way, and the block ended an argument
+list it had not started. A constructor called with a NULL list now
+returns -1.)
 
 After the parent constructs, the derived ctor overwrites the function pointer
 slots in its own struct region with its implementations.
@@ -440,17 +450,7 @@ declare_klass(VK_GAUGE_KLASS)
 static int
 _vk_gauge_ctor(vk_object_t *object, va_list *argp, ...)
 {
-    va_list args;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WIDGET_KLASS->ctor(object, argp);
-
-    va_end(args);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     VK_GAUGE(object)->ctor = _vk_gauge_ctor;
     VK_GAUGE(object)->dtor = _vk_gauge_dtor;
@@ -458,6 +458,10 @@ _vk_gauge_ctor(vk_object_t *object, va_list *argp, ...)
     return 0;
 }
 ```
+
+`VK_CHAIN_CTOR` goes first. A type that takes arguments of its own reads
+them after it, in the order `vk_gauge_create()` passes them:
+`VK_GAUGE(object)->max = va_arg(*argp, int);`
 
 **4. The destructor** frees its own, demotes, and hands on to the parent:
 
@@ -500,18 +504,7 @@ vk_gauge_create(int width)
     return (vk_gauge_t *)vk_object_create(VK_GAUGE_KLASS, width, 1);
 }
 
-int
-vk_gauge_destroy(vk_gauge_t *gauge)
-{
-    if(gauge == NULL) return -1;
-    if(!vk_object_assert(gauge, vk_gauge_t)) return -1;
-
-    _vk_object_announce_destroy(VK_OBJECT(gauge));
-
-    gauge->dtor(VK_OBJECT(gauge));
-
-    return 0;
-}
+VK_DEFINE_DESTROY(vk_gauge_destroy, vk_gauge_t)
 
 int
 vk_gauge_redraw(vk_gauge_t *gauge)
@@ -519,6 +512,10 @@ vk_gauge_redraw(vk_gauge_t *gauge)
     return vk_widget_redraw(VK_WIDGET(gauge));
 }
 ```
+
+`VK_DEFINE_DESTROY` is the whole of the destroy call: it refuses NULL
+and any object that is not exactly a `vk_gauge_t`, announces the
+destruction, and runs the destructor, returning 0 or -1.
 
 That is all. What the type does **not** do:
 

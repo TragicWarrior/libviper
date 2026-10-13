@@ -200,23 +200,8 @@ vk_scroller_redraw(vk_scroller_t *scroller)
     return vk_widget_redraw(VK_WIDGET(scroller));
 }
 
-inline int
-vk_scroller_destroy(vk_scroller_t *scroller)
-{
-    if(scroller == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(scroller, vk_scroller_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(scroller)) != 0) return -1;
-
-    scroller->dtor(VK_OBJECT(scroller));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_scroller_destroy, vk_scroller_t)
 
 inline int
 vk_widget_attach_scroller(vk_widget_t *host, vk_scroller_t *scroller)
@@ -279,22 +264,11 @@ static int
 _vk_scroller_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_scroller_t   *scroller;
-    va_list         args;
     int             flags;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WIDGET_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_WIDGET_KLASS);
 
     flags = va_arg(*argp, int);
-
-    va_end(args);
 
     scroller = VK_SCROLLER(object);
 

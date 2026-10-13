@@ -141,44 +141,15 @@ vk_frame_redraw(vk_frame_t *frame)
     return vk_widget_redraw(VK_WIDGET(frame));
 }
 
-inline int
-vk_frame_destroy(vk_frame_t *frame)
-{
-    if(frame == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(frame, vk_frame_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(frame)) != 0) return -1;
-
-    frame->dtor(VK_OBJECT(frame));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_frame_destroy, vk_frame_t)
 
 static int
 _vk_frame_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_frame_t  *frame;
-    va_list     args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-
-        VK_CONTAINER_KLASS->ctor(object, &args);
-        va_end(args);
-    }
-    else
-    {
-        VK_CONTAINER_KLASS->ctor(object, argp);
-    }
+    VK_CHAIN_CTOR(object, argp, VK_CONTAINER_KLASS);
 
     frame = VK_FRAME(object);
 

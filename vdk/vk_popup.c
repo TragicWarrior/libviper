@@ -329,45 +329,19 @@ vk_popup_redraw(vk_popup_t *popup)
     return vk_widget_redraw(VK_WIDGET(popup));
 }
 
-inline int
-vk_popup_destroy(vk_popup_t *popup)
-{
-    if(popup == NULL) return -1;
-
-    /* strictly this type: an object of any other, a derived one
-       included, is refused, and the caller is told */
-    if(!vk_object_assert(popup, vk_popup_t)) return -1;
-
-    /* first of all, and once: tell anyone listening that it is going.
-       refused when one of its own destroy handlers is asking */
-    if(_vk_object_announce_destroy(VK_OBJECT(popup)) != 0) return -1;
-
-    popup->dtor(VK_OBJECT(popup));
-
-    return 0;
-}
+/* destroy exactly this type; see VK_DEFINE_DESTROY */
+VK_DEFINE_DESTROY(vk_popup_destroy, vk_popup_t)
 
 static int
 _vk_popup_ctor(vk_object_t *object, va_list *argp, ...)
 {
     vk_popup_t  *popup;
-    va_list     args;
 
-    if(object == NULL) return -1;
-
-    if(argp == NULL)
-    {
-        va_start(args, argp);
-        argp = &args;
-    }
-
-    VK_WINDOW_KLASS->ctor(object, argp);
+    VK_CHAIN_CTOR(object, argp, VK_WINDOW_KLASS);
 
     popup = VK_POPUP(object);
 
     popup->style = va_arg(*argp, int);
-
-    va_end(args);
 
     popup->result = -1;
     popup->layout = NULL;

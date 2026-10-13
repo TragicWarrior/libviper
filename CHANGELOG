@@ -1,3 +1,33 @@
+Version 12.3.0
+
+vdk
+* [Bryan Christ] Two macros for the code every klass repeated.
+
+  Every type's constructor opened with the same block, and every type's
+  public destroy call was the same six lines, differing only in a
+  name.  A new type had to copy both exactly, and a mistake in either
+  compiled without complaint.
+
+  VK_CHAIN_CTOR(object, argp, PARENT_KLASS) is now the first line of a
+  constructor: it refuses a NULL object or argument list and runs the
+  parent's constructor.  VK_DEFINE_DESTROY(vk_gauge_destroy, vk_gauge_t)
+  is the whole of a destroy call: refuse NULL and any object not
+  exactly that type, announce the destruction, run the destructor.
+  Both are in vk_object.h.  Twenty-nine constructors and thirty destroy
+  calls in the library use them.
+
+  A constructor can no longer be called directly with its arguments.
+  Each one used to allow for that, with a va_start / va_end block, but
+  nothing ever did it: vk_object_construct and the constructors of
+  derived types always pass an argument list.  The block also called
+  va_end on a list it had not started whenever it was handed one, which
+  is every time.  It is gone; a constructor called with a NULL
+  argument list returns -1.
+
+  Nothing a program built on the library does changes.  KLASSES.md's
+  recipe for a new klass is shorter by the two blocks.  test_redraw
+  uses both macros in a type of its own.
+
 Version 12.2.1
 
 vdk
