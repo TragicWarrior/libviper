@@ -578,9 +578,12 @@ _vk_widget_resize(vk_widget_t *widget, int width, int height)
     getmaxyx(widget->canvas, pad_height, pad_width);
     getbegyx(widget->canvas, pad_y, pad_x);
 
-    /* newwin(0, ...) is "use remaining LINES/COLS" or NULL — never 0. */
-    copy_h = (pad_height > 1) ? pad_height - 1 : 1;
-    copy_w = (pad_width > 1) ? pad_width - 1 : 1;
+    /* the copy that carries the old contents across the resize is the
+       size of the canvas, so every cell goes with it.  (It used to be
+       a row and a column smaller, which lost the last of each.)
+       newwin(0, ...) means "the rest of the screen", so never 0. */
+    copy_h = (pad_height > 0) ? pad_height : 1;
+    copy_w = (pad_width > 0) ? pad_width : 1;
     copy_pad = newwin(copy_h, copy_w, pad_y, pad_x);
     if (copy_pad == NULL)
     {

@@ -573,6 +573,65 @@ main(void)
         vk_popup_destroy(popup);
     }
 
+    /* ---- a resize keeps what was on the canvas, all of it ---- */
+    {
+        /* a plain widget has no redraw: whatever the program painted
+           on it is all there is, so a resize must carry every cell
+           over, the last column and the last row included */
+        static vdk_cell_t   cells[40 * 10];
+        vk_widget_t         *plain;
+        WINDOW              *canvas;
+        int                 x, y;
+        int                 kept = 1;
+
+        plain = vk_widget_create(10, 4);
+        canvas = vk_widget_get_canvas(plain);
+        for(y = 0; y < 4; y++)
+        {
+            for(x = 0; x < 10; x++)
+                mvwaddch(canvas, y, x, (chtype)('a' + x + y));
+        }
+
+        vk_widget_resize(plain, 20, 6);
+        snapshot(plain, cells);
+        for(y = 0; y < 4; y++)
+        {
+            for(x = 0; x < 10; x++)
+            {
+                if(cells[y * 20 + x].ch != (uint32_t)('a' + x + y)) kept = 0;
+            }
+        }
+        check("resize", "growing keeps the last column and the last row",
+            kept);
+        check("resize", "the last column is still there",
+            cells[0 * 20 + 9].ch == (uint32_t)('a' + 9));
+        check("resize", "the last row is still there",
+            cells[3 * 20 + 0].ch == (uint32_t)('a' + 3));
+
+        /* shrinking keeps what still fits */
+        vk_widget_resize(plain, 5, 2);
+        snapshot(plain, cells);
+        kept = 1;
+        for(y = 0; y < 2; y++)
+        {
+            for(x = 0; x < 5; x++)
+            {
+                if(cells[y * 5 + x].ch != (uint32_t)('a' + x + y)) kept = 0;
+            }
+        }
+        check("resize", "shrinking keeps every cell that still fits", kept);
+
+        /* a one-cell widget is the smallest there is */
+        vk_widget_resize(plain, 1, 1);
+        check("resize", "down to one cell and back up",
+            vk_widget_resize(plain, 8, 3) == 0);
+        snapshot(plain, cells);
+        check("resize", "the one cell survived",
+            cells[0].ch == (uint32_t)'a');
+
+        vk_widget_destroy(plain);
+    }
+
     /* ---- the names from before 11.0.0 still build and still work ---- */
 
     label = vk_label_create(10);
