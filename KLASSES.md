@@ -1284,6 +1284,26 @@ with `vk_widget_resize()`, which runs the same five steps for it (a
 frame inside the box resizes its own child, and so on). A container is
 repainted after its children, so what it composites is current.
 
+### Arranging Without Painting (since 12.2.0)
+
+`_layout` puts each child in its place as well as sizing it, and is
+public as `vk_widget_layout(widget)` (with `vk_box_layout()`,
+`vk_grid_layout()`, `vk_frame_layout()` and `vk_window_layout()` as
+names for it). It paints nothing.
+
+Most programs never call it: the library arranges after every resize,
+and a redraw arranges as it paints. It is for the program that has to
+measure before the first redraw, for instance to size a label from the
+slot a box has given it:
+
+```c
+vk_box_layout(client);                      /* places and sizes, no painting */
+vk_widget_get_metrics(VK_WIDGET(label), &w, &h);
+```
+
+Before 12.2.0 a box or grid placed its children only inside its redraw,
+so the way to measure was to redraw the box and read the result.
+
 ## Recreate Propagation
 
 Canvas recreation is triggered during `vk_screen_teleport()` when all

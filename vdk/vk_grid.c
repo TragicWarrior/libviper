@@ -21,6 +21,9 @@ _vk_grid_layout(vk_widget_t *widget);
 static int
 _vk_grid_recreate(vk_widget_t *widget);
 
+static void
+_vk_grid_place(vk_grid_t *grid);
+
 /* not static so vk_table (and other subclasses) can chain through it
    for layout before overlaying their own decorations */
 int
@@ -537,6 +540,10 @@ _vk_grid_layout(vk_widget_t *widget)
     free(col_sizes);
     free(row_sizes);
 
+    /* and each child to its cell, so that where things are can be
+       read before anything is painted */
+    _vk_grid_place(grid);
+
     return 0;
 }
 
@@ -587,32 +594,24 @@ _vk_grid_kmio(vk_object_t *object, int32_t keystroke)
     return vk_object_push_keystroke(VK_OBJECT(child), keystroke);
 }
 
-int
-_vk_grid_redraw(vk_object_t *object)
+/*
+    Put every child of the grid in its cell: centred in the cell it was
+    given, on the grid's canvas.  Nothing is painted.
+
+    The grid's redraw calls this and then copies the children in; its
+    layout (vk_widget_layout, and after every resize) calls it too, so
+    a program can read where things are without painting anything.
+*/
+static void
+_vk_grid_place(vk_grid_t *grid)
 {
-    vk_grid_t *grid = (vk_grid_t *)object;
-    vk_widget_t *widget;
+    vk_widget_t *widget = VK_WIDGET(grid);
     int         *col_sizes;
     int         *row_sizes;
     int         *col_offsets;
     int         *row_offsets;
     int         c, r;
     int         pos;
-
-    if(grid == NULL) return -1;
-
-    /* what it holds repaints itself first, so that what is copied in
-       below is current */
-    VK_CONTAINER_KLASS->redraw(object);
-
-    widget = VK_WIDGET(grid);
-    widget->_erase(widget);
-
-    if(widget->fg >= 0 && widget->bg >= 0)
-    {
-        short pair = vdk_color_pair(widget->fg, widget->bg);
-        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
-    }
 
     col_sizes   = calloc(grid->cols, sizeof(int));
     row_sizes   = calloc(grid->rows, sizeof(int));
@@ -623,7 +622,7 @@ _vk_grid_redraw(vk_object_t *object)
     {
         free(col_sizes);   free(row_sizes);
         free(col_offsets); free(row_offsets);
-        return -1;
+        return;
     }
 
     _vk_grid_compute_track_sizes(grid, col_sizes, row_sizes);
@@ -659,7 +658,6 @@ _vk_grid_redraw(vk_object_t *object)
 
             vk_widget_move(child,
                 col_offsets[c] + xoff, row_offsets[r] + yoff);
-            vk_widget_blit(child);
         }
     }
 
@@ -667,6 +665,41 @@ _vk_grid_redraw(vk_object_t *object)
     free(row_sizes);
     free(col_offsets);
     free(row_offsets);
+}
+
+int
+_vk_grid_redraw(vk_object_t *object)
+{
+    vk_grid_t *grid = (vk_grid_t *)object;
+    vk_widget_t *widget;
+    int         total;
+    int         i;
+
+    if(grid == NULL) return -1;
+
+    /* what it holds repaints itself first, so that what is copied in
+       below is current */
+    VK_CONTAINER_KLASS->redraw(object);
+
+    widget = VK_WIDGET(grid);
+    widget->_erase(widget);
+
+    if(widget->fg >= 0 && widget->bg >= 0)
+    {
+        short pair = vdk_color_pair(widget->fg, widget->bg);
+        vk_widget_fill_pair(widget, L' ', widget->attrs, pair);
+    }
+
+    /* every child to its cell, then copied in */
+    _vk_grid_place(grid);
+
+    total = grid->cols * grid->rows;
+
+    for(i = 0; i < total; i++)
+    {
+        if(grid->slot_widgets[i] != NULL)
+            vk_widget_blit(grid->slot_widgets[i]);
+    }
 
     return 0;
 }

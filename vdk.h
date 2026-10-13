@@ -29,9 +29,9 @@
     error in itself where the macro does not exist.
 */
 #define VDK_VERSION_MAJOR           12
-#define VDK_VERSION_MINOR           1
+#define VDK_VERSION_MINOR           2
 #define VDK_VERSION_PATCH           0
-#define VDK_VERSION                 "12.1.0"
+#define VDK_VERSION                 "12.2.0"
 
 #define VDK_VERSION_AT_LEAST(major, minor, patch) \
     ((VDK_VERSION_MAJOR > (major)) \
@@ -638,6 +638,30 @@ uint32_t        vk_widget_get_id(vk_widget_t *widget);
     vk_widget_redraw() repaints a widget of any type as what it is.
 */
 int             vk_widget_redraw(vk_widget_t *widget);
+
+/*
+    Arrange what a widget holds for the size it has, without painting
+    anything: a box puts each child in its slot, a grid in its cell, and
+    a frame fits its child inside the border, each resizing a child that
+    expands.  Afterwards a child's position and size can be read.
+
+    The library does this itself after a resize, and a redraw arranges
+    as it paints, so most programs never call it.  It is for the program
+    that has to measure before the first redraw, for instance to size a
+    label from the slot it has been given.
+
+    A widget with nothing to arrange does nothing.  Returns 0, or -1 for
+    a NULL widget.
+*/
+int             vk_widget_layout(vk_widget_t *widget);
+#define         vk_box_layout(b) \
+                    vk_widget_layout(VK_WIDGET(b))
+#define         vk_grid_layout(g) \
+                    vk_widget_layout(VK_WIDGET(g))
+#define         vk_frame_layout(f) \
+                    vk_widget_layout(VK_WIDGET(f))
+#define         vk_window_layout(w) \
+                    vk_widget_layout(VK_WIDGET(w))
 
 /* destroy a widget of any type: one of a derived type (a window, a
    button) is destroyed as what it is.  Emits VK_EVENT_ON_DESTROY first.
