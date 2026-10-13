@@ -1,3 +1,35 @@
+Version 12.2.1
+
+vdk
+* [Bryan Christ] A destroy handler that destroys its own object is
+  refused.
+
+  A handler for VK_EVENT_ON_DESTROY runs while its object is being
+  destroyed.  If it called a destroy function on that same object, the
+  object was freed inside the handler and then again by the destroy
+  that had called the handler.  Nothing warned of it.
+
+  Every destroy call now returns -1 for an object whose destroy
+  handlers are running at that moment, and does nothing.  The destroy
+  that is running them carries on when the handler returns, so the
+  object is destroyed once.  The handlers registered after the
+  offending one still run.
+
+  A handler may still destroy other objects, the container its object
+  sits in and the widget a scroll bar is attached to included: the
+  container or host goes, and leaves alone the one object that is in
+  the middle of being destroyed by someone else.
+
+  vk_object_dispose() returns 0 or -1 where it returned nothing, so
+  that vk_widget_destroy() can pass a refusal on.
+
+  This covers the destroy event only.  Destroying an object from a
+  handler for any other of its events (a click, say) while that event
+  is still being delivered remains unsupported; defer it until the
+  emit has returned.
+
+  test_destroy covers it.
+
 Version 12.2.0
 
 vdk

@@ -840,8 +840,9 @@ vk_screen_destroy(vk_screen_t *screen)
        included, is refused, and the caller is told */
     if(!vk_object_assert(screen, vk_screen_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(screen));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(screen)) != 0) return -1;
 
     screen->dtor(VK_OBJECT(screen));
 

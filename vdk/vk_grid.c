@@ -416,8 +416,9 @@ vk_grid_destroy(vk_grid_t *grid)
        included, is refused, and the caller is told */
     if(!vk_object_assert(grid, vk_grid_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(grid));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(grid)) != 0) return -1;
 
     grid->dtor(VK_OBJECT(grid));
 

@@ -174,16 +174,28 @@ vk_object_emit(vk_object_t *object, int event)
 }
 
 /* see vk_object.h */
-void
+int
 _vk_object_announce_destroy(vk_object_t *object)
 {
-    if(object == NULL || object->destroying) return;
+    if(object == NULL) return -1;
 
-    /* marked first: a handler that somehow comes back here for the
-       same object finds the announcement already made */
-    object->destroying = true;
+    /* announced already: the destructor chain coming back through, one
+       layer at a time.  nothing to do, and it may carry on */
+    if(object->destroying == VK_DESTROY_ANNOUNCED) return 0;
+
+    /* its destroy handlers are running right now, and one of them has
+       asked for the object to be destroyed.  refused: the destroy that
+       called those handlers is waiting for them to return and will
+       finish the job */
+    if(object->destroying == VK_DESTROY_ANNOUNCING) return -1;
+
+    object->destroying = VK_DESTROY_ANNOUNCING;
 
     vk_object_emit(object, VK_EVENT_ON_DESTROY);
+
+    object->destroying = VK_DESTROY_ANNOUNCED;
+
+    return 0;
 }
 
 inline int
@@ -195,8 +207,9 @@ vk_object_destroy(vk_object_t *object)
 
     if(object == NULL) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(object);
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(object) != 0) return -1;
 
     /*
         still a derived type: its own destructor does the whole job.
@@ -244,22 +257,28 @@ vk_object_get_klass_name(vk_object_t *object)
     it actually is.  The typed calls (vk_button_destroy and the rest)
     each refuse an object that is not exactly their type; this is the
     one to use when all that is known is that the pointer is an object
-    -- a container destroying its children, for one.  NULL is a no-op.
+    -- a container destroying its children, for one.
+
+    Returns 0 when the object was destroyed, and -1 when it was not:
+    for NULL, and for a call made from one of the object's own destroy
+    handlers (the destroy that is running them finishes the job).
 */
-inline void
+inline int
 vk_object_dispose(vk_object_t *object)
 {
-    if(object == NULL) return;
+    if(object == NULL) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(object);
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(object) != 0) return -1;
 
     /* a plain object has no destructor of its own to run first */
     if(vk_object_assert(object, vk_object_t))
     {
-        vk_object_destroy(object);
-        return;
+        return vk_object_destroy(object);
     }
 
     object->dtor(object);
+
+    return 0;
 }

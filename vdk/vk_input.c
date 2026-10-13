@@ -296,8 +296,9 @@ vk_input_destroy(vk_input_t *input)
        included, is refused, and the caller is told */
     if(!vk_object_assert(input, vk_input_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(input));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(input)) != 0) return -1;
 
     input->dtor(VK_OBJECT(input));
 

@@ -95,8 +95,9 @@ vk_container_destroy(vk_container_t *container)
 
     if(!vk_object_assert(container, vk_container_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(container));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(container)) != 0) return -1;
 
     container->dtor(VK_OBJECT(container));
 

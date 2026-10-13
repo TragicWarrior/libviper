@@ -253,8 +253,9 @@ vk_deck_destroy(vk_deck_t *deck)
        included, is refused, and the caller is told */
     if(!vk_object_assert(deck, vk_deck_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(deck));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(deck)) != 0) return -1;
 
     deck->dtor(VK_OBJECT(deck));
 

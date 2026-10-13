@@ -632,8 +632,9 @@ vk_spinbutton_destroy(vk_spinbutton_t *spin)
        included, is refused, and the caller is told */
     if(!vk_object_assert(spin, vk_spinbutton_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(spin));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(spin)) != 0) return -1;
 
     spin->dtor(VK_OBJECT(spin));
 

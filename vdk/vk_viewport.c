@@ -151,8 +151,9 @@ vk_viewport_destroy(vk_viewport_t *vp)
        included, is refused, and the caller is told */
     if(!vk_object_assert(vp, vk_viewport_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(vp));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(vp)) != 0) return -1;
 
     vp->dtor(VK_OBJECT(vp));
 

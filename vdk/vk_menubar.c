@@ -297,8 +297,9 @@ vk_menubar_destroy(vk_menubar_t *menubar)
        included, is refused, and the caller is told */
     if(!vk_object_assert(menubar, vk_menubar_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(menubar));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(menubar)) != 0) return -1;
 
     menubar->dtor(VK_OBJECT(menubar));
 

@@ -568,12 +568,12 @@ vk_widget_destroy(vk_widget_t *widget)
        any widget, so the only refusal is NULL. */
     if(!vk_object_assert(widget, vk_widget_t))
     {
-        vk_object_dispose(VK_OBJECT(widget));
-        return 0;
+        return vk_object_dispose(VK_OBJECT(widget));
     }
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(widget));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(widget)) != 0) return -1;
 
     widget->dtor(VK_OBJECT(widget));
 
@@ -796,6 +796,16 @@ _vk_widget_dtor(vk_object_t *object)
         vk_object_dispose(VK_OBJECT(widget->vscroller));
     if(widget->hscroller != NULL)
         vk_object_dispose(VK_OBJECT(widget->hscroller));
+
+    /* a scroller that was not destroyed just now is one in the middle
+       of its own destroy handlers, one of which is destroying this
+       widget.  it will be gone when that handler returns; until then
+       it must not be left pointing at a widget that is about to be
+       freed */
+    if(widget->vscroller != NULL)
+        vk_widget_detach_scroller(widget, widget->vscroller);
+    if(widget->hscroller != NULL)
+        vk_widget_detach_scroller(widget, widget->hscroller);
 
     if(widget->composer != widget->canvas)
         delwin(widget->composer);

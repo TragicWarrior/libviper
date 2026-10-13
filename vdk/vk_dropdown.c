@@ -206,8 +206,9 @@ vk_dropdown_destroy(vk_dropdown_t *dropdown)
        included, is refused, and the caller is told */
     if(!vk_object_assert(dropdown, vk_dropdown_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(dropdown));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(dropdown)) != 0) return -1;
 
     dropdown->dtor(VK_OBJECT(dropdown));
 

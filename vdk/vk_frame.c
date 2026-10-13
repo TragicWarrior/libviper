@@ -150,8 +150,9 @@ vk_frame_destroy(vk_frame_t *frame)
        included, is refused, and the caller is told */
     if(!vk_object_assert(frame, vk_frame_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(frame));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(frame)) != 0) return -1;
 
     frame->dtor(VK_OBJECT(frame));
 
