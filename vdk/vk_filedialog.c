@@ -408,8 +408,9 @@ vk_filedialog_destroy(vk_filedialog_t *dialog)
        included, is refused, and the caller is told */
     if(!vk_object_assert(dialog, vk_filedialog_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(dialog));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(dialog)) != 0) return -1;
 
     dialog->dtor(VK_OBJECT(dialog));
 

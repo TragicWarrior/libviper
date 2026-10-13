@@ -195,8 +195,9 @@ vk_box_destroy(vk_box_t *box)
        included, is refused, and the caller is told */
     if(!vk_object_assert(box, vk_box_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(box));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(box)) != 0) return -1;
 
     box->dtor(VK_OBJECT(box));
 

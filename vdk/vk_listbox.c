@@ -711,8 +711,9 @@ vk_listbox_destroy(vk_listbox_t *listbox)
        included, is refused, and the caller is told */
     if(!vk_object_assert(listbox, vk_listbox_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(listbox));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(listbox)) != 0) return -1;
 
     listbox->dtor(VK_OBJECT(listbox));
 

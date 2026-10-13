@@ -50,10 +50,17 @@ struct _vk_object_s
        descriptor pointer (&VK_WIDGET_KLASS).  NULL for vk_object_t */
     vk_object_t         **parent;
 
-    /* set once VK_EVENT_ON_DESTROY has been emitted for this object,
-       so that it is emitted only once however the teardown is entered */
-    bool                destroying;
+    /* where the object is in being destroyed (VK_DESTROY_*): so that
+       VK_EVENT_ON_DESTROY is emitted only once however the teardown is
+       entered, and so that a destroy asked for by one of the handlers
+       of that very event can be told apart and refused */
+    unsigned char       destroying;
 };
+
+/* vk_object_t.destroying */
+#define VK_DESTROY_NONE         0       /* alive */
+#define VK_DESTROY_ANNOUNCING   1       /* its destroy handlers are running */
+#define VK_DESTROY_ANNOUNCED    2       /* they have run; being taken apart */
 
 /*
     Tell whoever is listening that `object` is about to be destroyed:
@@ -62,8 +69,14 @@ struct _vk_object_s
     Every destroy call makes this its first step; calling it again for
     the same object (as the destructor chain does, layer by layer) does
     nothing.
+
+    Returns 0 when the destroy may go ahead.  Returns -1 when it may
+    not: the object's destroy handlers are running at this moment, and
+    one of them has asked for the object to be destroyed.  It already
+    is being; the call that started it carries on when the handler
+    returns.  Going ahead here would free the object underneath both.
 */
-void            _vk_object_announce_destroy(vk_object_t *object);
+int             _vk_object_announce_destroy(vk_object_t *object);
 
 static inline int
 _assert_klass(char *kn1, char *kn2, int ks1, int ks2)

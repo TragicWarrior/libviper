@@ -266,8 +266,9 @@ vk_textbox_destroy(vk_textbox_t *textbox)
        included, is refused, and the caller is told */
     if(!vk_object_assert(textbox, vk_textbox_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(textbox));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(textbox)) != 0) return -1;
 
     textbox->dtor(VK_OBJECT(textbox));
 

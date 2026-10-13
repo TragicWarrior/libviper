@@ -363,7 +363,12 @@ free what a widget's user pointer refers to. Since 11.0.0:
   while they are all still alive. Each child is announced in turn as the
   container's destructor reaches it.
 - The library registers no handler of its own for it.
-- A handler must not destroy the object it was called for.
+- A handler that destroys the object it was called for is refused
+  (since 12.2.1): every destroy call returns -1 for an object whose
+  destroy handlers are running, and the destroy that is running them
+  finishes the job when the handler returns. Before 12.2.1 this freed
+  the object twice. A handler may destroy *other* objects, the
+  container its object sits in included.
 
 (In 10.x the event arrived from the widget layer of the teardown, with
 the object's own type already gone and a container's children already

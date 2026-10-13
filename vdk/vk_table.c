@@ -116,8 +116,9 @@ vk_table_destroy(vk_table_t *table)
        included, is refused, and the caller is told */
     if(!vk_object_assert(table, vk_table_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(table));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(table)) != 0) return -1;
 
     table->dtor(VK_OBJECT(table));
 

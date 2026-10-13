@@ -178,8 +178,9 @@ vk_activity_destroy(vk_activity_t *activity)
        included, is refused, and the caller is told */
     if(!vk_object_assert(activity, vk_activity_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(activity));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(activity)) != 0) return -1;
 
     activity->dtor(VK_OBJECT(activity));
 

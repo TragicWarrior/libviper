@@ -724,8 +724,9 @@ vk_graph_destroy(vk_graph_t *graph)
        included, is refused, and the caller is told */
     if(!vk_object_assert(graph, vk_graph_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(graph));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(graph)) != 0) return -1;
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends

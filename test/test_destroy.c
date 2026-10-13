@@ -84,6 +84,66 @@ before(const char *first, const char *then)
     return 1;
 }
 
+/* what the handlers below got back from the destroy calls they made */
+static int  inner_typed = 99;
+static int  inner_any = 99;
+static int  inner_object = 99;
+static int  inner_parent = 99;
+static int  inner_dispose = 99;
+static int  inner_calls = 0;
+
+/*
+    A destroy handler that does what it must not: destroys the object it
+    was called for, three different ways.  Each call has to be refused,
+    and the object must still be there for the next one.
+*/
+static int
+on_destroy_destroy_self(vk_object_t *object, int event, void *anything)
+{
+    (void)event;
+    (void)anything;
+
+    inner_calls++;
+    inner_typed = vk_label_destroy(VK_LABEL(object));
+    inner_any = vk_widget_destroy(VK_WIDGET(object));
+    inner_object = vk_object_destroy(object);
+    inner_dispose = vk_object_dispose(object);
+
+    return 0;
+}
+
+/*
+    A destroy handler on a child that destroys the box the child is in
+    (`anything`).  Allowed: the box is another object.  The box goes,
+    takes the child's sibling with it, and leaves the child -- which is
+    in the middle of being destroyed by someone else -- alone.
+*/
+static int
+on_destroy_destroy_parent(vk_object_t *object, int event, void *anything)
+{
+    (void)object;
+    (void)event;
+
+    inner_parent = vk_box_destroy((vk_box_t *)anything);
+
+    return 0;
+}
+
+/*
+    A destroy handler on a scroll bar that destroys the widget the bar
+    is attached to (`anything`).  Allowed, like the box above.
+*/
+static int
+on_destroy_destroy_host(vk_object_t *object, int event, void *anything)
+{
+    (void)object;
+    (void)event;
+
+    inner_parent = vk_widget_destroy((vk_widget_t *)anything);
+
+    return 0;
+}
+
 /* watch a widget's destruction under `name` */
 static void
 watch(void *widget, const char *name)
@@ -292,6 +352,64 @@ main(void)
     box = make_box(&a, &b);
     check("vk_box_destroy returns 0 and takes its children",
         vk_box_destroy(box) == 0 && events == 3);
+
+    /* ---- a destroy asked for from inside the object's own destroy
+            handler is refused, and the object is destroyed once ---- */
+
+    reset();
+    label = vk_label_create(10);
+    vk_object_register_event(VK_OBJECT(label), VK_EVENT_ON_DESTROY,
+        on_destroy_destroy_self, NULL);
+    watch(label, "label");
+    check("destroying a widget whose handler destroys it too returns 0",
+        vk_label_destroy(label) == 0);
+    check("the handler ran once", inner_calls == 1);
+    check("its typed destroy of the same widget was refused",
+        inner_typed == -1);
+    check("so was its vk_widget_destroy", inner_any == -1);
+    check("and its vk_object_destroy", inner_object == -1);
+    check("and its vk_object_dispose", inner_dispose == -1);
+    check("the handlers after it still ran, once", events == 1);
+
+    /* the same through a container: the child's handler is the culprit */
+    reset();
+    inner_calls = 0;
+    box = make_box(&a, &b);
+    vk_object_register_event(VK_OBJECT(a), VK_EVENT_ON_DESTROY,
+        on_destroy_destroy_self, NULL);
+    check("a box whose child's handler destroys the child is destroyed",
+        vk_box_destroy(box) == 0 && events == 3 && inner_calls == 1);
+
+    /* a child's handler may destroy the box the child is in */
+    reset();
+    box = make_box(&a, &b);
+    vk_object_register_event(VK_OBJECT(a), VK_EVENT_ON_DESTROY,
+        on_destroy_destroy_parent, box);
+    check("destroying a child whose handler destroys its box returns 0",
+        vk_label_destroy(a) == 0);
+    check("the box was destroyed by the handler", inner_parent == 0);
+    check("the box and both children were each announced once",
+        events == 3 && strstr(order, "box") != NULL
+        && strstr(order, "first") != NULL
+        && strstr(order, "second") != NULL);
+
+    /* an attached scroll bar whose handler destroys its host */
+    {
+        vk_listbox_t    *list = vk_listbox_create(20, 5);
+        vk_scroller_t   *bar = vk_scroller_create(VK_SCROLLBAR_VERTICAL);
+
+        reset();
+        inner_parent = 99;
+        vk_widget_attach_scroller(VK_WIDGET(list), bar);
+        watch(list, "list");
+        watch(bar, "bar");
+        vk_object_register_event(VK_OBJECT(bar), VK_EVENT_ON_DESTROY,
+            on_destroy_destroy_host, list);
+        check("destroying a scroll bar whose handler destroys its host returns 0",
+            vk_scroller_destroy(bar) == 0);
+        check("the host was destroyed by the handler, each announced once",
+            inner_parent == 0 && events == 2);
+    }
 
     reset();
     check("vk_screen_destroy returns 0", vk_screen_destroy(screen) == 0);

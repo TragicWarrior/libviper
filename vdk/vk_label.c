@@ -95,8 +95,9 @@ vk_label_destroy(vk_label_t *label)
        included, is refused, and the caller is told */
     if(!vk_object_assert(label, vk_label_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(label));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(label)) != 0) return -1;
 
     label->dtor(VK_OBJECT(label));
 

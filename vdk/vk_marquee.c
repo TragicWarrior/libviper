@@ -147,8 +147,9 @@ vk_marquee_destroy(vk_marquee_t *marquee)
        included, is refused, and the caller is told */
     if(!vk_object_assert(marquee, vk_marquee_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(marquee));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(marquee)) != 0) return -1;
 
     marquee->dtor(VK_OBJECT(marquee));
 

@@ -30,8 +30,8 @@
 */
 #define VDK_VERSION_MAJOR           12
 #define VDK_VERSION_MINOR           2
-#define VDK_VERSION_PATCH           0
-#define VDK_VERSION                 "12.2.0"
+#define VDK_VERSION_PATCH           1
+#define VDK_VERSION                 "12.2.1"
 
 #define VDK_VERSION_AT_LEAST(major, minor, patch) \
     ((VDK_VERSION_MAJOR > (major)) \
@@ -312,9 +312,11 @@ enum
     /* the object is about to be destroyed.  Emitted once, by the
        destroy call made on it, before anything is taken down: a
        handler sees the object whole.  A container is announced before
-       its children, which are still alive.  The handler must not
-       destroy the object.  The library itself does not listen for
-       this; a container destroys its children in its destructor. */
+       its children, which are still alive.  A handler that destroys
+       the object it was called for is refused (-1): the object is
+       already being destroyed, by the call that is running the
+       handler.  The library itself does not listen for this; a
+       container destroys its children in its destructor. */
     VK_EVENT_ON_DESTROY     = 4,
 
     /* interaction */
@@ -471,8 +473,9 @@ int             vk_object_destroy(vk_object_t *object);
 /* destroy an object of any type through the destructor of the type it
    actually is.  The typed destroy calls each refuse an object that is
    not exactly their type; this is for when all you hold is a widget or
-   object pointer.  NULL is a no-op. */
-void            vk_object_dispose(vk_object_t *object);
+   object pointer.  Returns 0, or -1 when nothing was destroyed (NULL,
+   or a call from one of the object's own destroy handlers). */
+int             vk_object_dispose(vk_object_t *object);
 
 /* vk_screen */
 vk_screen_t*    vk_screen_create(void);

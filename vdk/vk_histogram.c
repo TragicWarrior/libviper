@@ -240,8 +240,9 @@ vk_histogram_destroy(vk_histogram_t *hist)
        included, is refused, and the caller is told */
     if(!vk_object_assert(hist, vk_histogram_t)) return -1;
 
-    /* first of all, and once: tell anyone listening that it is going */
-    _vk_object_announce_destroy(VK_OBJECT(hist));
+    /* first of all, and once: tell anyone listening that it is going.
+       refused when one of its own destroy handlers is asking */
+    if(_vk_object_announce_destroy(VK_OBJECT(hist)) != 0) return -1;
 
     /*
         run the class dtor, as vk_label_destroy() does.  the dtor chain ends
