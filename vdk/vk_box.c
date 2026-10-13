@@ -85,18 +85,8 @@ vk_box_set_widget(vk_box_t *box, int slot, vk_widget_t *widget, uint32_t flags)
     {
         vk_widget_t *bw = VK_WIDGET(box);
 
-        if(flags & VK_INHERIT_FG)
-        {
-            widget->fg = bw->fg;
-        }
-        if(flags & VK_INHERIT_BG)
-        {
-            widget->bg = bw->bg;
-        }
-        if(flags & VK_INHERIT_ATTRS)
-        {
-            widget->attrs = bw->attrs;
-        }
+        /* what the widget is to take from the box, now and from then on */
+        vdk_inherit_attach(bw, widget, flags);
 
         container->add_widget(container, widget);
         vk_widget_set_surface(widget, bw->canvas);

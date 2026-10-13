@@ -42,6 +42,11 @@ Ownership
   - A container owns what it holds: destroying a window, frame, box
     or grid destroys everything inside it, to any depth.  Tear a
     dialog down with one destroy call.
+  - Redrawing a container redraws everything inside it: change what
+    you like in a dialog and redraw the window once.
+  - A widget can follow its container's colors (VK_INHERIT_AUTO):
+    color the window and what is inside follows, unless given colors
+    of its own.
 
 Screen
 

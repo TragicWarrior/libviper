@@ -262,18 +262,8 @@ _vk_frame_set_child(vk_frame_t *frame, vk_widget_t *child, uint32_t flags)
 
     if(child == NULL) return 0;
 
-    if(flags & VK_INHERIT_FG)
-    {
-        child->fg = widget->fg;
-    }
-    if(flags & VK_INHERIT_BG)
-    {
-        child->bg = widget->bg;
-    }
-    if(flags & VK_INHERIT_ATTRS)
-    {
-        child->attrs = widget->attrs;
-    }
+    /* what the child is to take from the frame, now and from then on */
+    vdk_inherit_attach(widget, child, flags);
 
     frame->child = child;
     container->add_widget(container, child);

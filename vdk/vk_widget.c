@@ -113,6 +113,11 @@ vk_widget_set_state(vk_widget_t *widget, uint32_t state)
     if(widget == NULL) return;
 
     old_state = widget->state;
+
+    /* the bits the library keeps for itself are not the caller's to
+       change: whatever was passed for them, they stay as they were */
+    state = (state & ~VDK_STATE_PRIVATE) | (old_state & VDK_STATE_PRIVATE);
+
     widget->state = state;
 
     if((state & VK_STATE_FROZEN) && !(old_state & VK_STATE_FROZEN))
@@ -147,6 +152,11 @@ vk_widget_set_colors(vk_widget_t *widget, int fg, int bg)
     widget->fg = fg;
     widget->bg = bg;
 
+    /* colours given to a widget are its own: it stops following its
+       container's, and VK_INHERIT_AUTO will leave them be */
+    widget->state &= ~(VK_STATE_INHERIT_FG | VK_STATE_INHERIT_BG);
+    widget->state |= (VDK_STATE_OWN_FG | VDK_STATE_OWN_BG);
+
     return;
 }
 
@@ -165,6 +175,88 @@ vk_widget_set_attrs(vk_widget_t *widget, attr_t attrs)
     if(widget == NULL) return;
 
     widget->attrs = attrs;
+
+    /* attributes given to a widget are its own */
+    widget->state &= ~VK_STATE_INHERIT_ATTRS;
+}
+
+/*
+    Is `prop` exactly one of the properties a program may set?  The raw
+    state word has room for more than there are, and holds bits that
+    belong to the library.
+*/
+static bool
+_vk_widget_is_prop(uint32_t prop)
+{
+    switch(prop)
+    {
+        case VK_PROP_VISIBLE:
+        case VK_PROP_FROZEN:
+        case VK_PROP_NORESIZE:
+        case VK_PROP_EXPAND:
+        case VK_PROP_INHERIT_FG:
+        case VK_PROP_INHERIT_BG:
+        case VK_PROP_INHERIT_ATTRS:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+/*
+    Turn one property on or off, leaving the others as they are.
+*/
+int
+vk_widget_set_prop(vk_widget_t *widget, uint32_t prop, bool on)
+{
+    uint32_t    state;
+
+    if(widget == NULL) return -1;
+    if(!_vk_widget_is_prop(prop)) return -1;
+
+    state = widget->state;
+
+    if(on)
+        state |= prop;
+    else
+        state &= ~prop;
+
+    /* through vk_widget_set_state, which does the work that freezing
+       and thawing take */
+    vk_widget_set_state(widget, state);
+
+    /* a colour that is to follow the container is no longer the
+       widget's own; one that stops following is kept as it stands */
+    if(prop == VK_PROP_INHERIT_FG)
+    {
+        if(on)
+            widget->state &= ~VDK_STATE_OWN_FG;
+        else
+            widget->state |= VDK_STATE_OWN_FG;
+    }
+
+    if(prop == VK_PROP_INHERIT_BG)
+    {
+        if(on)
+            widget->state &= ~VDK_STATE_OWN_BG;
+        else
+            widget->state |= VDK_STATE_OWN_BG;
+    }
+
+    return 0;
+}
+
+/*
+    Is one property on?
+*/
+bool
+vk_widget_get_prop(vk_widget_t *widget, uint32_t prop)
+{
+    if(widget == NULL) return false;
+    if(!_vk_widget_is_prop(prop)) return false;
+
+    return (widget->state & prop) != 0;
 }
 
 inline int

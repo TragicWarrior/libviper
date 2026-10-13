@@ -524,6 +524,8 @@ That is all. What the type does **not** do:
   destructor does
 - repaint its children, if it is built on a container -- calling the
   parent's redraw first does
+- hand its colors to its children, if it is built on a container -- the
+  same call does
 
 Two optional extras, for a type that holds other widgets or wraps text:
 set `VK_WIDGET(object)->_layout` in the constructor to arrange the
@@ -1303,16 +1305,53 @@ There is no registry and no setter; read with `vk_widget_get_id()`.
 `_recreate` (teleport) rebuilds the ncurses `WINDOW`, not the widget,
 so the id is unchanged.
 
-`vk_widget_t` carries a `uint32_t state` bitfield. The ctor initializes it
-to `VK_STATE_VISIBLE`. State can be read with `vk_widget_get_state()` and
-written with `vk_widget_set_state()`.
+### Properties (since 11.2.0)
 
-| Flag | Bit | Effect |
-|------|-----|--------|
-| `VK_STATE_VISIBLE` | `1 << 1` | Widget is drawn during refresh. Cleared = hidden. |
-| `VK_STATE_FROZEN` | `1 << 3` | Widget skips drawing but remains visible in layout. |
-| `VK_STATE_NORESIZE` | `1 << 7` | `vk_widget_resize()` returns -1 immediately. |
-| `VK_STATE_EXPAND` | `1 << 8` | Container resizes widget to fill its slot. Off by default. |
+A widget has a handful of on / off properties that say how it behaves.
+One is read or changed at a time, and the others are left alone:
+
+```c
+vk_widget_set_prop(widget, VK_PROP_EXPAND, false);
+
+if(vk_widget_get_prop(widget, VK_PROP_VISIBLE)) ...
+```
+
+| Property | Effect | By name |
+|----------|--------|---------|
+| `VK_PROP_VISIBLE` | Widget is drawn during refresh. Off = hidden. On by default. | `vk_widget_show()`, `vk_widget_hide()`, `vk_widget_is_visible()` |
+| `VK_PROP_FROZEN` | Widget shows a snapshot and ignores repaints. | `vk_widget_freeze()`, `vk_widget_thaw()`, `vk_widget_is_frozen()` |
+| `VK_PROP_NORESIZE` | `vk_widget_resize()` returns -1 immediately. | `vk_widget_set_noresize()`, `vk_widget_clear_noresize()`, `vk_widget_is_noresize()` |
+| `VK_PROP_EXPAND` | Container resizes widget to fill its slot. | `vk_widget_set_expand()`, `vk_widget_clear_expand()`, `vk_widget_is_expand()` |
+| `VK_PROP_INHERIT_FG` | Foreground follows the container's. | the `VK_INHERIT_*` attach flags |
+| `VK_PROP_INHERIT_BG` | Background follows the container's. | the `VK_INHERIT_*` attach flags |
+| `VK_PROP_INHERIT_ATTRS` | Text attributes follow the container's. | the `VK_INHERIT_*` attach flags |
+
+The names in the last column are macros over the two calls; the ones
+that existed before 11.2.0 do what they always did.
+
+`vk_widget_set_prop()` returns 0, or -1 for a NULL widget or for
+anything that is not exactly one property.
+
+### The State Word
+
+The properties are bits of a `uint32_t state` on `vk_widget_t`, which
+`vk_widget_get_state()` and `vk_widget_set_state()` read and write whole.
+Prefer the property calls: writing the whole word means reading it,
+changing a bit and writing it back, and a call that passes one flag by
+itself turns every other property off.
+
+| Flag | Bit |
+|------|-----|
+| `VK_STATE_VISIBLE` | `1 << 1` |
+| `VK_STATE_FROZEN` | `1 << 3` |
+| `VK_STATE_NORESIZE` | `1 << 7` |
+| `VK_STATE_EXPAND` | `1 << 8` |
+| `VK_STATE_INHERIT_FG` | `1 << 16` |
+| `VK_STATE_INHERIT_BG` | `1 << 17` |
+| `VK_STATE_INHERIT_ATTRS` | `1 << 18` |
+
+Bits 29 to 31 belong to the library. `vk_widget_set_state()` leaves them
+as they are whatever it is passed.
 
 ### Visibility
 
@@ -1346,16 +1385,87 @@ should not be affected by parent layout changes.
 
 When a widget is placed inside a container (`vk_box_t` slot or `vk_frame_t`
 child), the container only resizes it to fill the available space if
-`VK_STATE_EXPAND` is set. The flag is **off** by default so widgets keep
-their natural dimensions. Use `vk_widget_set_expand()` before placing the
-widget in a container to opt in.
+`VK_PROP_EXPAND` is on. It is **off** by default so widgets keep their
+natural dimensions. Use `vk_widget_set_expand()` before placing the
+widget in a container to opt in, and `vk_widget_clear_expand()` to opt
+out again.
 
 ## Widget Attributes
 
 `vk_widget_t` carries `fg`, `bg` (color), and `attrs` (ncurses attributes
-like `A_BOLD`, `A_UNDERLINE`). Set via `vk_widget_set_attrs()`. Widgets
-that render text (labels, marquees) combine colors and attrs into their
-`wattron`/`wbkgd` calls automatically.
+like `A_BOLD`, `A_UNDERLINE`). Set via `vk_widget_set_colors()` and
+`vk_widget_set_attrs()`. Widgets that render text (labels, marquees)
+combine colors and attrs into their `wattron`/`wbkgd` calls
+automatically. A new widget is black on white.
+
+### Colors From the Container (since 11.2.0)
+
+Every widget paints its own canvas in its own colors; a container does
+not paint through what it holds. So that a dialog does not have to color
+each widget in it, a widget can **follow** its container: the container
+hands its colors on each time it is redrawn, before it redraws what it
+holds.
+
+```c
+vk_widget_set_colors(VK_WIDGET(window), COLOR_WHITE, COLOR_BLUE);
+
+vk_box_set_widget(box, 0, VK_WIDGET(label),   VK_INHERIT_AUTO);
+vk_box_set_widget(box, 1, VK_WIDGET(warning), VK_INHERIT_AUTO);
+vk_widget_set_colors(VK_WIDGET(warning), COLOR_RED, COLOR_WHITE);
+vk_window_set_child(window, VK_WIDGET(box), VK_INHERIT_AUTO);
+
+vk_window_redraw(window);
+```
+
+The box and the label come out white on blue. The warning keeps its red
+on white: colors given to a widget are its own.
+
+The last argument of the attach calls says what the child follows:
+
+| Flag | The child |
+|------|-----------|
+| `VK_INHERIT_NONE` | is left as it is |
+| `VK_INHERIT_FG`, `VK_INHERIT_BG`, `VK_INHERIT_COLOR` | follows that color, or both |
+| `VK_INHERIT_ATTRS`, `VK_INHERIT_ALL` | follows the text attributes, or everything |
+| `VK_INHERIT_AUTO` | follows whichever of the two colors it has not been given itself |
+
+Rules:
+
+- **Use `VK_INHERIT_AUTO` unless there is a reason not to.** Color the
+  outermost widget and what is inside follows.
+- **`vk_widget_set_colors()` wins.** It makes both colors the widget's
+  own, whether it is called before or after the attach, and
+  `vk_widget_set_attrs()` does the same for attributes.
+- **Order does not matter.** A tree may be built bottom-up and the
+  window colored last; the first redraw sorts it out. (Before 11.2.0
+  the flags copied once, at attach, and the container had to be colored
+  first.)
+- **A later change follows.** Recolor the container, redraw it, and
+  everything that follows it is recolored.
+- **Attributes do not follow under `VK_INHERIT_AUTO`.** Bold on a window
+  would otherwise make every label in it bold. Ask for them with
+  `VK_INHERIT_ATTRS`.
+- **To go back to following,** turn the property on:
+  `vk_widget_set_prop(widget, VK_PROP_INHERIT_BG, true)`.
+
+What is handed on is `fg`, `bg` and `attrs` only. A type's other colors
+(a list's highlight, a progress bar's fill, relief, a scroll bar's
+border) are set on that type. A frame's border follows the frame's own
+colors unless it is given border colors. A widget attached to a screen
+or a deck has no container to follow.
+
+The parts of a popup and of a file dialog follow it: coloring a popup
+colors its layout, its button bar, its buttons and the client it is
+given, until one of them is given colors of its own
+(`vk_popup_set_colors()`, `vk_popup_set_button_colors()`, or
+`vk_widget_set_colors()` on the part).
+
+How it works: `vk_widget_set_colors()` notes that the colors are the
+widget's own; the attach calls turn the `VK_PROP_INHERIT_*` properties
+on; and `vk_container_t`'s redraw, which already visits every child,
+copies the container's values into each child that follows before
+redrawing it. A child that is a container does the same for its own, so
+the colors reach the bottom of the tree.
 
 ### 3D Relief Colors
 

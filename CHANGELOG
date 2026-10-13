@@ -1,3 +1,50 @@
+Version 11.2.0
+
+vdk
+* [Bryan Christ] A widget can follow its container's colours, and has
+  properties.
+
+  Colours.  Every widget paints in its own colours and a new one is
+  black on white, so a dialog had to colour each box, filler and label
+  in it or show a white block.  The VK_INHERIT_* flags on the attach
+  calls helped, but copied once, at attach: the container had to be
+  coloured first and the tree built from the top down.
+
+  Following is now live.  A container hands its colours to the children
+  that follow it each time it is redrawn, so the order a tree is built
+  in does not matter and recolouring a container recolours what
+  follows it.  The existing flags keep their values and their meaning,
+  and VK_INHERIT_NONE still leaves the child as it is.
+
+  VK_INHERIT_AUTO is new: the child follows whichever of the two
+  colours it has not been given itself.  Colour the outermost widget,
+  attach with AUTO, and what is inside follows.  vk_widget_set_colors()
+  always wins: it makes the colours the widget's own, before or after
+  the attach.  Text attributes do not follow under AUTO;
+  VK_INHERIT_ATTRS asks for them.
+
+  The parts of a popup and of a file dialog now follow it.  Colouring a
+  popup colours its layout, button bar, buttons and client until one of
+  them is given colours of its own.  A program that coloured a popup's
+  window and left its parts at the default will see them take the
+  window's colours.
+
+  Properties.  The on / off things about a widget -- visible, frozen,
+  no-resize, expand, and the three "follows" above -- are read and
+  changed one at a time with vk_widget_get_prop() and
+  vk_widget_set_prop(), which leave the others alone.  The names that
+  were already there (vk_widget_show, _hide, _is_visible, _freeze,
+  _thaw, _set_expand) are macros over them and do what they did.  The
+  ones that were missing are added: vk_widget_clear_expand, _is_expand,
+  _is_frozen, _set_noresize, _clear_noresize, _is_noresize.
+
+  vk_widget_get_state() and vk_widget_set_state() are unchanged, except
+  that the state word's top three bits belong to the library and
+  set_state leaves them alone.
+
+  No rebuild is needed: the library is still libvdk.so.11, and the
+  widget struct is unchanged.  test_inherit covers it.
+
 Version 11.1.1
 
 vdk

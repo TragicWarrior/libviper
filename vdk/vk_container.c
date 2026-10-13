@@ -275,6 +275,10 @@ _vk_container_redraw(vk_object_t *object)
     {
         child = list_entry(pos, vk_widget_t, list);
 
+        /* a child that follows the container's colours or attributes
+           is given them as they are now, then paints with them */
+        vdk_inherit_apply(VK_WIDGET(container), child);
+
         vk_widget_redraw(child);
     }
 
