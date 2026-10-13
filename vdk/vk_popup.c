@@ -23,9 +23,6 @@ _popup_button_pressed(vk_widget_t *widget, void *anything);
 
 require_klass(VK_WINDOW_KLASS);
 
-static int
-_vk_popup_redraw(vk_object_t *object);
-
 declare_klass(VK_POPUP_KLASS)
 {
     .size = KLASS_SIZE(vk_popup_t),
@@ -33,7 +30,6 @@ declare_klass(VK_POPUP_KLASS)
     .ctor = _vk_popup_ctor,
     .dtor = _vk_popup_dtor,
     .parent = &VK_WINDOW_KLASS,
-    .redraw = _vk_popup_redraw,
 };
 
 static void
@@ -431,29 +427,4 @@ _popup_button_pressed(vk_widget_t *widget, void *anything)
     vk_popup_close(ctx->popup, ctx->index);
 
     return 0;
-}
-
-/*
-    A popup's redraw.  The popup's own parts are widgets it holds -- the
-    buttons, the bar they sit in, the layout box -- and each paints onto
-    a canvas of its own.  They go first: the window's painting, which
-    comes last, is what copies them into place.
-*/
-static int
-_vk_popup_redraw(vk_object_t *object)
-{
-    vk_popup_t  *popup = VK_POPUP(object);
-    int         i;
-
-    for(i = 0; i < popup->button_count; i++)
-        vk_button_redraw(popup->buttons[i]);
-
-    if(popup->button_bar != NULL)
-        vk_box_redraw(popup->button_bar);
-
-    if(popup->layout != NULL)
-        vk_box_redraw(popup->layout);
-
-    /* the border, the title, and the layout box copied in */
-    return VK_WINDOW_KLASS->redraw(object);
 }

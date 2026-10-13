@@ -449,6 +449,10 @@ _vk_frame_redraw(vk_object_t *object)
 
     widget = VK_WIDGET(frame);
 
+    /* what it holds repaints itself first, so that what is copied in
+       below is current */
+    VK_CONTAINER_KLASS->redraw(object);
+
     /*
         Paint the interior in the frame's own background before erasing, so a
         childless (decorative) frame reads as an opaque panel instead of

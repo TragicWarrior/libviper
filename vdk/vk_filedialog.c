@@ -133,9 +133,6 @@ _vk_filedialog_set_child(vk_filedialog_t *dialog, int slot,
 
 require_klass(VK_BOX_KLASS);
 
-static int
-_vk_filedialog_redraw(vk_object_t *object);
-
 declare_klass(VK_FILEDIALOG_KLASS)
 {
     .size = KLASS_SIZE(vk_filedialog_t),
@@ -143,7 +140,6 @@ declare_klass(VK_FILEDIALOG_KLASS)
     .ctor = _vk_filedialog_ctor,
     .dtor = _vk_filedialog_dtor,
     .parent = &VK_BOX_KLASS,
-    .redraw = _vk_filedialog_redraw,
 };
 
 inline vk_filedialog_t*
@@ -729,48 +725,4 @@ _vk_filedialog_kmio(vk_object_t *object, int32_t keystroke)
     }
 
     return _vk_filedialog_list_key(dialog, keystroke);
-}
-
-/*
-    A file dialog's redraw.  Its own parts are widgets it holds -- the
-    path input, the file list in its frame, the buttons -- each painting
-    onto a canvas of its own.  They go first; the box's painting, which
-    comes last, copies them into place.
-*/
-static int
-_vk_filedialog_redraw(vk_object_t *object)
-{
-    vk_filedialog_t *dialog = VK_FILEDIALOG(object);
-
-    /* the dialog is still being built, or is being taken apart: its
-       parts are not all there to paint */
-    if(dialog->path_input == NULL || dialog->file_list == NULL
-        || dialog->btn_ok == NULL || dialog->btn_cancel == NULL
-        || dialog->button_bar == NULL)
-        return VK_BOX_KLASS->redraw(object);
-
-    vk_input_redraw(dialog->path_input);
-
-    /*
-        Render the file_list content into its own canvas FIRST, then run
-        the frame update.  vk_frame_redraw erases the frame canvas and
-        draws the sunken border on it, then blits the child's pre-
-        rendered canvas inside.  Swap the order and the listbox content
-        gets wiped by the frame's erase.
-    */
-    vk_widget_redraw(VK_WIDGET(dialog->file_list));
-    if(dialog->list_frame != NULL)
-        vk_frame_redraw(dialog->list_frame);
-
-    if(dialog->scroller != NULL)
-    {
-        if(vk_scroller_redraw(dialog->scroller) > 0)
-            vk_widget_blit(VK_WIDGET(dialog->scroller));
-    }
-
-    vk_button_redraw(dialog->btn_ok);
-    vk_button_redraw(dialog->btn_cancel);
-    vk_box_redraw(dialog->button_bar);
-    /* the box copies its slots into place */
-    return VK_BOX_KLASS->redraw(object);
 }

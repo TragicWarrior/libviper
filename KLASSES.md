@@ -522,6 +522,8 @@ That is all. What the type does **not** do:
 - look after attached scroll bars
 - destroy its children, if it is built on a container -- the container's
   destructor does
+- repaint its children, if it is built on a container -- calling the
+  parent's redraw first does
 
 Two optional extras, for a type that holds other widgets or wraps text:
 set `VK_WIDGET(object)->_layout` in the constructor to arrange the
@@ -605,14 +607,16 @@ itself whether the parent's painting is part of it:
 | Type | `redraw` |
 |------|----------|
 | `vk_widget_t` | does nothing |
-| `vk_container_t` | the widget's |
+| `vk_container_t` | repaints each widget it holds (since 11.1.0); paints nothing of its own |
+| `vk_frame_t`, `vk_box_t`, `vk_grid_t` | the container's, then its own canvas with the children copied in |
 | `vk_meter_t` | the progress bar's |
-| `vk_marquee_t`, `vk_selectbox_t`, `vk_dropdown_t`, `vk_window_t` | its own, complete; the parent's is not called |
+| `vk_marquee_t`, `vk_selectbox_t`, `vk_dropdown_t` | its own, complete; the parent's is not called |
+| `vk_window_t` | the container's, then its own (border, title, child); the frame's is not called |
 | `vk_table_t` | the grid's, then its dividers |
 | `vk_color_t` | the table's, then its swatches |
 | `vk_histogram_t` | bins its samples, then the graph's |
-| `vk_popup_t` | lays out its buttons, then the window's |
-| `vk_filedialog_t` | repaints its parts, then the box's |
+| `vk_popup_t` | the window's |
+| `vk_filedialog_t` | the box's |
 | every other type | its own |
 
 **Calling the parent's.** A type that wants what its parent paints calls
@@ -638,10 +642,38 @@ It is called through the parent's klass, not through
 slot, which is this function. Calling the parent's is the author's
 choice; only constructors and destructors must chain.
 
-**Composites.** A box, grid or frame composites what it holds: its
-redraw blits each child's canvas into its own. It does not repaint the
-children. A child whose state changed is redrawn first, then its
-container.
+**Containers repaint what they hold (since 11.1.0).** Redrawing a
+container redraws everything in it, to any depth, and then the container
+itself. Change any number of widgets anywhere in a window and call
+`vk_window_redraw()` once.
+
+It is done in one place. `vk_container_t`'s redraw walks the container's
+child list and calls `vk_widget_redraw()` on each child, which repaints
+it as whatever it is; a container knows nothing about the types it
+holds, and a new type needs no mention anywhere. Frame, window, box and
+grid call that first (`VK_CONTAINER_KLASS->redraw(object)`), then paint
+their own canvas and copy the children in. A type built on one of them
+gets it by calling its parent's redraw, or by naming none.
+
+What this means for a caller:
+
+- Redrawing a widget repaints that widget and what is inside it. It does
+  not reach upward: after redrawing a label alone, its box and window
+  still show the old one until they are redrawn.
+- Redrawing the outermost widget is always enough. Redrawing a child
+  first and then its container, as was needed before 11.1.0, still
+  works; the child is simply painted twice.
+- A redraw of a window costs a repaint of the whole tree in it. To
+  repaint one corner of a large tree often, redraw that part and blit
+  it.
+
+The repaint that follows a resize or a recreate does not walk down
+again: each child has just been through the same and repainted itself,
+so the container only copies them in. A deep widget is painted once per
+resize, not once per level.
+
+(Before 11.1.0 a container only copied its children's canvases in, and a
+changed child had to be redrawn by hand before its container.)
 
 ## Public API Convention
 
@@ -1539,8 +1571,12 @@ and `vk_widget_set_attrs()` on the textbox widget.
 it renders identically to a label. When text overflows, it scrolls.
 
 The marquee is a state machine driven by the caller via `vk_marquee_run()`.
-Each call is one tick. The caller controls the tick rate externally (e.g.
-via `wtimeout` on the input loop).
+Each call is one tick: the marquee moves on, then repaints. The caller
+controls the tick rate externally (e.g. via `wtimeout` on the input loop).
+
+Only `vk_marquee_run()` moves it (since 11.1.0). A redraw for any other
+reason -- a resize, or a container above it being redrawn -- paints the
+marquee where it is. Before 11.1.0 every redraw was a tick.
 
 | Constant | Behavior |
 |----------|----------|
@@ -1834,7 +1870,7 @@ bar and buttons, and the list's scroller.
 | `vk_filedialog_set_button_colors(dialog, fg, bg)` | Set button face colors |
 | `vk_filedialog_set_button_attrs(dialog, attrs)` | Set button text attributes |
 | `vk_filedialog_get_file_list(dialog)` | Return the internal file list widget |
-| `vk_filedialog_redraw(dialog)` | Update all children and composite |
+| `vk_filedialog_redraw(dialog)` | Repaint the dialog and everything in it |
 | `vk_filedialog_destroy(dialog)` | Destroy dialog and all children |
 
 ## Popups
@@ -1911,7 +1947,7 @@ available under `vk_popup_*` names via convenience macros.
 | `vk_popup_set_colors(popup, fg, bg)` | Set interior (layout) colors |
 | `vk_popup_set_button_colors(popup, fg, bg)` | Set button and button bar colors |
 | `vk_popup_set_button_attrs(popup, attrs)` | Set button text attributes |
-| `vk_popup_redraw(popup)` | Update buttons, button bar, layout, and window |
+| `vk_popup_redraw(popup)` | Repaint the popup and everything in it |
 | `vk_popup_destroy(popup)` | Destroy popup and all owned children |
 
 ## Calendars

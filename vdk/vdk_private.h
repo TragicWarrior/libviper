@@ -105,4 +105,13 @@ int     vdk_widget_reset_canvas(vk_widget_t *widget);
 */
 void    _vdk_cells_colors_baseline(void);
 
+/*
+    A widget state bit the library keeps for itself.  It is set on a
+    widget for the length of the repaint that follows its resize or its
+    recreate: by then everything the widget holds has been through the
+    same and has repainted itself, so a container's redraw only has to
+    copy its children in, not repaint each of them a second time.
+*/
+#define VDK_STATE_CHILDREN_CURRENT  (1UL << 31)     // 2147483648
+
 #endif  /* _VDK_PRIVATE_H_ */

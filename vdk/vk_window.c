@@ -26,6 +26,7 @@ static int
 _vk_window_recreate(vk_widget_t *widget);
 
 require_klass(VK_FRAME_KLASS);
+require_klass(VK_CONTAINER_KLASS);
 
 declare_klass(VK_WINDOW_KLASS)
 {
@@ -185,6 +186,10 @@ _vk_window_redraw(vk_object_t *object)
 
     window = VK_WINDOW(frame);
     widget = VK_WIDGET(frame);
+
+    /* what it holds repaints itself first, so that what is copied in
+       below is current */
+    VK_CONTAINER_KLASS->redraw(object);
 
     widget->_erase(widget);
     frame->_draw_border(frame);

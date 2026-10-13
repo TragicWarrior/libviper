@@ -5,6 +5,7 @@
 #include "vk_object.h"
 #include "vk_widget.h"
 #include "vk_container.h"
+#include "vdk_private.h"
 
 // base klass methods
 static int
@@ -26,6 +27,9 @@ _vk_container_rotate(vk_container_t *container, int vector);
 static int
 _vk_container_vacate(vk_container_t *container);
 
+static int
+_vk_container_redraw(vk_object_t *object);
+
 require_klass(VK_WIDGET_KLASS);
 
 declare_klass(VK_CONTAINER_KLASS)
@@ -35,6 +39,7 @@ declare_klass(VK_CONTAINER_KLASS)
     .ctor = _vk_container_ctor,
     .dtor = _vk_container_dtor,
     .parent = &VK_WIDGET_KLASS,
+    .redraw = _vk_container_redraw,
 };
 
 // create a new widget from scratch
@@ -239,3 +244,39 @@ _vk_container_rotate(vk_container_t *container, int vector)
     return 0;
 }
 
+/*
+    The redraw of a container: everything it holds repaints itself.
+
+    Each child is repainted as whatever it is, through its own redraw,
+    so the container needs to know nothing about the types it holds.  A
+    child that is itself a container does the same for its own, which
+    takes the repaint to the bottom of the tree.
+
+    This paints nothing of the container itself.  A type built on a
+    container calls this first and then paints its own canvas and
+    copies the children in, so what it copies is current.
+*/
+static int
+_vk_container_redraw(vk_object_t *object)
+{
+    vk_container_t      *container;
+    struct list_head    *pos;
+    vk_widget_t         *child;
+
+    if(object == NULL) return -1;
+
+    container = VK_CONTAINER(object);
+
+    /* this repaint follows a resize or a recreate, which every child
+       has just been through as well: they are current already */
+    if(VK_WIDGET(object)->state & VDK_STATE_CHILDREN_CURRENT) return 0;
+
+    list_for_each(pos, &container->widget_list)
+    {
+        child = list_entry(pos, vk_widget_t, list);
+
+        vk_widget_redraw(child);
+    }
+
+    return 0;
+}
