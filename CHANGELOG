@@ -1,3 +1,31 @@
+Version 12.3.1
+
+vdk
+* [Bryan Christ] A bright colour on a terminal with 8 colours.
+
+  On a terminal with only 8 colours, such as the Linux console, a
+  colour pair asked for with a bright colour (8 - 15) does not exist,
+  so it was drawn white on black.  A bright white host label on
+  magenta showed as white on black.  vdk_color_pair() now uses the
+  plain counterpart of a bright colour the terminal lacks:  bright
+  white on magenta is drawn white on magenta.
+
+  When that turns two colours asked for as different into one, the
+  text is drawn black or white, whichever shows against the
+  background, so bright white on white stays readable.  Colours asked
+  for as the same stay the same.
+
+  The colour picker (vk_color) showed its eight bright swatches the
+  same as the plain ones there, since a background cannot be bright.
+  Bold brightens text instead, so on a terminal with 8 colours a bright
+  swatch is filled with full blocks (U+2588) drawn in the plain colour,
+  bold.
+
+  This happens only on a terminal with 8 colours, decided each time a
+  pair is asked for, so it follows a session moved between terminals.
+  Nothing changes on a terminal with 16 or 256 colours.  test_colors
+  checks both.
+
 Version 12.3.0
 
 vdk

@@ -26,3 +26,10 @@ target_include_directories(test_inherit PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(test_inherit vdk-static -lutil ${CURSES_LIBRARIES})
 
 add_test(NAME test_inherit COMMAND test_inherit)
+
+add_executable(test_colors test_colors.c)
+
+target_include_directories(test_colors PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(test_colors vdk-static -lutil ${CURSES_LIBRARIES})
+
+add_test(NAME test_colors COMMAND test_colors)

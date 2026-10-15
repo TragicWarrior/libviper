@@ -82,9 +82,40 @@ vdk_color_init(void)
     _vdk_cells_colors_baseline();
 }
 
+/*
+    on a terminal with only 8 colours a bright colour (8 - 15) has no
+    pair of its own, and a pair asked for with one came out white on
+    black.  Use its plain counterpart instead.  When that makes two
+    colours asked for as different the same, the text becomes black or
+    white, whichever shows against the background; colours asked for as
+    the same stay the same, which is how text is hidden on purpose.
+*/
+static void
+_vdk_color_fold(short *fg, short *bg)
+{
+    short   f = *fg;
+    short   b = *bg;
+
+    if(f >= 8 && f <= 15) f -= 8;
+    if(b >= 8 && b <= 15) b -= 8;
+
+    // two different colours became one:  make the text show
+    if(f == b && *fg != *bg)
+    {
+        f = (b == COLOR_YELLOW || b == COLOR_CYAN || b == COLOR_WHITE)
+            ? COLOR_BLACK : COLOR_WHITE;
+    }
+
+    *fg = f;
+    *bg = b;
+}
+
 short
 vdk_color_pair(short fg, short bg)
 {
+    // a terminal with 8 colours: fold the bright ones it lacks
+    if(COLORS >= 8 && COLORS < 16) _vdk_color_fold(&fg, &bg);
+
     if(fg == COLOR_WHITE && bg == COLOR_BLACK) return 0;
 
     if(fg <= 7 && bg <= 7)
