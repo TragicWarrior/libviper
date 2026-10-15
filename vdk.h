@@ -30,8 +30,8 @@
 */
 #define VDK_VERSION_MAJOR           12
 #define VDK_VERSION_MINOR           3
-#define VDK_VERSION_PATCH           0
-#define VDK_VERSION                 "12.3.0"
+#define VDK_VERSION_PATCH           1
+#define VDK_VERSION                 "12.3.1"
 
 #define VDK_VERSION_AT_LEAST(major, minor, patch) \
     ((VDK_VERSION_MAJOR > (major)) \

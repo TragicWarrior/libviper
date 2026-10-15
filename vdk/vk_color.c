@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <langinfo.h>
 
 #include "vkmio.h"
 
@@ -167,6 +168,32 @@ _vk_color_paint_cell(vk_widget_t *widget, vk_grid_t *grid,
        pair field. */
     pair = vdk_color_pair(COLOR_BLACK, color_idx);
     setcchar(&cc, sp, A_NORMAL, pair, NULL);
+
+    /* a terminal with 8 colours has no bright backgrounds: the pair
+       above folds a bright swatch to its plain colour and it looks
+       like the plain one.  Bold brightens text, so fill the swatch
+       with full blocks drawn in the plain colour, bold.  The block is
+       U+2588 itself: ncurses' line-drawing BLOCK becomes U+25AE, a
+       small rectangle, on a UTF-8 terminal. */
+    if(color_idx >= 8 && color_idx <= 15 && COLORS >= 8 && COLORS < 16)
+    {
+        wchar_t     block[2] = { 0x2588, L'\0' };     // █
+        attr_t      block_attrs = A_BOLD;
+        short       block_pair;
+        short       plain = color_idx - 8;
+
+        /* without a UTF-8 locale, the line-drawing set's block is what
+           there is.  (Not vdk_has_utf8(): it says no on the Linux
+           console, whose fonts all have this one.) */
+        if(strcmp(nl_langinfo(CODESET), "UTF-8") != 0)
+        {
+            getcchar(WACS_BLOCK, block, &block_attrs, &block_pair, NULL);
+            block_attrs |= A_BOLD;
+        }
+
+        pair = vdk_color_pair(plain, plain);
+        setcchar(&cc, block, block_attrs, pair, NULL);
+    }
 
     for(yy = 0; yy < h; yy++)
         for(xx = 0; xx < w; xx++)
