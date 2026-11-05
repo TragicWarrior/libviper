@@ -29,9 +29,9 @@
     error in itself where the macro does not exist.
 */
 #define VDK_VERSION_MAJOR           12
-#define VDK_VERSION_MINOR           3
-#define VDK_VERSION_PATCH           1
-#define VDK_VERSION                 "12.3.1"
+#define VDK_VERSION_MINOR           4
+#define VDK_VERSION_PATCH           0
+#define VDK_VERSION                 "12.4.0"
 
 #define VDK_VERSION_AT_LEAST(major, minor, patch) \
     ((VDK_VERSION_MAJOR > (major)) \
@@ -1051,6 +1051,8 @@ int             vk_marquee_set_direction(vk_marquee_t *marquee, int direction);
 int             vk_marquee_set_speed(vk_marquee_t *marquee, int interval);
 int             vk_marquee_set_pause(vk_marquee_t *marquee, int duration);
 int             vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat);
+/* how far the text has scrolled.  -1 when marquee is NULL */
+int             vk_marquee_get_offset(vk_marquee_t *marquee);
 int             vk_marquee_run(vk_marquee_t *marquee);
 int             vk_marquee_destroy(vk_marquee_t *marquee);
 
@@ -1155,6 +1157,8 @@ int             vk_input_destroy(vk_input_t *input);
 vk_activity_t*  vk_activity_create(void);
 int             vk_activity_set_style(vk_activity_t *activity, int style);
 int             vk_activity_get_style(vk_activity_t *activity);
+/* the frame the indicator is showing.  -1 when activity is NULL */
+int             vk_activity_get_frame(vk_activity_t *activity);
 int             vk_activity_set_speed(vk_activity_t *activity, int interval);
 int             vk_activity_start(vk_activity_t *activity);
 int             vk_activity_stop(vk_activity_t *activity);

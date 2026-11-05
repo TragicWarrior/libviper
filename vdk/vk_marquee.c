@@ -127,6 +127,17 @@ vk_marquee_set_repeat(vk_marquee_t *marquee, bool repeat)
     return 0;
 }
 
+/*
+    How far the text has scrolled.  -1 when marquee is NULL.
+*/
+inline int
+vk_marquee_get_offset(vk_marquee_t *marquee)
+{
+    if(marquee == NULL) return -1;
+
+    return marquee->scroll_offset;
+}
+
 inline int
 vk_marquee_run(vk_marquee_t *marquee)
 {

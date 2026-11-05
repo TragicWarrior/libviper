@@ -1,3 +1,13 @@
+Version 12.4.0
+
+vdk
+* [Bryan Christ] Getters for the activity frame and the marquee offset.
+
+  vk_activity_get_frame() returns the frame the indicator is showing.
+  vk_marquee_get_offset() returns how far the text has scrolled.  Both
+  return -1 when passed NULL, the same as the other getters.  A program
+  can see whether a tick changed the picture without reading the struct.
+
 Version 12.3.1
 
 vdk
