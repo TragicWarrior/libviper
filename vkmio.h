@@ -6,6 +6,15 @@
 
 #undef  NCURSES_OPAQUE
 #define NCURSES_OPAQUE 0
+
+/*
+    the library uses ncurses' wide-character API (cchar_t and friends),
+    which ncurses declares only when asked.  ask here, so a program can
+    include this header without defining _XOPEN_SOURCE_EXTENDED first.
+*/
+#ifndef NCURSES_WIDECHAR
+#define NCURSES_WIDECHAR 1
+#endif
 #include <ncursesw/curses.h>
 
 /* vk_kmio_init flags */

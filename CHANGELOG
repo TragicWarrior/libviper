@@ -1,3 +1,29 @@
+Version 12.4.1
+
+packaging
+* [Bryan Christ] "make package" builds Debian packages, without root:
+  libvdk12 (the shared library) and libvdk-dev (the headers, static
+  library, the libvdk.so link and libviper.pc).  There was no packaging
+  before.  The packages declare their dependencies, the runtime package
+  carries a shlibs file and an ldconfig trigger, and each has a
+  machine-readable copyright file and the changelog.
+
+* [Bryan Christ] vdk.h and vkmio.h compile on their own.  They use
+  ncurses' wide-character API (cchar_t), which ncurses declares only
+  when asked, so a program that included vdk.h without defining
+  _XOPEN_SOURCE_EXTENDED first failed with "unknown type name
+  'cchar_t'".  The headers now ask (NCURSES_WIDECHAR) themselves.
+  Programs that define _XOPEN_SOURCE_EXTENDED are unaffected.
+
+* [Bryan Christ] libviper.pc works.  It had prefix /usr/local whatever
+  the install, and empty libdir, includedir and Cflags.  Its prefix is
+  now found from where the file sits, so it is right for /usr/local and
+  for the packages' /usr, and Libs.private lists what a static link
+  needs.
+
+* [Bryan Christ] The soname number is taken from PROJECT_VERSION
+  instead of being written out a second time.
+
 Version 12.4.0
 
 vdk

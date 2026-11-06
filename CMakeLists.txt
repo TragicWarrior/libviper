@@ -32,7 +32,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 # socket protocol itself.  Configure with -D_NO_GPM in CMAKE_C_FLAGS to
 # leave the support out.
 
-set(PROJECT_VERSION 12.4.0)
+set(PROJECT_VERSION 12.4.1)
 
 # vdk.h tells programs which libviper they are building against
 # (VDK_VERSION_*).  It has to say what is set here: stop if it does not.
@@ -108,19 +108,53 @@ add_library(vdk-shared SHARED $<TARGET_OBJECTS:vdk.o>)
 target_link_libraries(vdk-shared ${CURSES_LIBRARIES})
 
 SET_TARGET_PROPERTIES(vdk-static PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1)
-SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION 12)
+# the soname's number:  the major version
+string(REGEX MATCH "^[0-9]+" VDK_SOVERSION "${PROJECT_VERSION}")
 
-set(PKG_CONFIG_LIBS
-    "-lvdk"
-)
+SET_TARGET_PROPERTIES(vdk-shared PROPERTIES OUTPUT_NAME vdk CLEAN_DIRECT_OUTPUT 1 VERSION ${PROJECT_VERSION} SOVERSION ${VDK_SOVERSION})
 
+# what a program linking the static library needs as well
+set(PKG_CONFIG_LIBS_PRIVATE "-lncursesw -ltinfo")
+
+# @ONLY:  the ${...} in the template are pkg-config's own variables.  the
+# prefix is found from where the .pc file sits, so the same file is right
+# for /usr/local (make install) and /usr (the packages).
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
+  @ONLY
 )
 
-install (TARGETS vdk-static vdk-shared DESTINATION lib)
-install (FILES vdk.h vkmio.h DESTINATION include)
+# Every file is given a component, which decides the Debian package it
+# goes in:  "runtime" is libvdk12, what a program needs to run, and "dev"
+# is libvdk-dev, what is needed to build one.  A plain "make install"
+# installs both.
+#
+# The shared library is installed twice:  its real file and the
+# libvdk.so.12 soname link go with the runtime, the bare libvdk.so link a
+# linker looks for goes with the development files.
+install (TARGETS vdk-shared LIBRARY DESTINATION lib
+    COMPONENT runtime NAMELINK_SKIP)
+install (TARGETS vdk-shared LIBRARY DESTINATION lib
+    COMPONENT dev NAMELINK_ONLY)
+install (TARGETS vdk-static ARCHIVE DESTINATION lib COMPONENT dev)
+install (FILES vdk.h vkmio.h DESTINATION include COMPONENT dev)
+
+# Debian wants a copyright file (in its machine-readable format) and a
+# compressed changelog in each package's own doc directory.  gzip -n
+# leaves the time stamp out, so the same source gives the same package.
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    execute_process(
+        COMMAND gzip -9 -n -c "${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG"
+        OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/changelog.gz")
+
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/copyright"
+        "${CMAKE_CURRENT_BINARY_DIR}/changelog.gz"
+        DESTINATION share/doc/libvdk${VDK_SOVERSION} COMPONENT runtime)
+    install (FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/copyright"
+        "${CMAKE_CURRENT_BINARY_DIR}/changelog.gz"
+        DESTINATION share/doc/libvdk-dev COMPONENT dev)
+endif()
 
 # Install pkgconfig files to libdata on BSD, otherwise lib
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")
@@ -128,7 +162,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "BSD")
 else()
     set(PKG_CONFIG_INSTALL_DIR "lib/pkgconfig")
 endif()
-install (FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION ${PKG_CONFIG_INSTALL_DIR})
+install (FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc"
+    DESTINATION ${PKG_CONFIG_INSTALL_DIR} COMPONENT dev)
 
 # Refresh the dynamic linker's cache after installing, so a new
 # libvdk.so.N is found straight away.  Without it a program linked
@@ -163,6 +198,73 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         endif()
     ]])
 endif()
+
+#
+# Debian packages:  "make package" builds two .deb files, no root needed.
+#
+#   libvdk12     the shared library (Section libs)
+#   libvdk-dev   the headers, static library, the libvdk.so link and the
+#                pkg-config file, libviper.pc (Section libdevel)
+#
+# The library's major version is in the runtime package's name, so a new
+# major version installs beside the old one instead of replacing it.
+# dpkg-shlibdeps works out what each package depends on, and the runtime
+# package gets a shlibs file and an ldconfig trigger.
+#
+set(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_NAME "libvdk")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_CONTACT "Bryan Christ <bryan.christ@gmail.com>")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/TragicWarrior/libviper")
+set(CPACK_STRIP_FILES ON)
+
+# directories the packages create are 0755, whatever the builder's umask
+set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE
+    WORLD_READ WORLD_EXECUTE)
+
+set(CPACK_DEB_COMPONENT_INSTALL ON)
+set(CPACK_COMPONENTS_ALL runtime dev)
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION ON)
+set(CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS ON)
+set(CPACK_DEBIAN_PACKAGE_GENERATE_SHLIBS_POLICY ">=")
+
+# a package description:  the first line is the synopsis, a blank line
+# separates paragraphs (CPack writes the " ." Debian wants there).  this
+# works because CPACK_PACKAGE_DESCRIPTION_SUMMARY is left unset:  when it
+# is set, CPack puts it in front of every package's description.
+set(CPACK_DEBIAN_RUNTIME_PACKAGE_NAME "libvdk${VDK_SOVERSION}")
+set(CPACK_DEBIAN_RUNTIME_PACKAGE_SECTION "libs")
+
+# the linker cache is refreshed by a dpkg trigger, as Debian asks
+set(CPACK_DEBIAN_RUNTIME_PACKAGE_CONTROL_EXTRA
+    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/triggers")
+set(CPACK_DEBIAN_RUNTIME_DESCRIPTION
+"widget toolkit for ncurses programs (VDK)
+libviper's VDK is a widget toolkit for console programs built on
+ncursesw:  windows, frames, boxes and grids, labels, buttons, inputs,
+list and select boxes, menus, dialogs, graphs and more, with mouse
+support through xterm reporting or the console's gpm daemon.
+
+This package holds the shared library, libvdk.")
+
+set(CPACK_DEBIAN_DEV_PACKAGE_NAME "libvdk-dev")
+set(CPACK_DEBIAN_DEV_PACKAGE_SECTION "libdevel")
+set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS
+    "libvdk${VDK_SOVERSION} (= ${PROJECT_VERSION}), libncurses-dev")
+set(CPACK_DEBIAN_DEV_DESCRIPTION
+"widget toolkit for ncurses programs (VDK) - development files
+libviper's VDK is a widget toolkit for console programs built on
+ncursesw.
+
+This package holds the headers (vdk.h and vkmio.h), the static library
+and the pkg-config file, libviper.pc.")
+
+include(CPack)
 
 add_subdirectory(demo)
 
