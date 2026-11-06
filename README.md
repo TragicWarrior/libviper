@@ -106,6 +106,29 @@ vdk.h and vkmio.h to .../include, and a pkg-config file (libviper.pc)
 for downstream consumers.  On Linux the install then runs ldconfig, so
 the new library is found at once; a staged install (DESTDIR) skips it.
 
+A program builds against the installed library with:
+
+    cc -o myprog myprog.c $(pkg-config --cflags --libs libviper)
+
+Debian packages
+---------------
+
+To build .deb packages for Debian or a Debian-based system (Ubuntu,
+etc.), run this from the build directory.  It does not need root:
+
+    make package
+
+It produces two packages, named for the version and architecture:
+
+    libvdk12_<version>_<arch>.deb    the shared library, all a program
+                                     built against libvdk needs to run
+    libvdk-dev_<version>_<arch>.deb  the headers, static library and
+                                     the pkg-config file, libviper.pc
+
+Install both with  sudo apt install ./libvdk12_*.deb ./libvdk-dev_*.deb.
+The packages install to /usr; "make install" installs to /usr/local.
+Having both at once is harmless but confusing, so pick one.
+
 
 DEMOS
 =====

@@ -1,0 +1,24 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: libviper
+Upstream-Contact: Bryan Christ <bryan.christ@gmail.com>
+Source: https://github.com/TragicWarrior/libviper
+Comment: libviper ships one library, libvdk (the VDK widget toolkit for
+ ncurses).  See LICENSE in the source for the project's own statement.
+
+Files: *
+Copyright: Bryan Christ <bryan.christ@gmail.com>
+License: GPL-2+
+
+License: GPL-2+
+ libviper is free software; you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation; either version 2 of the License, or (at your
+ option) any later version.
+ .
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 2 can be found in "/usr/share/common-licenses/GPL-2".
