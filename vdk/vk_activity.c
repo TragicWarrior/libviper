@@ -103,6 +103,17 @@ vk_activity_get_style(vk_activity_t *activity)
     return activity->style;
 }
 
+/*
+    The frame the indicator is showing.  -1 when activity is NULL.
+*/
+inline int
+vk_activity_get_frame(vk_activity_t *activity)
+{
+    if(activity == NULL) return -1;
+
+    return activity->frame;
+}
+
 inline int
 vk_activity_set_speed(vk_activity_t *activity, int interval)
 {

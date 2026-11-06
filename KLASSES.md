@@ -1758,7 +1758,8 @@ For `VK_SCROLL_LOOP`:
 
 `vk_marquee_set_text()` is a marquee-specific function (not a pass-through)
 because it resets scroll state when text changes. `vk_marquee_get_text()`
-reads the text via the inherited label API.
+reads the text via the inherited label API. `vk_marquee_get_offset()`
+returns how far the text has scrolled, or -1 when the marquee is NULL.
 
 ## Selectboxes
 
@@ -1943,6 +1944,7 @@ after any of those until the next tick.
 | `vk_activity_create()` | Create a 1x1 activity indicator (default: spinner, stopped) |
 | `vk_activity_set_style(a, style)` | Set animation style; resets frame counter |
 | `vk_activity_get_style(a)` | Return current style constant |
+| `vk_activity_get_frame(a)` | Return the frame being shown, or -1 if `a` is NULL |
 | `vk_activity_set_speed(a, interval)` | Set tick interval between frame advances |
 | `vk_activity_start(a)` | Begin animating |
 | `vk_activity_stop(a)` | Stop animating (clears to blank) |
